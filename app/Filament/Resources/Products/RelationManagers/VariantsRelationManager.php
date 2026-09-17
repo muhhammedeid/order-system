@@ -36,7 +36,7 @@ class VariantsRelationManager extends RelationManager
     protected static function options($query, ?string $currentValue): array
     {
         $options = $query
-            ->where('active')
+            ->where('active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name', 'name')
