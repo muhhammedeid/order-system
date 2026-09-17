@@ -1,4 +1,6 @@
 <script setup>
+import { Link } from '@inertiajs/vue3';
+
 defineProps({
     product: {
         type: Object,
@@ -13,7 +15,10 @@ const formatter = new Intl.NumberFormat('ar-EG', {
 </script>
 
 <template>
-    <div class="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition hover:shadow-md">
+    <Link
+        :href="`/product/${product.slug}`"
+        class="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition hover:shadow-md"
+    >
         <div class="aspect-square w-full bg-gray-100">
             <img
                 v-if="product.images && product.images.length"
@@ -44,5 +49,5 @@ const formatter = new Intl.NumberFormat('ar-EG', {
                 </p>
             </div>
         </div>
-    </div>
+    </Link>
 </template>

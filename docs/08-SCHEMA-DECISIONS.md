@@ -17,6 +17,10 @@ Rules:
 4. Model-level validation of `color`/`size` stays permissive (any trimmed non-empty string), so Excel imports (P05-W02) are not blocked by missing lookup entries. Import behavior will be decided in P05-W02.
 5. `unique(product_id, color, size)` on `product_variants` remains the database integrity guarantee.
 
+## P02-W02 — Settings unique key
+
+`05-DATABASE-SCHEMA.md` defines the `settings` table (`id`, `key`, `value`) but does not explicitly specify an index on `key`. Since `key` is a configuration identifier used for lookup (`Setting::get()`), `unique(key)` is applied as an **approved technical schema decision**. `settings` is the approved configuration mechanism for operational settings (e.g. `whatsapp_number`); it does not originate from the original schema's index list.
+
 ## P01-W01 — Product price precision
 
 `05-DATABASE-SCHEMA.md` does not define decimal precision/scale for `products.price`. MVP implementation value: `decimal(12,2)`.
