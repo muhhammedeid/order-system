@@ -53,4 +53,30 @@ class Customer extends Model
 
         return $data;
     }
+
+    /**
+     * Deterministic behavior with duplicate phones: the earliest
+     * created customer (lowest id) is matched and refreshed.
+     */
+    public static function matchOrCreate(array $data): self
+    {
+        $data = self::validate($data);
+
+        $customer = static::query()
+            ->where('phone', $data['phone'])
+            ->orderBy('id')
+            ->first();
+
+        if ($customer) {
+            $customer->fill(collect($data)
+                ->only(['customer_code', 'name', 'company_name', 'whatsapp', 'governorate', 'city', 'address'])
+                ->filter(fn ($value) => filled($value))
+                ->all());
+            $customer->save();
+
+            return $customer;
+        }
+
+        return static::create($data);
+    }
 }
