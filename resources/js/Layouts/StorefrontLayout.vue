@@ -1,5 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 
 defineProps({
     title: {
@@ -7,6 +8,8 @@ defineProps({
         default: '',
     },
 });
+
+const cartCount = computed(() => usePage().props.cartCount ?? 0);
 </script>
 
 <template>
@@ -22,6 +25,18 @@ defineProps({
                         class="text-base font-semibold text-gray-700 hover:text-gray-900"
                     >
                         المتجر
+                    </Link>
+                    <Link
+                        href="/cart"
+                        class="text-base font-semibold text-gray-700 hover:text-gray-900"
+                    >
+                        الطلب
+                        <span
+                            v-if="cartCount > 0"
+                            class="ms-1 rounded-full bg-gray-900 px-2 py-0.5 text-xs text-white"
+                        >
+                            {{ cartCount }}
+                        </span>
                     </Link>
                 </nav>
             </div>

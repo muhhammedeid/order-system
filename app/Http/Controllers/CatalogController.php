@@ -118,6 +118,7 @@ class CatalogController extends Controller
                 'sizes' => $variants
                     ->sortBy(fn ($variant) => $sizeOrder->get($variant->size))
                     ->map(fn ($variant) => [
+                        'id' => $variant->id,
                         'size' => $variant->size,
                         'available_quantity' => (int) $variant->available_quantity,
                     ])

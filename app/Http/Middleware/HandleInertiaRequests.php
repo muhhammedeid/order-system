@@ -31,6 +31,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            'cartCount' => \App\Support\Cart::count(),
         ];
     }
 }
