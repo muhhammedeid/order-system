@@ -2,6 +2,17 @@
 
 Technical/schema decisions that deviate from, or refine, `05-DATABASE-SCHEMA.md`. These are engineering choices, not business requirements.
 
+## P05-W01/W02 — Import semantics
+
+- **Customer Code is the import identity key:** non-blank code updates the existing customer (provided non-empty fields) or creates one; blank code + phone matching an existing customer = invalid row (no phone-based merging); blank code + new phone = new customer without code. Phone stays indexed, never unique.
+- **Product Code is the import matching key:** exists → update (existing slug preserved, never regenerated), else create (slug from name; collision = invalid row).
+- **request_price price semantics (approved correction):** hidden ≠ absent. `request_price` may store an internal price; blank price on an existing product never erases a stored price; blank price on a NEW `request_price` product → NULL. Public products require a numeric price ≥ 0 when provided; a missing price on an existing public product leaves the stored price untouched (it can never legitimately be NULL anyway).
+- **Per-row transactions:** each row is its own DB transaction; failures roll back fully (including newly-created categories) and are reported without blocking other rows. No whole-file transaction.
+- **Header contract:** exact header names required; missing core headers reject the file. No fuzzy matching/aliases/mapping UI.
+- Duplicate codes within a file: first occurrence processes; subsequent occurrences are invalid rows.
+- Excel package: `maatwebsite/excel` v3.1, synchronous only (no queues).
+- **P05-W03 Order Export is DEFERRED** until the real accounting-system import template is provided. Until then the Phase 04 manual `confirmed → exported` action remains the only path; on P05-W03 implementation that action is removed and the actual export becomes the sole trigger.
+
 ## P04-W02 — Order item variant reference (approved deviation)
 
 The original `order_items` schema stores only `product_id` plus historical snapshots (code, name, color, size, price fields). With the approved two-stage order lifecycle, `new → confirmed` must decrement a **specific** `ProductVariant` row and `confirmed → cancelled` must restore that exact row — snapshot text (`product_id + color + size`) cannot be trusted for stock operations.
