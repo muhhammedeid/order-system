@@ -48,3 +48,4 @@ Do not add architecture, services, workflows, integrations, or features unless e
 - `04-DEVELOPMENT-GUARDRAILS.md`
 - `05-DATABASE-SCHEMA.md`
 - `06-MVP-ACCEPTANCE.md`
+- `07-ENVIRONMENT.md` — official local development environment (WSL MariaDB, PHP extensions)
