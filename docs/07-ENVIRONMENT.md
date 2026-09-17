@@ -32,6 +32,12 @@ The project development database is **MariaDB 10.11.14 running inside WSL (Ubunt
 - Local admin account created via `php artisan make:filament-user`.
 - Credentials are stored only locally; never commit them anywhere.
 
+## Technical Decisions (MVP)
+
+- `products.price` uses `decimal(12,2)` — a technical MVP choice; the source schema does not define precision/scale.
+- `price_visibility` is a plain string column backed by the PHP enum `App\Enums\PriceVisibility` (`public` / `request_price`).
+- Development machine note: the WSL VM is stopped/started by Windows quickly; MariaDB inside WSL takes ~30-45 s to become ready after the VM boots. If the database refuses connections after idle, run `wsl -- sudo -n service mariadb start` (or `wsl -- sudo -n systemctl start mariadb`) and wait for readiness before running artisan commands.
+
 ## Manual QA
 
 - Final visual browser verification of `/admin/login` is performed manually by the project owner.

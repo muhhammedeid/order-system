@@ -23,4 +23,14 @@ class FilamentAdminAccessTest extends TestCase
             ->get('/admin')
             ->assertStatus(200);
     }
+
+    public function test_admin_resource_pages_render(): void
+    {
+        $admin = User::factory()->create();
+
+        $this->actingAs($admin)->get('/admin/products')->assertStatus(200);
+        $this->actingAs($admin)->get('/admin/products/create')->assertStatus(200);
+        $this->actingAs($admin)->get('/admin/categories')->assertStatus(200);
+        $this->actingAs($admin)->get('/admin/categories/create')->assertStatus(200);
+    }
 }
