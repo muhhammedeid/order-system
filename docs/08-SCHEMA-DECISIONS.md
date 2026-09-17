@@ -2,6 +2,14 @@
 
 Technical/schema decisions that deviate from, or refine, `05-DATABASE-SCHEMA.md`. These are engineering choices, not business requirements.
 
+## P03-W03 — Ordering behavior
+
+1. **No quantity decrement (approved business decision):** submitting an order does NOT change `product_variants.available_quantity`. No reservation, restock, or stock-movement logic exists. The accounting/inventory system remains the external source of truth; quantities are managed by admin/imports.
+2. **Customer/orders FK delete behavior:** the original schema does not define delete behavior for `orders.customer_id`. Chosen: `restrictOnDelete` — customers with orders cannot be deleted, so historical order/customer data always remains intact.
+3. **`order_items.product_id` FK:** `nullOnDelete` — deleting a product never destroys order snapshots (`product_code`, `product_name`, color, size, quantities, prices stay).
+4. **Order numbering:** `ORD-<year>-<5 digits>` sequential. A candidate number is derived from the current year's max sequence inside the order transaction; `unique(order_number)` is the final integrity guarantee and a duplicate collision triggers a bounded retry (max 5) with a regenerated number. No sequence table.
+5. **Duplicate-phone deterministic rule:** when several customers share the exact same phone, the earliest created customer (lowest `id`) is matched and refreshed. No phone normalization or unique-phone constraint (per schema design).
+
 ## P01-W02 — Product Variants (lookup tables)
 
 `05-DATABASE-SCHEMA.md` does not define lookup tables for variant options. Two tables were added in P01-W02 as **admin convenience only**:
