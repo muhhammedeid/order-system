@@ -34,8 +34,7 @@ The project development database is **MariaDB 10.11.14 running inside WSL (Ubunt
 
 ## Technical Decisions (MVP)
 
-- `products.price` uses `decimal(12,2)` — a technical MVP choice; the source schema does not define precision/scale.
-- `price_visibility` is a plain string column backed by the PHP enum `App\Enums\PriceVisibility` (`public` / `request_price`).
+Schema/technical decisions that refine the approved schema now live in `08-SCHEMA-DECISIONS.md`.
 - Development machine note: the WSL VM is stopped/started by Windows quickly; MariaDB inside WSL takes ~30-45 s to become ready after the VM boots. If the database refuses connections after idle, run `wsl -- sudo -n service mariadb start` (or `wsl -- sudo -n systemctl start mariadb`) and wait for readiness before running artisan commands.
 
 ## Manual QA

@@ -49,3 +49,4 @@ Do not add architecture, services, workflows, integrations, or features unless e
 - `05-DATABASE-SCHEMA.md`
 - `06-MVP-ACCEPTANCE.md`
 - `07-ENVIRONMENT.md` — official local development environment (WSL MariaDB, PHP extensions)
+- `08-SCHEMA-DECISIONS.md` — technical/schema decisions that refine the approved schema

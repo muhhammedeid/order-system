@@ -32,5 +32,11 @@ class FilamentAdminAccessTest extends TestCase
         $this->actingAs($admin)->get('/admin/products/create')->assertStatus(200);
         $this->actingAs($admin)->get('/admin/categories')->assertStatus(200);
         $this->actingAs($admin)->get('/admin/categories/create')->assertStatus(200);
+        $this->actingAs($admin)->get('/admin/variant-colors')->assertStatus(200);
+        $this->actingAs($admin)->get('/admin/variant-sizes')->assertStatus(200);
+
+        $product = \App\Models\Product::factory()->create();
+
+        $this->actingAs($admin)->get("/admin/products/{$product->getKey()}/edit")->assertStatus(200);
     }
 }
