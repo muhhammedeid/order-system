@@ -104,6 +104,22 @@ class ProductVariantsTest extends TestCase
         ]);
     }
 
+    public function test_color_and_size_are_trimmed_on_save(): void
+    {
+        $product = Product::factory()->create();
+
+        $variant = $product->variants()->create([
+            'color' => '  Black  ',
+            'size' => ' 41 ',
+            'available_quantity' => 5,
+        ]);
+
+        $variant->refresh();
+
+        $this->assertSame('Black', $variant->color);
+        $this->assertSame('41', $variant->size);
+    }
+
     public function test_product_variants_relationship_works_both_directions(): void
     {
         $product = Product::factory()->create();
