@@ -45,7 +45,7 @@ class OrderCreationTest extends TestCase
         $response->assertRedirect("/order/success/{$order->order_number}");
 
         $this->assertMatchesRegularExpression('/^ORD-\d{4}-\d{5}$/', $order->order_number);
-        $this->assertSame('new', $order->status);
+        $this->assertSame('new', $order->status->value);
         $this->assertSame(3, $order->total_quantity);
         $this->assertSame('Deliver after Friday', $order->customer_notes);
 

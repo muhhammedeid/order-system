@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Validator;
 
 class ProductVariant extends Model
@@ -19,11 +21,29 @@ class ProductVariant extends Model
         'available_quantity',
     ];
 
+    protected static function booted(): void
+    {
+        static::deleting(function (self $variant) {
+            $referencedByConfirmed = $variant->orderItems()
+                ->whereHas('order', fn ($query) => $query->where('status', OrderStatus::Confirmed->value))
+                ->exists();
+
+            if ($referencedByConfirmed) {
+                throw new \RuntimeException('لا يمكن حذف هذا المقاس لأنه مرتبط بطلب مؤكد — يمكن إلغاء الطلب أولًا');
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
             'available_quantity' => 'integer',
         ];
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     protected function color(): Attribute

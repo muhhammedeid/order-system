@@ -2,9 +2,19 @@
 
 Technical/schema decisions that deviate from, or refine, `05-DATABASE-SCHEMA.md`. These are engineering choices, not business requirements.
 
+## P04-W02 — Order item variant reference (approved deviation)
+
+The original `order_items` schema stores only `product_id` plus historical snapshots (code, name, color, size, price fields). With the approved two-stage order lifecycle, `new → confirmed` must decrement a **specific** `ProductVariant` row and `confirmed → cancelled` must restore that exact row — snapshot text (`product_id + color + size`) cannot be trusted for stock operations.
+
+- `order_items.product_variant_id` (nullable, FK → `product_variants.id`, `nullOnDelete()`) was added as the **operational stock reference**.
+- Snapshot columns (`product_id`, `product_code`, `product_name`, `color`, `size`, quantity, prices, `price_visibility`) remain unchanged and historical — they are never replaced by relationships.
+- Legacy rows with `NULL product_variant_id` fail confirmation safely with a clear admin error (never guessed).
+- `ProductVariant` rows referenced by a **confirmed** order cannot be deleted (application-level guard, no soft deletes/ledger); product deletion is also blocked when it would cascade such variants.
+- Status transitions (`new → confirmed` decrement, `confirmed → cancelled` restore, `confirmed → exported`, terminal `exported`/`cancelled`) are enforced server-side in the `Order` model; `status` is not mass-assignable, changes happen only through approved transition methods/actions.
+
 ## P03-W03 — Ordering behavior
 
-1. **No quantity decrement (approved business decision):** submitting an order does NOT change `product_variants.available_quantity`. No reservation, restock, or stock-movement logic exists. The accounting/inventory system remains the external source of truth; quantities are managed by admin/imports.
+1. **Quantity lifecycle — updated by approved business rule (two-stage):** customer submission does NOT change `product_variants.available_quantity` (the order is a request at this stage). The **only** decrement happens at Operations confirmation (`new → confirmed`), exactly once, inside a transaction with row locks and full revalidation. Cancelling a confirmed order restores the deducted quantities exactly once. `exported` and `cancelled` are terminal. No reservation, restock, or stock-movement logic exists; the accounting/inventory system remains the external source of truth.
 2. **Customer/orders FK delete behavior:** the original schema does not define delete behavior for `orders.customer_id`. Chosen: `restrictOnDelete` — customers with orders cannot be deleted, so historical order/customer data always remains intact.
 3. **`order_items.product_id` FK:** `nullOnDelete` — deleting a product never destroys order snapshots (`product_code`, `product_name`, color, size, quantities, prices stay).
 4. **Order numbering:** `ORD-<year>-<5 digits>` sequential. A candidate number is derived from the current year's max sequence inside the order transaction; `unique(order_number)` is the final integrity guarantee and a duplicate collision triggers a bounded retry (max 5) with a regenerated number. No sequence table.

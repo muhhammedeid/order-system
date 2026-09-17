@@ -34,6 +34,19 @@ class Product extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (self $product) {
+            $referencedByConfirmed = $product->variants()
+                ->whereHas('orderItems.order', fn ($query) => $query->where('status', \App\Enums\OrderStatus::Confirmed->value))
+                ->exists();
+
+            if ($referencedByConfirmed) {
+                throw new \RuntimeException('لا يمكن حذف المنتج لأن بعض مقاساته مرتبطة بطلبات مؤكدة — يمكن إلغاء الطلبات أولًا');
+            }
+        });
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
