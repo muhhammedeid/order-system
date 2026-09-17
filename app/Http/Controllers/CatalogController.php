@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PriceVisibility;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\VariantColor;
 use App\Models\VariantSize;
 use Illuminate\Http\Request;
@@ -77,7 +78,31 @@ class CatalogController extends Controller
                 'images' => $product->images->map(fn ($image) => $image->image_path)->values()->all(),
             ],
             'variants' => $this->variantProps($product),
+            'whatsapp' => $this->whatsappProps($product),
         ]);
+    }
+
+    private function whatsappProps(Product $product): ?array
+    {
+        if ($product->price_visibility !== PriceVisibility::RequestPrice) {
+            return null;
+        }
+
+        $number = Setting::whatsappNumber();
+
+        if ($number === null) {
+            return null;
+        }
+
+        $message = "مرحبًا، أريد معرفة سعر المنتج {$product->name}\n"
+            . "Code: {$product->product_code}\n"
+            . 'Product Link: ' . route('product.show', ['product' => $product->slug]);
+
+        return [
+            'number' => $number,
+            'message' => $message,
+            'href' => "https://wa.me/{$number}?text=" . rawurlencode($message),
+        ];
     }
 
     private function variantProps(Product $product): array

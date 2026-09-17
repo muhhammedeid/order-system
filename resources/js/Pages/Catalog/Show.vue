@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import StorefrontLayout from '@/Layouts/StorefrontLayout.vue';
 import ProductGallery from '@/Components/ProductGallery.vue';
 import VariantSelector from '@/Components/VariantSelector.vue';
+import WhatsAppPriceButton from '@/Components/WhatsAppPriceButton.vue';
 
 const props = defineProps({
     product: {
@@ -13,6 +14,10 @@ const props = defineProps({
     variants: {
         type: Array,
         default: () => [],
+    },
+    whatsapp: {
+        type: Object,
+        default: null,
     },
 });
 
@@ -66,6 +71,11 @@ const formatter = new Intl.NumberFormat('ar-EG', {
                 >
                     {{ formatter.format(product.price) }} EGP
                 </p>
+
+                <WhatsAppPriceButton
+                    v-if="whatsapp"
+                    :href="whatsapp.href"
+                />
 
                 <VariantSelector
                     v-if="variants.length"

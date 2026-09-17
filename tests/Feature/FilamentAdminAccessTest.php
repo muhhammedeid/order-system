@@ -38,5 +38,6 @@ class FilamentAdminAccessTest extends TestCase
         $product = \App\Models\Product::factory()->create();
 
         $this->actingAs($admin)->get("/admin/products/{$product->getKey()}/edit")->assertStatus(200);
+        $this->actingAs($admin)->get('/admin/settings')->assertStatus(200);
     }
 }
