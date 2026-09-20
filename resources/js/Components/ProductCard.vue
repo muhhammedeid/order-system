@@ -31,7 +31,7 @@ const colorsLabel = computed(() => {
         <div class="relative aspect-square w-full overflow-hidden bg-surface-muted">
             <img
                 v-if="product.image"
-                :src="`/storage/${product.image}`"
+                :src="product.image"
                 :alt="product.name"
                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"

@@ -87,7 +87,7 @@ class Cart
             ->orderBy('id')
             ->get(['product_id', 'image_path'])
             ->groupBy('product_id')
-            ->map(fn ($rows) => $rows->first()->image_path);
+            ->map(fn ($rows) => $rows->first()->url());
 
         $items = [];
         $totalQuantity = 0;

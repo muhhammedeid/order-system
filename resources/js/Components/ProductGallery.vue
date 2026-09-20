@@ -41,7 +41,7 @@ function step(delta) {
         <div class="group relative aspect-square w-full overflow-hidden rounded-card border-2 border-line bg-surface-muted">
             <img
                 v-if="mainImage"
-                :src="`/storage/${mainImage}`"
+                :src="mainImage"
                 :alt="alt"
                 class="h-full w-full object-cover"
                 decoding="async"
@@ -105,7 +105,7 @@ function step(delta) {
                 @click="mainIndex = index"
             >
                 <img
-                    :src="`/storage/${image}`"
+                    :src="image"
                     :alt="`${alt} — صورة ${index + 1}`"
                     class="h-full w-full object-cover"
                     loading="lazy"

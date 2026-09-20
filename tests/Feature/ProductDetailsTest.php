@@ -51,9 +51,9 @@ class ProductDetailsTest extends TestCase
         $this->get("/product/{$product->slug}")
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.images', [
-                    'products/images/first.png',
-                    'products/images/second.png',
-                    'products/images/third.png',
+                    url('/storage/products/images/first.png'),
+                    url('/storage/products/images/second.png'),
+                    url('/storage/products/images/third.png'),
                 ]));
     }
 

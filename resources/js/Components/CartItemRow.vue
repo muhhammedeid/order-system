@@ -38,7 +38,7 @@ const unitPriceLabel = computed(() =>
             >
                 <img
                     v-if="item.product.image"
-                    :src="`/storage/${item.product.image}`"
+                    :src="item.product.image"
                     :alt="item.product.name"
                     class="h-full w-full object-cover"
                     loading="lazy"

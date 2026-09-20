@@ -25,7 +25,7 @@ class CatalogPresenter
             'price_visibility' => $product->price_visibility->value,
             'price' => $isPublic ? $product->price : null,
             'category' => $product->category?->only('id', 'name'),
-            'image' => $images->first()->image_path ?? null,
+            'image' => $images->first()?->url(),
             'images_count' => $images->count(),
             'colors_count' => $variants->pluck('color')->unique()->count(),
         ];

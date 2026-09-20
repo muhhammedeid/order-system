@@ -46,7 +46,7 @@ class ProductionRequirementsWidget extends Widget
                     'name' => $product->name,
                     'code' => $product->product_code,
                     'active' => (bool) $product->active,
-                    'image' => $product->images->first()?->image_path,
+                    'image' => $product->images->first()?->url(),
                     'required_quantity' => (int) $row->required_quantity,
                     'orders_count' => (int) $row->orders_count,
                 ];

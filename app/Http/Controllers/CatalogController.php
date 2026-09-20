@@ -82,7 +82,7 @@ class CatalogController extends Controller
                 'price_visibility' => $product->price_visibility->value,
                 'price' => $product->price_visibility === PriceVisibility::PublicPrice ? $product->price : null,
                 'size_enabled' => $product->size_enabled,
-                'images' => $product->images->map(fn ($image) => $image->image_path)->values()->all(),
+                'images' => $product->images->map(fn ($image) => $image->url())->values()->all(),
             ],
             'variants' => $this->variantProps($product),
             'whatsapp' => $this->whatsappProps($product),
@@ -93,7 +93,7 @@ class CatalogController extends Controller
                     ? mb_substr(strip_tags($product->description), 0, 155)
                     : "اطلب {$product->name} بالجملة من MAI SHOES — كود المنتج {$product->product_code}.",
                 'type' => 'product',
-                'image' => $firstImage ? url("/storage/{$firstImage->image_path}") : null,
+                'image' => $firstImage?->url(),
             ],
         ]);
     }

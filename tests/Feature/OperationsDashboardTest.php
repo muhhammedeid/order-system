@@ -252,7 +252,7 @@ class OperationsDashboardTest extends TestCase
 
         $this->assertSame(8, $rowA['required_quantity']);
         $this->assertSame(2, $rowA['orders_count']);
-        $this->assertSame('products/images/a.jpg', $rowA['image']);
+        $this->assertSame(url('/storage/products/images/a.jpg'), $rowA['image']);
         $this->assertSame('SH-A', $rowA['code']);
 
         $rowB = $requirements->firstWhere('id', $productB->id);

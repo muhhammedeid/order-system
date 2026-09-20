@@ -75,7 +75,7 @@ class ProductForm
                             ->label('Image')
                             ->image()
                             ->acceptedFileTypes(['image/*'])
-                            ->disk('public')
+                            ->disk(config('filesystems.product_images_disk'))
                             ->directory('products/images')
                             ->required(),
                         Hidden::make('sort_order')

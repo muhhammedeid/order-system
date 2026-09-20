@@ -23,7 +23,7 @@
                     >
                         @if ($requirement['image'])
                             <img
-                                src="{{ url('/storage/'.$requirement['image']) }}"
+                                src="{{ $requirement['image'] }}"
                                 alt="صورة {{ $requirement['name'] }}"
                                 loading="lazy"
                                 style="width: 100%; height: 8.75rem; object-fit: cover; border-radius: 0.5rem;"
