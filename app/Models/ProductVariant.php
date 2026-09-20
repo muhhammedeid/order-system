@@ -39,7 +39,7 @@ class ProductVariant extends Model
         static::saving(function (self $variant) {
             $color = trim((string) $variant->color);
 
-            if ($color === '') {
+            if ($color === '' && (! $variant->exists || $variant->isDirty('color'))) {
                 throw ValidationException::withMessages([
                     'color' => 'اللون مطلوب لكل صنف حتى يظهر ضمن الألوان المتاحة للعميل.',
                 ]);
