@@ -108,7 +108,7 @@ function confirmDialog() {
                     v-if="items.length"
                     class="text-sm text-ink-muted"
                 >
-                    {{ items.length }} صنف · الكمية الشاملة {{ total_quantity }}
+                    {{ items.length }} صنف · إجمالي {{ total_quantity }} قطعة
                 </p>
             </div>
 

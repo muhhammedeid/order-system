@@ -102,7 +102,7 @@ class OrderController extends Controller
 
             $variants = ProductVariant::query()
                 ->whereIn('id', $variantIds)
-                ->with(['product:id,product_code,name,price_visibility,price,active'])
+                ->with(['product:id,product_code,name,price_visibility,price,active,size_enabled'])
                 ->get()
                 ->keyBy('id');
 
@@ -125,6 +125,8 @@ class OrderController extends Controller
                 if ($item['quantity'] < 1) {
                     throw ValidationException::withMessages(['cart' => 'الكمية يجب أن تكون أكبر من صفر']);
                 }
+
+                $this->validateQuantityDistribution($selected, (int) $item['quantity']);
             }
 
             $customer = Customer::matchOrCreate($customerData);
@@ -145,7 +147,9 @@ class OrderController extends Controller
                 OrderItem::create(
                     $snapshot + [
                         'order_id' => $order->id,
-                        'quantity' => $item['quantity'],
+                        'requested_quantity' => $item['quantity'],
+                        'color_count' => $item['color_count'],
+                        'quantity' => $item['pieces_quantity'],
                     ]
                 );
             }
@@ -160,5 +164,44 @@ class OrderController extends Controller
 
         return $errorCode === 1062
             && str_contains($exception->getMessage(), 'orders_order_number_unique');
+    }
+
+    private function validateQuantityDistribution($variants, int $quantity): void
+    {
+        $product = $variants->first()?->product;
+
+        if (! $product) {
+            return;
+        }
+
+        $colorCount = max(1, $variants->pluck('color')->filter()->unique()->count());
+
+        if ($quantity > intdiv(OrderItem::MAX_QUANTITY, $colorCount)) {
+            throw ValidationException::withMessages([
+                'cart' => 'إجمالي عدد القطع يتجاوز الحد المسموح.',
+            ]);
+        }
+
+        if ($product->size_enabled) {
+            return;
+        }
+
+        $sizeCounts = $variants
+            ->groupBy(fn (ProductVariant $variant): string => (string) $variant->color)
+            ->map(fn ($group): int => $group->pluck('size')->filter()->unique()->count());
+
+        if ($sizeCounts->isEmpty() || $sizeCounts->contains(0)) {
+            throw ValidationException::withMessages([
+                'cart' => 'أحد المنتجات لا يحتوي على المقاسات الافتراضية لكل لون.',
+            ]);
+        }
+
+        foreach ($sizeCounts->unique() as $sizeCount) {
+            if ($quantity % $sizeCount !== 0) {
+                throw ValidationException::withMessages([
+                    'cart' => "يجب أن تقبل كمية المنتج القسمة على عدد المقاسات المتاحة ({$sizeCount}).",
+                ]);
+            }
+        }
     }
 }

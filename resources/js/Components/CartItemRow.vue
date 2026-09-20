@@ -103,10 +103,19 @@ const unitPriceLabel = computed(() =>
                 <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
                     <QuantityStepper
                         :model-value="item.quantity"
+                        label="الكمية لكل لون"
+                        :min="item.quantity_step"
+                        :step="item.quantity_step"
                         :busy="busy"
                         :error="error"
                         @update:model-value="emit('update-quantity', item, $event)"
                     />
+
+                    <p class="text-sm text-ink-muted">
+                        إجمالي القطع:
+                        <strong class="tabular-nums text-ink">{{ item.pieces_quantity }}</strong>
+                        ({{ item.quantity }} × {{ item.color_count }} لون)
+                    </p>
 
                     <div
                         v-if="item.line_total"

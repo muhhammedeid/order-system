@@ -325,7 +325,8 @@ class AdminExcelExportTest extends TestCase
         $this->assertSame([
             'Order No', 'Order Date', 'Customer Code', 'Customer Name', 'Phone',
             'Product Code', 'Product Name', 'Color', 'Size',
-            'Ordered Qty', 'Delivered Qty', 'Remaining Qty', 'Status', 'Unit Price',
+            'Qty Per Color', 'Color Count', 'Total Pieces', 'Delivered Qty',
+            'Remaining Qty', 'Status', 'Unit Price',
         ], $this->headers($sheet));
 
         $this->assertSame(3, $sheet->getHighestRow());
@@ -343,16 +344,18 @@ class AdminExcelExportTest extends TestCase
         $this->assertSame('Black', $sheet->getCell('H2')->getValue());
         $this->assertSame('41', $sheet->getCell('I2')->getValue());
         $this->assertSame(5, (int) $sheet->getCell('J2')->getValue());
-        $this->assertSame(2, (int) $sheet->getCell('K2')->getValue());
-        $this->assertSame(3, (int) $sheet->getCell('L2')->getValue());
-        $this->assertSame(OrderStatus::PartiallyDelivered->label(), $sheet->getCell('M2')->getValue());
-        $this->assertSame(250.0, (float) $sheet->getCell('N2')->getValue());
+        $this->assertSame(1, (int) $sheet->getCell('K2')->getValue());
+        $this->assertSame(5, (int) $sheet->getCell('L2')->getValue());
+        $this->assertSame(2, (int) $sheet->getCell('M2')->getValue());
+        $this->assertSame(3, (int) $sheet->getCell('N2')->getValue());
+        $this->assertSame(OrderStatus::PartiallyDelivered->label(), $sheet->getCell('O2')->getValue());
+        $this->assertSame(250.0, (float) $sheet->getCell('P2')->getValue());
 
         $this->assertSame('SH-2', $sheet->getCell('F3')->getValue());
         $this->assertSame('Sandal', $sheet->getCell('G3')->getValue());
         $this->assertNull($sheet->getCell('I3')->getValue());
-        $this->assertSame(4, (int) $sheet->getCell('L3')->getValue());
-        $this->assertNull($sheet->getCell('N3')->getValue());
+        $this->assertSame(4, (int) $sheet->getCell('N3')->getValue());
+        $this->assertNull($sheet->getCell('P3')->getValue());
     }
 
     public function test_order_management_export_respects_the_active_status_tab(): void

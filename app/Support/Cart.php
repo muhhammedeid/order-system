@@ -76,7 +76,38 @@ class Cart
 
     public static function count(): int
     {
-        return array_sum(array_column(self::items(), 'quantity'));
+        return self::hydrated()['total_quantity'];
+    }
+
+    /** @return array<int, int> */
+    public static function variantIdsFor(string|int $identifier): array
+    {
+        foreach (self::items() as $item) {
+            if (self::matches($item, $identifier)) {
+                return array_values(array_unique(array_map(
+                    'intval',
+                    $item['variant_ids'] ?? [$item['variant_id']],
+                )));
+            }
+        }
+
+        return [];
+    }
+
+    /** @param array<int, int> $variantIds */
+    public static function requestedQuantityFor(array $variantIds): int
+    {
+        $variantIds = array_values(array_unique(array_map('intval', $variantIds)));
+        sort($variantIds);
+        $lineId = sha1(implode(',', $variantIds));
+
+        foreach (self::items() as $item) {
+            if (($item['line_id'] ?? null) === $lineId) {
+                return (int) ($item['quantity'] ?? 0);
+            }
+        }
+
+        return 0;
     }
 
     public static function hydrated(): array
@@ -90,7 +121,7 @@ class Cart
 
         $variants = ProductVariant::query()
             ->whereIn('id', $variantIds)
-            ->with(['product:id,slug,name,product_code,price_visibility,price,active'])
+            ->with(['product:id,slug,name,product_code,price_visibility,price,active,size_enabled'])
             ->get()
             ->keyBy('id');
 
@@ -123,6 +154,11 @@ class Cart
             $quantity = (int) $storedItem['quantity'];
             $colors = $selected->pluck('color')->filter()->unique()->values()->all();
             $sizes = $selected->pluck('size')->filter()->unique()->values()->all();
+            $colorCount = max(1, count($colors));
+            $piecesQuantity = $quantity * $colorCount;
+            $quantityStep = $product->size_enabled
+                ? 1
+                : self::distributionStep($selected);
             $lineId = $storedItem['line_id'] ?? sha1(implode(',', $ids));
 
             $items[] = [
@@ -130,6 +166,9 @@ class Cart
                 'variant_id' => $anchor->id,
                 'variant_ids' => $ids,
                 'quantity' => $quantity,
+                'color_count' => $colorCount,
+                'pieces_quantity' => $piecesQuantity,
+                'quantity_step' => $quantityStep,
                 'color' => implode('، ', $colors),
                 'size' => implode('، ', $sizes),
                 'product' => [
@@ -142,13 +181,13 @@ class Cart
                     'image' => $images->get($product->id),
                 ],
                 'unit_price' => $isPublic ? $product->price : null,
-                'line_total' => $isPublic ? bcmul((string) $product->price, (string) $quantity, 2) : null,
+                'line_total' => $isPublic ? bcmul((string) $product->price, (string) $piecesQuantity, 2) : null,
             ];
 
-            $totalQuantity += $quantity;
+            $totalQuantity += $piecesQuantity;
 
             if ($isPublic) {
-                $publicTotal = bcadd($publicTotal, bcmul((string) $product->price, (string) $quantity, 2), 2);
+                $publicTotal = bcadd($publicTotal, bcmul((string) $product->price, (string) $piecesQuantity, 2), 2);
             }
         }
 
@@ -163,5 +202,37 @@ class Cart
     {
         return (string) ($item['line_id'] ?? '') === (string) $identifier
             || (int) ($item['variant_id'] ?? 0) === (int) $identifier;
+    }
+
+    private static function distributionStep($variants): int
+    {
+        $sizeCounts = $variants
+            ->groupBy(fn (ProductVariant $variant): string => (string) $variant->color)
+            ->map(fn ($group): int => $group->pluck('size')->filter()->unique()->count())
+            ->filter(fn (int $count): bool => $count > 0)
+            ->values();
+
+        if ($sizeCounts->isEmpty()) {
+            return 1;
+        }
+
+        return $sizeCounts->reduce(
+            fn (int $step, int $count): int => self::leastCommonMultiple($step, $count),
+            1,
+        );
+    }
+
+    private static function leastCommonMultiple(int $left, int $right): int
+    {
+        return intdiv($left * $right, self::greatestCommonDivisor($left, $right));
+    }
+
+    private static function greatestCommonDivisor(int $left, int $right): int
+    {
+        while ($right !== 0) {
+            [$left, $right] = [$right, $left % $right];
+        }
+
+        return max(1, $left);
     }
 }

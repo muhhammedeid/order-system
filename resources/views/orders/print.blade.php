@@ -292,7 +292,9 @@
                         <th>اسم المنتج</th>
                         <th>اللون</th>
                         <th>المقاس</th>
-                        <th>الكمية</th>
+                        <th>الكمية لكل لون</th>
+                        <th>عدد الألوان</th>
+                        <th>إجمالي القطع</th>
                         <th>سعر الوحدة</th>
                         <th>إجمالي البند</th>
                     </tr>
@@ -304,6 +306,8 @@
                             <td>{{ $item->product_name }}</td>
                             <td>{{ $item->color ?? '—' }}</td>
                             <td>{{ $item->size ?? '—' }}</td>
+                            <td class="num">{{ $item->requested_quantity }}</td>
+                            <td class="num">{{ $item->color_count }}</td>
                             <td class="num">{{ $item->quantity }}</td>
                             <td class="num">
                                 @if ($item->unit_price === null)

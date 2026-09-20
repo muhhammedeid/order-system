@@ -69,7 +69,12 @@ class OrderCreationTest extends TestCase
     public function test_unsized_order_item_snapshot_has_null_size(): void
     {
         $variant = ProductVariant::factory()
-            ->for(Product::factory()->create(['price_visibility' => 'public', 'price' => 450]))
+            ->for(Product::factory()->create([
+                'price_visibility' => 'public',
+                'price' => 450,
+                'color_enabled' => true,
+                'size_enabled' => true,
+            ]))
             ->create(['color' => 'Black', 'size' => null, 'available_quantity' => 10]);
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2]);
@@ -109,6 +114,9 @@ class OrderCreationTest extends TestCase
 
         $this->assertSame('Black، White', $item->color);
         $this->assertSame('40، 41', $item->size);
+        $this->assertSame(2, $item->requested_quantity);
+        $this->assertSame(2, $item->color_count);
+        $this->assertSame(4, $item->quantity);
         $this->assertSame('450.00', $item->unit_price);
     }
 

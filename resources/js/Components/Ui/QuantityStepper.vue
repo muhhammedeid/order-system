@@ -15,6 +15,10 @@ const props = defineProps({
         type: Number,
         default: null,
     },
+    step: {
+        type: Number,
+        default: 1,
+    },
     label: {
         type: String,
         default: 'الكمية',
@@ -62,7 +66,7 @@ function commit(value) {
 }
 
 function step(delta) {
-    commit(draft.value + delta);
+    commit(draft.value + (delta * props.step));
 }
 
 function onBlur() {
@@ -97,6 +101,7 @@ function onBlur() {
                 inputmode="numeric"
                 :min="min"
                 :max="max ?? undefined"
+                :step="step"
                 :aria-label="label"
                 :aria-invalid="error ? 'true' : undefined"
                 :aria-busy="busy ? 'true' : undefined"

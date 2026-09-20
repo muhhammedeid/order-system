@@ -131,7 +131,10 @@ of the choice toggle. `size` is optional because some products are genuinely siz
 The generated `color_key`/`size_key` columns preserve combination uniqueness and
 legacy nullable rows remain readable.
 
-`available_quantity` is an internal Admin reference only. It is not exposed to customers and never blocks ordering: the storefront accepts any positive requested quantity (Revision R01).
+`available_quantity` is an internal Admin reference only. It is not exposed to customers
+and never blocks ordering. Storefront quantity is entered per color; when customer size
+choice is disabled it must divide evenly by the available size count for each selected
+color.
 
 ---
 
@@ -192,6 +195,8 @@ product_code
 product_name
 color nullable
 size nullable
+requested_quantity
+color_count
 quantity
 delivered_quantity
 unit_price nullable
@@ -207,8 +212,15 @@ are snapshots. `color` and `size` are nullable text fields and may contain a
 human-readable list when one order line includes multiple variants. Historical
 snapshots are never rewritten.
 
-`quantity` is the single global requested quantity for the order line. It is not
-multiplied by the number of colors or sizes represented by that line.
+`requested_quantity` is the quantity requested per color. `color_count` is the number
+of selected colors (or all available colors when color choice is disabled). `quantity`
+is the derived actual-piece total: `requested_quantity × color_count`. Sizes do not
+multiply this value. For products whose size choice is disabled, requested quantity
+must divide evenly by the available size count for each selected color.
+
+Rows created before the quantity-breakdown migration retain their historical
+`quantity`; they are initialized with `requested_quantity = quantity` and
+`color_count = 1` so historical production and delivery totals never change.
 
 `product_variant_id` is the operational variant reference used by Admin order operations (editing, delivery tracking). It is `nullOnDelete`.
 

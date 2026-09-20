@@ -91,8 +91,14 @@ class OrderInfolist
                                 TextEntry::make('size')
                                     ->label('المقاس')
                                     ->placeholder('—'),
+                                TextEntry::make('requested_quantity')
+                                    ->label('الكمية لكل لون')
+                                    ->numeric(),
+                                TextEntry::make('color_count')
+                                    ->label('عدد الألوان')
+                                    ->numeric(),
                                 TextEntry::make('quantity')
-                                    ->label('الكمية')
+                                    ->label('إجمالي القطع')
                                     ->numeric(),
                                 TextEntry::make('delivered_quantity')
                                     ->label('تم تسليمه')

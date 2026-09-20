@@ -34,7 +34,11 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                     <span class="block text-xs text-ink-muted">
                         <template v-if="item.color">{{ item.color }}</template>
                         <template v-if="item.size"><template v-if="item.color"> / </template><span class="tabular-nums">{{ item.size }}</span></template>
-                        <span class="ms-1">× <span class="tabular-nums">{{ formatQuantity(item.quantity) }}</span></span>
+                        <span class="ms-1">
+                            · {{ formatQuantity(item.quantity) }} لكل لون
+                            × {{ formatQuantity(item.color_count) }} لون
+                            = {{ formatQuantity(item.pieces_quantity) }} قطعة
+                        </span>
                     </span>
                 </span>
 
@@ -55,7 +59,7 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
 
         <dl class="flex flex-col gap-2 border-t-2 border-line pt-3">
             <div class="flex items-center justify-between text-sm">
-                <dt class="text-ink-muted">إجمالي الكميات الشاملة</dt>
+                <dt class="text-ink-muted">إجمالي القطع</dt>
                 <dd class="font-bold tabular-nums text-ink">
                     {{ formatQuantity(totalQuantity) }}
                 </dd>

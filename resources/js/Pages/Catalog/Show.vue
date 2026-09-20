@@ -56,6 +56,52 @@ const flatVariants = computed(() =>
     ),
 );
 
+const selectedGroupsForOrder = computed(() => {
+    if (! colorEnabled.value) {
+        return props.variants;
+    }
+
+    return props.variants.filter((group) => selectedColors.value.includes(group.color));
+});
+
+const selectedColorCount = computed(() => Math.max(1, selectedGroupsForOrder.value.length));
+
+const selectedSizeCounts = computed(() =>
+    selectedGroupsForOrder.value.map((group) =>
+        new Set(group.sizes.map((variant) => variant.size).filter(Boolean)).size,
+    ),
+);
+
+function greatestCommonDivisor(left, right) {
+    while (right !== 0) {
+        [left, right] = [right, left % right];
+    }
+
+    return Math.max(1, left);
+}
+
+const quantityStep = computed(() => {
+    if (sizeEnabled.value) {
+        return 1;
+    }
+
+    const counts = selectedSizeCounts.value.filter((count) => count > 0);
+
+    return counts.reduce(
+        (step, count) => (step * count) / greatestCommonDivisor(step, count),
+        1,
+    );
+});
+
+const piecesQuantity = computed(() => form.quantity * selectedColorCount.value);
+const lineTotalPreview = computed(() => {
+    if (props.product.price === null) {
+        return null;
+    }
+
+    return Number(props.product.price) * piecesQuantity.value;
+});
+
 const selectedVariantIds = computed(() => {
     if (! colorEnabled.value) {
         return flatVariants.value.map((variant) => variant.id);
@@ -113,6 +159,22 @@ function addToOrder() {
         quantityError.value = 'أدخل كمية صحيحة أكبر من صفر';
 
         return;
+    }
+
+    if (! sizeEnabled.value) {
+        if (selectedSizeCounts.value.some((count) => count === 0)) {
+            quantityError.value = 'لا يمكن الطلب قبل تعيين المقاسات الافتراضية لكل لون';
+
+            return;
+        }
+
+        const invalidCount = selectedSizeCounts.value.find((count) => form.quantity % count !== 0);
+
+        if (invalidCount) {
+            quantityError.value = `يجب أن تقبل الكمية القسمة على عدد المقاسات المتاحة (${invalidCount})`;
+
+            return;
+        }
     }
 
     colorError.value = null;
@@ -217,9 +279,33 @@ const pickerError = computed(
 
                             <QuantityPicker
                                 v-model="form.quantity"
+                                label="الكمية لكل لون"
+                                :min="quantityStep"
+                                :step="quantityStep"
                                 :busy="form.processing"
                                 :error="pickerError"
                             />
+
+                            <div class="rounded-control border border-line bg-surface-soft px-3 py-2 text-sm text-ink-muted">
+                                <p>
+                                    إجمالي القطع:
+                                    <strong class="tabular-nums text-ink">{{ piecesQuantity }}</strong>
+                                    ({{ form.quantity }} × {{ selectedColorCount }} لون)
+                                </p>
+                                <p
+                                    v-if="lineTotalPreview !== null"
+                                    class="mt-1"
+                                >
+                                    إجمالي المبلغ:
+                                    <strong class="tabular-nums text-ink">{{ lineTotalPreview.toLocaleString('ar-EG') }} ج.م</strong>
+                                </p>
+                                <p
+                                    v-if="! sizeEnabled"
+                                    class="mt-1 text-xs"
+                                >
+                                    يجب أن تقبل الكمية القسمة على {{ quantityStep }} لتوزيعها بالتساوي على المقاسات.
+                                </p>
+                            </div>
                         </div>
 
                         <p

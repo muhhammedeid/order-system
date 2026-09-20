@@ -77,7 +77,9 @@ class OrderItemsExport extends BusinessExport implements WithColumnFormatting
             'Product Name',
             'Color',
             'Size',
-            'Ordered Qty',
+            'Qty Per Color',
+            'Color Count',
+            'Total Pieces',
             'Delivered Qty',
             'Remaining Qty',
             'Status',
@@ -103,6 +105,8 @@ class OrderItemsExport extends BusinessExport implements WithColumnFormatting
             $record->product_name,
             $record->color,
             $record->size,
+            $record->requested_quantity,
+            $record->color_count,
             $record->quantity,
             $record->delivered_quantity,
             $record->remaining_quantity,
@@ -117,7 +121,7 @@ class OrderItemsExport extends BusinessExport implements WithColumnFormatting
     public function columnFormats(): array
     {
         return [
-            'N' => '#,##0.00',
+            'P' => '#,##0.00',
         ];
     }
 

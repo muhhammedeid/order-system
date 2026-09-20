@@ -33,6 +33,8 @@ class CartController extends Controller
 
         $requestedIds = $validated['variant_ids'] ?? [(int) $validated['variant_id']];
         $variantIds = $this->canonicalVariantIds($requestedIds);
+        $resultingQuantity = Cart::requestedQuantityFor($variantIds) + (int) $validated['quantity'];
+        $this->validateQuantityDistribution($variantIds, $resultingQuantity);
         $variant = ProductVariant::query()->with('product:id,name,active')->find($variantIds[0]);
 
         Cart::add($variantIds, $validated['quantity']);
@@ -61,7 +63,23 @@ class CartController extends Controller
         }
 
         $validated = $validator->validated();
-        Cart::update($validated['line_id'] ?? (int) $validated['variant_id'], $validated['quantity']);
+        $identifier = $validated['line_id'] ?? (int) $validated['variant_id'];
+        $variantIds = Cart::variantIdsFor($identifier);
+
+        if ($variantIds === []) {
+            return back()->withErrors(['cart' => 'بند الطلب لم يعد موجودًا']);
+        }
+
+        try {
+            $this->validateQuantityDistribution($variantIds, (int) $validated['quantity']);
+        } catch (ValidationException $exception) {
+            $validator->errors()->add('quantity', $exception->errors()['quantity'][0] ?? 'الكمية غير صالحة');
+            $validator->errors()->add('quantity_line', (string) $identifier);
+
+            throw new ValidationException($validator);
+        }
+
+        Cart::update($identifier, $validated['quantity']);
 
         return back();
     }
@@ -147,5 +165,46 @@ class CartController extends Controller
             ->map(fn ($id): int => (int) $id)
             ->all();
     }
-}
 
+    /** @param array<int, int> $variantIds */
+    private function validateQuantityDistribution(array $variantIds, int $quantity): void
+    {
+        $variants = ProductVariant::query()
+            ->whereIn('id', $variantIds)
+            ->with('product')
+            ->get();
+        $product = $variants->first()?->product;
+
+        if (! $product || $variants->count() !== count($variantIds)) {
+            throw ValidationException::withMessages(['quantity' => 'تعذر التحقق من توزيع الكمية']);
+        }
+
+        $colorCount = max(1, $variants->pluck('color')->filter()->unique()->count());
+
+        if ($quantity > intdiv(OrderItem::MAX_QUANTITY, $colorCount)) {
+            throw ValidationException::withMessages(['quantity' => 'إجمالي عدد القطع يتجاوز الحد المسموح']);
+        }
+
+        if ($product->size_enabled) {
+            return;
+        }
+
+        $sizeCounts = $variants
+            ->groupBy(fn (ProductVariant $variant): string => (string) $variant->color)
+            ->map(fn ($group): int => $group->pluck('size')->filter()->unique()->count());
+
+        if ($sizeCounts->isEmpty() || $sizeCounts->contains(0)) {
+            throw ValidationException::withMessages([
+                'quantity' => 'لا يمكن الطلب قبل تعيين المقاسات الافتراضية لكل لون.',
+            ]);
+        }
+
+        foreach ($sizeCounts->unique() as $sizeCount) {
+            if ($quantity % $sizeCount !== 0) {
+                throw ValidationException::withMessages([
+                    'quantity' => "يجب أن تقبل الكمية القسمة على عدد المقاسات المتاحة ({$sizeCount}).",
+                ]);
+            }
+        }
+    }
+}

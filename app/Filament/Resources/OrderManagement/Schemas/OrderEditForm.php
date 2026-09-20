@@ -50,7 +50,7 @@ class OrderEditForm
                                 TableColumn::make('اللون / المقاس')
                                     ->width('48%')
                                     ->markAsRequired(),
-                                TableColumn::make('الكمية')
+                                TableColumn::make('الكمية لكل لون')
                                     ->width('15%')
                                     ->markAsRequired(),
                             ])
@@ -99,8 +99,8 @@ class OrderEditForm
                                     })
                                     ->searchable()
                                     ->required(),
-                                TextInput::make('quantity')
-                                    ->label('الكمية')
+                                TextInput::make('requested_quantity')
+                                    ->label('الكمية لكل لون')
                                     ->numeric()
                                     ->integer()
                                     ->minValue(1)

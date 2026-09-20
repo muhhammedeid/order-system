@@ -22,6 +22,8 @@ class ProductVariant extends Model
      */
     public const MAX_QUANTITY = 4294967295;
 
+    public const DEFAULT_SIZE_COUNT = 5;
+
     protected $fillable = [
         'product_id',
         'color',
@@ -144,16 +146,15 @@ class ProductVariant extends Model
      * first insert, and the transaction rolls back on any failure.
      *
      * @param  array<int, array{color?: mixed, quantity?: mixed}>  $colorRows
-     * @param  array<int, mixed> | null  $selectedSizes
      * @return array{created: int, skipped: int}
      */
-    public static function generateMissing(Product $product, array $colorRows, ?array $selectedSizes = null): array
+    public static function generateMissing(Product $product, array $colorRows): array
     {
-        return DB::transaction(function () use ($product, $colorRows, $selectedSizes): array {
+        return DB::transaction(function () use ($product, $colorRows): array {
             /** @var Product $product */
             $product = Product::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
 
-            $sizes = self::generationSizes($product, $selectedSizes);
+            $sizes = self::generationSizes();
 
             if ($colorRows === []) {
                 throw ValidationException::withMessages([
@@ -199,29 +200,19 @@ class ProductVariant extends Model
     }
 
     /**
-     * @param  array<int, mixed> | null  $selectedSizes
      * @return array<int, string | null>
      */
-    protected static function generationSizes(Product $product, ?array $selectedSizes): array
+    protected static function generationSizes(): array
     {
-        if ($selectedSizes === null || $selectedSizes === []) {
-            return [null];
-        }
-
         $activeSizes = VariantSize::activeNames();
 
-        $sizes = array_values(array_intersect(
-            $activeSizes,
-            array_map(fn ($size): string => trim((string) $size), $selectedSizes),
-        ));
-
-        if ($sizes === []) {
+        if (count($activeSizes) !== self::DEFAULT_SIZE_COUNT) {
             throw ValidationException::withMessages([
-                'sizes' => 'لا توجد مقاسات مُفعّلة صالحة للتوليد.',
+                'sizes' => 'يجب أن يكون هناك 5 مقاسات نشطة بالضبط قبل إضافة لون.',
             ]);
         }
 
-        return $sizes;
+        return $activeSizes;
     }
 
     /**

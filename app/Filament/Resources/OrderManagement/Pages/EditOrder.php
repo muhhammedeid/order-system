@@ -30,7 +30,7 @@ class EditOrder extends EditRecord
             'id' => $item->id,
             'product_id' => $item->product_id,
             'product_variant_id' => $item->product_variant_id,
-            'quantity' => $item->quantity,
+            'requested_quantity' => $item->requested_quantity,
         ])->all();
 
         return $data;

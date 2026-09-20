@@ -41,7 +41,9 @@ class OptionalSizeTest extends TestCase
         $this->get('/cart')->assertInertia(fn (Assert $page) => $page
             ->where('items.0.color', 'Black، White')
             ->where('items.0.size', '40')
-            ->where('items.0.quantity', 7));
+            ->where('items.0.quantity', 7)
+            ->where('items.0.color_count', 2)
+            ->where('items.0.pieces_quantity', 14)
+            ->where('total_quantity', 14));
     }
 }
-

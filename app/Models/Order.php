@@ -192,7 +192,7 @@ class Order extends Model
             foreach ($rows as $row) {
                 $itemId = isset($row['id']) && filled($row['id']) ? (int) $row['id'] : null;
                 $variantId = isset($row['product_variant_id']) ? (int) $row['product_variant_id'] : 0;
-                $quantity = $row['quantity'] ?? null;
+                $requestedQuantity = $row['requested_quantity'] ?? $row['quantity'] ?? null;
 
                 if ($itemId !== null) {
                     if (in_array($itemId, $keptIds, true)) {
@@ -206,8 +206,10 @@ class Order extends Model
                     $keptIds[] = $itemId;
                 }
 
-                if (! is_numeric($quantity) || (int) $quantity != $quantity || (int) $quantity < 1) {
-                    throw new OrderItemException('كمية البند يجب أن تكون عددًا صحيحًا أكبر من صفر');
+                if (! is_numeric($requestedQuantity)
+                    || (int) $requestedQuantity != $requestedQuantity
+                    || (int) $requestedQuantity < 1) {
+                    throw new OrderItemException('الكمية لكل لون يجب أن تكون عددًا صحيحًا أكبر من صفر');
                 }
 
                 if ($variantId <= 0) {
@@ -228,9 +230,32 @@ class Order extends Model
 
                 if ($existing && (int) $existing->product_variant_id === $variantId) {
                     // Quantity-only edit: preserve the accepted snapshots.
-                    $attributes = ['quantity' => (int) $quantity];
+                    $colorCount = max(1, (int) $existing->color_count);
+
+                    if ((int) $requestedQuantity > intdiv(OrderItem::MAX_QUANTITY, $colorCount)) {
+                        throw new OrderItemException('إجمالي عدد القطع يتجاوز الحد المسموح');
+                    }
+
+                    if (! $variant->product->size_enabled
+                        && (int) $requestedQuantity % ProductVariant::DEFAULT_SIZE_COUNT !== 0) {
+                        throw new OrderItemException('الكمية لكل لون يجب أن تقبل القسمة على عدد المقاسات الافتراضية (5)');
+                    }
+
+                    $attributes = [
+                        'requested_quantity' => (int) $requestedQuantity,
+                        'quantity' => (int) $requestedQuantity * $colorCount,
+                    ];
                 } else {
-                    $attributes = OrderItem::snapshotFromVariant($variant) + ['quantity' => (int) $quantity];
+                    if (! $variant->product->size_enabled
+                        && (int) $requestedQuantity % ProductVariant::DEFAULT_SIZE_COUNT !== 0) {
+                        throw new OrderItemException('الكمية لكل لون يجب أن تقبل القسمة على عدد المقاسات الافتراضية (5)');
+                    }
+
+                    $attributes = OrderItem::snapshotFromVariant($variant) + [
+                        'requested_quantity' => (int) $requestedQuantity,
+                        'color_count' => 1,
+                        'quantity' => (int) $requestedQuantity,
+                    ];
                 }
 
                 $prepared[] = ['item' => $existing, 'attributes' => $attributes];

@@ -19,6 +19,10 @@ const props = defineProps({
         type: Number,
         default: 4294967295,
     },
+    step: {
+        type: Number,
+        default: 1,
+    },
     label: {
         type: String,
         default: 'الكمية',
@@ -133,6 +137,7 @@ function normalizeCustom() {
                 inputmode="numeric"
                 :min="min"
                 :max="max"
+                :step="step"
                 :aria-label="`${label} مخصصة`"
                 :aria-invalid="error ? 'true' : undefined"
                 :disabled="busy"

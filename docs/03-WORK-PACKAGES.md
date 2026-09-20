@@ -542,28 +542,33 @@ documents live in `Revision phase/`.
   zeros are written as text cells and spreadsheet formula injection is neutralized. Exports
   are read-only and never change order lifecycle state (`exported` remains removed).
 - **R05 — Regression, Documentation & Revised MVP Acceptance: pending.**
-- **R06 — Product & Variant Management UX Revision: implemented.** Admin-only UX revision,
-  no schema change and no migration. (1) Order Items repeater on the order edit page now
+- **R06 — Product & Variant Management UX Revision: implemented.** Admin-only UX revision.
+  (1) Order Items repeater on the order edit page now
   renders as a table (Product 32% / Variant 48% / Quantity 15%) with the delete action at
   row end; on narrow containers it stacks with per-field labels. Order rules, snapshots,
   eligibility and quantity authority are unchanged. (2) The Products list exposes the
   existing create page through an `إضافة منتج` action. (3) Variant Colors and Variant Sizes
   are grouped under an `الإعدادات` navigation group with the general settings page; routes
   and data models are unchanged. (4) Variant generation: active Variant Sizes are the
-  default template (no `default` column); a `توليد أصناف الألوان` action on the Variants
-  relation manager accepts per-color default quantities and an optional size checklist,
-  then creates only missing Product + Color + Size combinations inside one atomic
+  fixed five-size template (no `default` column); an `إضافة لون بالمقاسات الافتراضية`
+  action on the Variants relation manager accepts per-color default quantities and
+  creates every missing Product + Color + Size combination inside one atomic
   transaction. The default quantity is copied into new variants only (never a shared live
   quantity); existing variants are never updated, regenerated or deleted, and changing
-  global sizes never mutates historical products. Size-disabled products generate one
-  unsized variant per color. Individual quantities are edited independently through an
+  global sizes never mutates historical products. Every new color generates the five
+  active size variants even when customer size choice is disabled. Individual quantities are edited independently through an
   inline `TextInputColumn` with server-side column rules, with `ProductVariant::validate()`
   and the `(product_id, color, size_key)` unique index remaining authoritative for every
-  generated record.
+  generated record. The active size lookup must contain exactly five sizes before a new
+  color can be generated.
 - **Out-of-package — Wholesale selection rules (user-approved): implemented.** Product
   variants retain their available colors and optional sizes independently from the storefront
   choice toggles. Disabled color choice displays and orders the complete set; enabled color
   choice supports multiple colors; disabled size choice displays assigned sizes without asking
-  the customer to choose; size choice requires color choice. One global requested quantity is
-  stored per order line and is not multiplied by colors or sizes.
-
+  the customer to choose; size choice requires color choice. Requested quantity is stored
+  per color. Actual pieces equal requested quantity multiplied by the number of selected
+  colors (or every available color when color choice is disabled), and a public line total
+  equals actual pieces multiplied by unit price. Sizes do not multiply the total, but when
+  size choice is disabled the quantity per color must divide evenly by every selected
+  color's available size count. Order items store requested quantity, color count, and the
+  derived actual-piece quantity; pre-migration historical totals are preserved.

@@ -9,11 +9,9 @@ use App\Models\VariantSize;
 use App\Support\Exports\ProductVariantsExport;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -65,11 +63,11 @@ class VariantsRelationManager extends RelationManager
     protected function generateVariantsAction(): Action
     {
         return Action::make('generateVariants')
-            ->label('توليد أصناف الألوان')
+            ->label('إضافة لون بالمقاسات الافتراضية')
             ->icon(Heroicon::OutlinedSparkles)
-            ->modalHeading('توليد أصناف الألوان')
-            ->modalDescription('يتم إنشاء الأصناف الناقصة فقط؛ الأصناف الموجودة لا تتغير كمياتها.')
-            ->modalSubmitActionLabel('توليد')
+            ->modalHeading('إضافة الألوان بالمقاسات الخمسة')
+            ->modalDescription('كل لون سيُضاف تلقائيًا بجميع المقاسات الخمسة النشطة. الأصناف الموجودة لا تتغير.')
+            ->modalSubmitActionLabel('إضافة')
             ->form([
                 Repeater::make('colors')
                     ->label('الألوان والكميات')
@@ -91,20 +89,27 @@ class VariantsRelationManager extends RelationManager
                             ->maxValue(ProductVariant::MAX_QUANTITY)
                             ->required(),
                     ]),
-                CheckboxList::make('sizes')
-                    ->label('المقاسات')
-                    ->options(fn (): array => self::sizeOptions(null))
-                    ->helperText('اتركها فارغة إذا كان المنتج لا يحتوي على مقاسات.'),
             ])
             ->action(function (array $data): void {
+                $sizes = VariantSize::activeNames();
+
+                if (count($sizes) !== ProductVariant::DEFAULT_SIZE_COUNT) {
+                    Notification::make()
+                        ->title('تعذرت إضافة الألوان')
+                        ->body('يجب أن يكون هناك 5 مقاسات نشطة بالضبط في إعدادات المقاسات.')
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
                 $result = ProductVariant::generateMissing(
                     $this->getOwnerRecord(),
                     $data['colors'] ?? [],
-                    $data['sizes'] ?? null,
                 );
 
                 Notification::make()
-                    ->title('توليد أصناف الألوان')
+                    ->title('تمت إضافة الألوان')
                     ->body("تم إنشاء {$result['created']} صنفًا، وتجاهل {$result['skipped']} صنفًا موجودًا.")
                     ->success()
                     ->send();
@@ -188,7 +193,6 @@ class VariantsRelationManager extends RelationManager
                     ->sortable(),
             ])
             ->headerActions([
-                CreateAction::make(),
                 $this->generateVariantsAction(),
                 $this->excelExportAction(
                     'exportExcel',

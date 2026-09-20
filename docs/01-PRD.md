@@ -37,7 +37,7 @@ They can:
 - View available colors and optional sizes.
 - View price when public.
 - Request hidden price through WhatsApp.
-- Add products to an order with any positive quantity.
+- Add products with a positive quantity per color that satisfies the size-distribution rule.
 - Enter customer information.
 - Submit order.
 
@@ -106,7 +106,7 @@ Example:
 
 The system does not manage warehouse transactions.
 
-`available_quantity` is an internal Admin reference only. It is never shown to customers and never blocks ordering: any positive requested quantity is accepted (quantity presets `5`, `10`, or a custom positive integer). Operations may contact the customer and agree on quantities before confirmation.
+`available_quantity` is an internal Admin reference only. It is never shown to customers and never blocks ordering. The requested quantity is entered per color (presets `5`, `10`, or a custom positive integer). Operations may contact the customer and agree on quantities before confirmation.
 
 When `size_enabled` is `false`, assigned sizes are displayed beneath each selected
 color without requiring a size choice.
@@ -115,9 +115,17 @@ When `color_enabled` is `false`, all available colors and their assigned sizes a
 displayed without choice and the order includes the complete set. When it is enabled,
 the customer may select multiple colors.
 
-The requested quantity is one global business quantity per order line. It is never
-multiplied in this system by the number of selected colors or available sizes; the
-factory interprets the physical production quantity outside the ordering system.
+The requested quantity is the quantity per selected color. Total pieces are calculated
+as `requested quantity × selected color count`, and the public-price line total is
+`total pieces × unit price`. When color choice is disabled, every available color is
+included automatically in the color count. Sizes never multiply the total directly.
+
+The five active Variant Sizes are the default size template for every new color. Adding
+a color generates all five Product + Color + Size variants automatically. When customer
+size choice is disabled, the quantity per color must be divisible by the number of sizes
+available for each selected color (five in the standard setup), so it can be distributed
+evenly across those sizes. When size choice is enabled, this divisibility restriction
+does not apply because the customer selects the required size.
 
 ---
 
@@ -230,7 +238,9 @@ Client can:
 - Continue shopping
 - Submit order
 
-Quantity must be a positive integer. It is not limited by `available_quantity`.
+Quantity per color must be a positive integer and is not limited by
+`available_quantity`. When size choice is disabled it must also be divisible by the
+available size count for every selected color.
 
 ---
 

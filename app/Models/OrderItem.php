@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderItem extends Model
 {
@@ -30,6 +31,8 @@ class OrderItem extends Model
         'product_name',
         'color',
         'size',
+        'requested_quantity',
+        'color_count',
         'quantity',
         'unit_price',
         'price_visibility',
@@ -38,6 +41,8 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
+            'requested_quantity' => 'integer',
+            'color_count' => 'integer',
             'quantity' => 'integer',
             'delivered_quantity' => 'integer',
             'unit_price' => 'decimal:2',
@@ -47,6 +52,19 @@ class OrderItem extends Model
     protected static function booted(): void
     {
         static::saving(function (self $item) {
+            $requestedQuantity = (int) ($item->requested_quantity ?: $item->quantity);
+            $colorCount = max(1, (int) ($item->color_count ?: 1));
+
+            if ($requestedQuantity < 1 || $requestedQuantity > intdiv(self::MAX_QUANTITY, $colorCount)) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'إجمالي عدد القطع يتجاوز الحد المسموح.',
+                ]);
+            }
+
+            $item->requested_quantity = $requestedQuantity;
+            $item->color_count = $colorCount;
+            $item->quantity = $requestedQuantity * $colorCount;
+
             $delivered = (int) ($item->delivered_quantity ?? 0);
 
             if ($delivered < 0 || $delivered > (int) $item->quantity) {
