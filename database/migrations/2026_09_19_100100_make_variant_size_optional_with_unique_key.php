@@ -14,30 +14,34 @@ return new class extends Migration
      * rows containing NULL, so uniqueness is enforced through a generated
      * `size_key` column (COALESCE(size, '')) which is indexed together with
      * product_id and color. Indexes on virtual generated columns are
-     * supported by MariaDB (10.11) and MySQL.
+     * supported by MariaDB (10.11), MySQL and TiDB.
+     *
+     * Statement order matters: both size columns become nullable before
+     * size_key is generated, because TiDB rejects modifying a column while
+     * a generated column depends on it.
      */
     public function up(): void
     {
-        Schema::table('product_variants', function (Blueprint $table) {
-            $table->string('size_key')->virtualAs("coalesce(size, '')")->after('size');
-        });
-
-        // The new unique index is created first because it also serves the
-        // product_id foreign key, which the old unique index currently backs.
-        Schema::table('product_variants', function (Blueprint $table) {
-            $table->unique(['product_id', 'color', 'size_key']);
-        });
-
-        Schema::table('product_variants', function (Blueprint $table) {
-            $table->dropUnique(['product_id', 'color', 'size']);
-        });
-
         Schema::table('product_variants', function (Blueprint $table) {
             $table->string('size')->nullable()->change();
         });
 
         Schema::table('order_items', function (Blueprint $table) {
             $table->string('size')->nullable()->change();
+        });
+
+        Schema::table('product_variants', function (Blueprint $table) {
+            $table->string('size_key')->virtualAs("coalesce(size, '')")->after('size');
+        });
+
+        // The new unique index is created before the old one is dropped so
+        // the product_id foreign key is always backed by a unique index.
+        Schema::table('product_variants', function (Blueprint $table) {
+            $table->unique(['product_id', 'color', 'size_key']);
+        });
+
+        Schema::table('product_variants', function (Blueprint $table) {
+            $table->dropUnique(['product_id', 'color', 'size']);
         });
     }
 
