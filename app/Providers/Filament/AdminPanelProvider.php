@@ -31,9 +31,9 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('MAI SHOES')
-            ->brandLogo(url('/favicon.svg'))
+            ->brandLogo('/favicon.svg')
             ->brandLogoHeight('2.25rem')
-            ->favicon(url('/favicon.svg'))
+            ->favicon('/favicon.svg')
             ->font(
                 'IBM Plex Sans Arabic',
                 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap',
