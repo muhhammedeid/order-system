@@ -28,6 +28,7 @@ class ProductDetailsTest extends TestCase
                 ->where('product.product_code', $product->product_code)
                 ->where('product.price', '450.00')
                 ->where('product.price_visibility', 'public')
+                ->where('product.color_enabled', true)
                 ->where('product.size_enabled', false));
     }
 
@@ -90,6 +91,7 @@ class ProductDetailsTest extends TestCase
         $response = $this->get("/product/{$product->slug}");
 
         $response->assertInertia(fn (Assert $page) => $page
+            ->where('product.color_enabled', true)
             ->where('product.size_enabled', true)
             ->has('variants', 2)
             ->where('variants.0.color', 'Black')
@@ -113,6 +115,7 @@ class ProductDetailsTest extends TestCase
 
         $this->get("/product/{$product->slug}")
             ->assertInertia(fn (Assert $page) => $page
+                ->where('product.color_enabled', true)
                 ->where('product.size_enabled', false)
                 ->has('variants', 2)
                 ->where('variants.0.sizes.0.size', null)

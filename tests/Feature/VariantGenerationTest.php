@@ -267,4 +267,54 @@ class VariantGenerationTest extends TestCase
 
         ProductVariant::generateMissing($product, []);
     }
+
+    public function test_color_disabled_size_enabled_products_generate_one_uncolored_variant_per_size(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => true]);
+        $this->sizes(['40', '41']);
+
+        $result = ProductVariant::generateMissing($product, [
+            ['quantity' => 50],
+        ]);
+
+        $this->assertSame(['created' => 2, 'skipped' => 0], $result);
+        $this->assertSame(2, $product->variants()->count());
+        $this->assertSame(2, $product->variants()->whereNull('color')->count());
+        $this->assertSame(50, $product->variants()->where('size', '40')->value('available_quantity'));
+        $this->assertSame(50, $product->variants()->where('size', '41')->value('available_quantity'));
+    }
+
+    public function test_both_dimensions_disabled_products_generate_exactly_one_variant(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => false]);
+
+        $result = ProductVariant::generateMissing($product, [
+            ['quantity' => 25],
+        ]);
+
+        $this->assertSame(['created' => 1, 'skipped' => 0], $result);
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertNull($product->variants()->first()->color);
+        $this->assertNull($product->variants()->first()->size);
+
+        $repeat = ProductVariant::generateMissing($product, [['quantity' => 99]]);
+
+        $this->assertSame(['created' => 0, 'skipped' => 1], $repeat);
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertSame(25, $product->variants()->value('available_quantity'));
+    }
+
+    public function test_generation_rejects_a_color_for_color_disabled_products(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => false]);
+
+        try {
+            ProductVariant::generateMissing($product, [['color' => 'Black', 'quantity' => 10]]);
+            $this->fail('Expected ValidationException');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('color', $exception->errors());
+        }
+
+        $this->assertSame(0, $product->variants()->count());
+    }
 }

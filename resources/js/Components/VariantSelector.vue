@@ -19,6 +19,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    colorEnabled: {
+        type: Boolean,
+        default: true,
+    },
     colorError: {
         type: String,
         default: null,
@@ -32,7 +36,7 @@ const props = defineProps({
 const emit = defineEmits(['update:selectedColor', 'update:selectedSize']);
 
 const selectedGroup = computed(
-    () => props.variants.find((group) => group.color === props.selectedColor) ?? null,
+    () => props.variants.find((group) => (group.color ?? '') === (props.selectedColor ?? '')) ?? null,
 );
 
 const sizes = computed(() => selectedGroup.value?.sizes ?? []);
@@ -55,7 +59,10 @@ function selectSize(size) {
 
 <template>
     <div class="flex flex-col gap-5">
-        <fieldset class="min-w-0">
+        <fieldset
+            v-if="colorEnabled"
+            class="min-w-0"
+        >
             <legend class="mb-2 text-sm font-semibold text-ink">
                 اللون
             </legend>
@@ -63,7 +70,7 @@ function selectSize(size) {
             <div class="flex flex-wrap gap-2">
                 <label
                     v-for="group in variants"
-                    :key="group.color"
+                    :key="group.color ?? 'default'"
                     class="cursor-pointer"
                 >
                     <input

@@ -61,6 +61,23 @@ class ProductForm
                 Toggle::make('active')
                     ->default(true)
                     ->required(),
+                Toggle::make('color_enabled')
+                    ->label('تفعيل اختيار اللون')
+                    ->helperText('عند تعطيله لا يُطلب اللون عند تعريف الأصناف أو اختيارها. لا يمكن تعطيله إذا كان المنتج يحتوي على ألوان مسجلة.')
+                    ->default(true)
+                    ->rule(function (?Product $record): \Closure {
+                        return function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                            if (! $record || (bool) $value === (bool) $record->color_enabled) {
+                                return;
+                            }
+
+                            $message = $record->colorEnabledConflictMessage((bool) $value);
+
+                            if ($message !== null) {
+                                $fail($message);
+                            }
+                        };
+                    }),
                 Toggle::make('size_enabled')
                     ->label('تفعيل اختيار المقاس')
                     ->helperText('عند تعطيله يختار العميل اللون والكمية فقط. لا يمكن تعطيله إذا كان المنتج يحتوي على مقاسات مسجلة.')

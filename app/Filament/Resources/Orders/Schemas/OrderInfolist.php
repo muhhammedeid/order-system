@@ -86,7 +86,8 @@ class OrderInfolist
                                 TextEntry::make('product_name')
                                     ->label('اسم المنتج'),
                                 TextEntry::make('color')
-                                    ->label('اللون'),
+                                    ->label('اللون')
+                                    ->placeholder('—'),
                                 TextEntry::make('size')
                                     ->label('المقاس')
                                     ->placeholder('—'),

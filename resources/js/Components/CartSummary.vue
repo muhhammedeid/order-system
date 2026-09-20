@@ -32,7 +32,8 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                 <span class="min-w-0 flex-1">
                     <span class="font-semibold text-ink">{{ item.product.name }}</span>
                     <span class="block text-xs text-ink-muted">
-                        {{ item.color }}<template v-if="item.size"> / <span class="tabular-nums">{{ item.size }}</span></template>
+                        <template v-if="item.color">{{ item.color }}</template>
+                        <template v-if="item.size"><template v-if="item.color"> / </template><span class="tabular-nums">{{ item.size }}</span></template>
                         <span class="ms-1">× <span class="tabular-nums">{{ formatQuantity(item.quantity) }}</span></span>
                     </span>
                 </span>

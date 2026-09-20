@@ -11,6 +11,8 @@ Technical/schema decisions that deviate from, or refine, `05-DATABASE-SCHEMA.md`
 - `order_items.product_variant_id` is the operational variant reference for Admin editing and delivery tracking; snapshots remain historical.
 - A `new` order is editable in Admin: product, variant, optional size and quantity. Unchanged variants keep their snapshots; changed/new items rebuild snapshots from trusted data; `total_quantity` is recalculated. `delivered_quantity` and `status` are never accepted from payloads.
 - Sizing is optional per product via `products.size_enabled` (default `false`). When disabled, variant `size` is `NULL`; when enabled, size is required.
+- Coloring is optional per product via `products.color_enabled` (default `true`, preserving existing behavior). When disabled, variant `color` is `NULL`; when enabled, color is required. The two flags are independent and all four combinations are supported.
+- Variant uniqueness is `unique(product_id, color_key, size_key)` with generated `color_key = COALESCE(color, '')` and `size_key = COALESCE(size, '')`; the generated keys keep `NULL` dimensions unique, so a product with both dimensions disabled has exactly one meaningful variant. `order_items.color`/`order_items.size` are nullable snapshots and are never rewritten for historical orders.
 - A public product must always have a price: `price_visibility = public` with a blank price is rejected by the `Product` model on save, so Admin, import, and any other write path share the same enforcement.
 - Product/customer imports validate each row and never bypass the rules above (for example, an existing `request_price` product with no stored price cannot be imported as `public` without a price).
 

@@ -82,7 +82,8 @@ class ProductionRequirements extends Page implements HasTable
                     ->label('المنتج')
                     ->searchable(),
                 TextColumn::make('color')
-                    ->label('اللون'),
+                    ->label('اللون')
+                    ->placeholder('—'),
                 TextColumn::make('size')
                     ->label('المقاس')
                     ->placeholder('—'),

@@ -82,6 +82,31 @@ class OrderCreationTest extends TestCase
         $this->assertSame('450.00', $item->unit_price);
     }
 
+    public function test_uncolored_order_item_snapshot_has_null_color(): void
+    {
+        $product = Product::factory()->create([
+            'price_visibility' => 'public',
+            'price' => 450,
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+
+        $variant = $product->variants()->create([
+            'color' => null,
+            'size' => null,
+            'available_quantity' => 10,
+        ]);
+
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2]);
+        $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567']);
+
+        $item = OrderItem::query()->first();
+
+        $this->assertNull($item->color);
+        $this->assertNull($item->size);
+        $this->assertSame('450.00', $item->unit_price);
+    }
+
     public function test_empty_cart_is_rejected(): void
     {
         $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567'])

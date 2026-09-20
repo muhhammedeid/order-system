@@ -330,6 +330,30 @@ class ProductImportTest extends TestCase
         $this->assertNull(Product::query()->where('product_code', 'SH-200')->first()->variants()->first());
     }
 
+    public function test_import_preserves_existing_color_enabled_flag(): void
+    {
+        $existing = Product::factory()->create([
+            'product_code' => 'SH-300',
+            'name' => 'Old Colorless Name',
+            'slug' => 'old-colorless-name',
+            'color_enabled' => false,
+            'size_enabled' => true,
+        ]);
+        $existing->variants()->create(['color' => null, 'size' => '41', 'available_quantity' => 5]);
+
+        $this->import([
+            ['Product Code' => 'SH-300', 'Product Name' => 'New Name', 'Category' => 'C', 'Price' => '10', 'Price Visibility' => 'public', 'Active' => '1'],
+        ]);
+
+        $this->assertFalse($existing->refresh()->color_enabled);
+        $this->assertTrue($existing->size_enabled);
+        $this->assertDatabaseHas('product_variants', [
+            'product_id' => $existing->getKey(),
+            'color' => null,
+            'size' => '41',
+        ]);
+    }
+
     public function test_header_contract_is_enforced(): void
     {
         $reader = new RawSheetReader;

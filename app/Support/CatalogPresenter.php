@@ -27,7 +27,7 @@ class CatalogPresenter
             'category' => $product->category?->only('id', 'name'),
             'image' => $images->first()?->url(),
             'images_count' => $images->count(),
-            'colors_count' => $variants->pluck('color')->unique()->count(),
+            'colors_count' => $variants->pluck('color')->filter(fn ($color) => filled($color))->unique()->count(),
         ];
     }
 }

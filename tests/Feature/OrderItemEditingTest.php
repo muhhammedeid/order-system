@@ -378,4 +378,34 @@ class OrderItemEditingTest extends TestCase
         $this->assertSame(6, $item->quantity);
         $this->assertSame('Brown', $item->color);
     }
+
+    public function test_uncolored_variant_edit_keeps_null_color(): void
+    {
+        $order = $this->newOrder();
+
+        $uncoloredProduct = Product::factory()->create([
+            'price_visibility' => 'public',
+            'price' => 250,
+            'color_enabled' => false,
+            'size_enabled' => true,
+        ]);
+        $uncoloredVariant = $uncoloredProduct->variants()->create([
+            'color' => null,
+            'size' => '40',
+            'available_quantity' => 0,
+        ]);
+
+        $item = $this->orderItem($order, $uncoloredVariant, 2);
+        $order->recalculateTotalQuantity();
+
+        $order->updateItems([
+            ['id' => $item->id, 'product_id' => $uncoloredProduct->id, 'product_variant_id' => $uncoloredVariant->id, 'quantity' => 6],
+        ]);
+
+        $item->refresh();
+
+        $this->assertNull($item->color);
+        $this->assertSame('40', $item->size);
+        $this->assertSame(6, $item->quantity);
+    }
 }

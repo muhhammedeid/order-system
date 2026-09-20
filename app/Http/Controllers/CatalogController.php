@@ -81,6 +81,7 @@ class CatalogController extends Controller
                 'category' => $product->category?->only('id', 'name'),
                 'price_visibility' => $product->price_visibility->value,
                 'price' => $product->price_visibility === PriceVisibility::PublicPrice ? $product->price : null,
+                'color_enabled' => $product->color_enabled,
                 'size_enabled' => $product->size_enabled,
                 'images' => $product->images->map(fn ($image) => $image->url())->values()->all(),
             ],
@@ -154,10 +155,14 @@ class CatalogController extends Controller
             ? $variants->filter(fn ($variant) => filled($variant->size))
             : $variants->reject(fn ($variant) => filled($variant->size));
 
+        $variants = $product->color_enabled
+            ? $variants->filter(fn ($variant) => filled($variant->color))
+            : $variants->reject(fn ($variant) => filled($variant->color));
+
         return $variants
             ->groupBy('color')
             ->map(fn ($variants, $color) => [
-                'color' => $color,
+                'color' => filled($color) ? $color : null,
                 'sort' => $colorOrder->get($color),
                 'sizes' => $variants
                     ->sortBy(fn ($variant) => $sizeOrder->get($variant->size))

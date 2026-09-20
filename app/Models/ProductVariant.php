@@ -30,6 +30,7 @@ class ProductVariant extends Model
     ];
 
     protected $hidden = [
+        'color_key',
         'size_key',
     ];
 
@@ -42,7 +43,20 @@ class ProductVariant extends Model
                 return;
             }
 
+            $color = trim((string) $variant->color);
             $size = trim((string) $variant->size);
+
+            if ($product->color_enabled && $color === '') {
+                throw ValidationException::withMessages([
+                    'color' => 'اللون مطلوب لأن اختيار الألوان مُفعّل لهذا المنتج.',
+                ]);
+            }
+
+            if (! $product->color_enabled && $color !== '') {
+                throw ValidationException::withMessages([
+                    'color' => 'هذا المنتج لا يستخدم الألوان — يجب ألا يحتوي الصنف على قيمة لون.',
+                ]);
+            }
 
             if ($product->size_enabled && $size === '') {
                 throw ValidationException::withMessages([
@@ -71,7 +85,7 @@ class ProductVariant extends Model
             ->exists();
     }
 
-    public static function existsFor(Product $product, string $color, ?string $size, ?int $ignoreId = null): bool
+    public static function existsFor(Product $product, ?string $color, ?string $size, ?int $ignoreId = null): bool
     {
         $candidateKey = self::combinationKey($color, $size);
 
@@ -95,7 +109,11 @@ class ProductVariant extends Model
 
     protected function color(): Attribute
     {
-        return Attribute::set(fn ($value) => trim((string) $value));
+        return Attribute::set(function ($value) {
+            $trimmed = trim((string) $value);
+
+            return $trimmed === '' ? null : $trimmed;
+        });
     }
 
     protected function size(): Attribute
@@ -113,26 +131,34 @@ class ProductVariant extends Model
     }
 
     /**
-     * Size is required only when the parent product has size selection
-     * enabled; unsized variants store NULL (never a fake value).
+     * Color is required only when the parent product has color selection
+     * enabled; size is required only when size selection is enabled.
+     * Disabled dimensions store NULL (never a fake value).
      */
     public static function validate(array $data, ?Product $product = null): array
     {
         $data['color'] = trim((string) ($data['color'] ?? ''));
         $data['size'] = trim((string) ($data['size'] ?? ''));
 
+        $colorEnabled = (bool) ($product?->color_enabled ?? true);
         $sizeEnabled = (bool) ($product?->size_enabled ?? false);
 
         Validator::make(
             $data,
             [
-                'color' => ['required', 'string', 'max:255'],
+                'color' => $colorEnabled
+                    ? ['required', 'string', 'max:255']
+                    : ['nullable', 'string', 'max:255'],
                 'size' => $sizeEnabled
                     ? ['required', 'string', 'max:255']
                     : ['nullable', 'string', 'max:255'],
                 'available_quantity' => ['required', 'integer', 'min:0', 'max:'.self::MAX_QUANTITY],
             ],
         )->validate();
+
+        if ($data['color'] === '') {
+            $data['color'] = null;
+        }
 
         if ($data['size'] === '') {
             $data['size'] = null;
@@ -143,9 +169,10 @@ class ProductVariant extends Model
 
     /**
      * Creates only the missing Product + Color + Size combinations for the
-     * submitted color rows, copying each row's default quantity into the new
-     * variants. Existing variants are never read back into state, updated or
-     * deleted; the default quantity is a creation convenience only.
+     * submitted color rows (when color selection is disabled the product uses
+     * a single color row without a color), copying each row's default quantity
+     * into the new variants. Existing variants are never read back into state,
+     * updated or deleted; the default quantity is a creation convenience only.
      *
      * The whole generation is atomic: every candidate is validated before the
      * first insert, and the transaction rolls back on any failure.
@@ -246,8 +273,8 @@ class ProductVariant extends Model
             ->all();
     }
 
-    protected static function combinationKey(string $color, ?string $size): string
+    protected static function combinationKey(?string $color, ?string $size): string
     {
-        return mb_strtolower(trim($color)).'|'.trim((string) $size);
+        return mb_strtolower(trim((string) $color)).'|'.trim((string) $size);
     }
 }

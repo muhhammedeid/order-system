@@ -36,8 +36,9 @@ const props = defineProps({
     },
 });
 
-const selectedColor = ref(props.variants.length ? props.variants[0].color : '');
+const selectedColor = ref(props.variants.length ? (props.variants[0].color ?? '') : '');
 const selectedSize = ref('');
+const colorError = ref(null);
 const sizeError = ref(null);
 const quantityError = ref(null);
 
@@ -46,6 +47,7 @@ const form = useForm({
     quantity: 5,
 });
 
+const colorEnabled = computed(() => Boolean(props.product.color_enabled));
 const sizeEnabled = computed(() => Boolean(props.product.size_enabled));
 
 const flatVariants = computed(() =>
@@ -55,18 +57,18 @@ const flatVariants = computed(() =>
 );
 
 const selectedVariant = computed(() => {
-    if (! selectedColor.value) {
+    if (colorEnabled.value && ! selectedColor.value) {
         return null;
     }
 
-    if (! sizeEnabled.value) {
-        return flatVariants.value.find(
-            (variant) => variant.color === selectedColor.value,
-        ) ?? null;
+    if (sizeEnabled.value && ! selectedSize.value) {
+        return null;
     }
 
     return flatVariants.value.find(
-        (variant) => variant.color === selectedColor.value && variant.size === selectedSize.value,
+        (variant) =>
+            (! colorEnabled.value || variant.color === selectedColor.value)
+            && (! sizeEnabled.value || variant.size === selectedSize.value),
     ) ?? null;
 });
 
@@ -79,7 +81,8 @@ const breadcrumbs = computed(() => [
     { label: props.product.name },
 ]);
 
-watch(selectedSize, () => {
+watch([selectedColor, selectedSize], () => {
+    colorError.value = null;
     sizeError.value = null;
     quantityError.value = null;
     form.clearErrors();
@@ -87,9 +90,11 @@ watch(selectedSize, () => {
 
 function addToOrder() {
     if (! selectedVariant.value) {
-        sizeError.value = sizeEnabled.value
-            ? 'اختر المقاس المطلوب أولًا'
-            : 'اختر اللون المطلوب أولًا';
+        if (colorEnabled.value && ! selectedColor.value) {
+            colorError.value = 'اختر اللون المطلوب أولًا';
+        } else {
+            sizeError.value = 'اختر المقاس المطلوب أولًا';
+        }
 
         return;
     }
@@ -100,6 +105,7 @@ function addToOrder() {
         return;
     }
 
+    colorError.value = null;
     sizeError.value = null;
     quantityError.value = null;
     form.variant_id = selectedVariant.value.id;
@@ -172,8 +178,9 @@ const pickerError = computed(
                             v-model:selected-color="selectedColor"
                             v-model:selected-size="selectedSize"
                             :variants="variants"
+                            :color-enabled="colorEnabled"
                             :size-enabled="sizeEnabled"
-                            :color-error="! sizeEnabled ? sizeError : null"
+                            :color-error="colorEnabled ? colorError : null"
                             :size-error="sizeEnabled ? sizeError : null"
                         />
 
@@ -181,10 +188,19 @@ const pickerError = computed(
                             v-if="selectedVariant"
                             class="flex flex-col gap-3 rounded-control border-2 border-line bg-surface p-3.5"
                         >
-                            <p class="text-sm text-ink">
-                                <span class="font-semibold">{{ selectedColor }}</span>
+                            <p
+                                v-if="(colorEnabled && selectedColor) || (sizeEnabled && selectedSize)"
+                                class="text-sm text-ink"
+                            >
+                                <span
+                                    v-if="colorEnabled && selectedColor"
+                                    class="font-semibold"
+                                >{{ selectedColor }}</span>
                                 <template v-if="sizeEnabled && selectedSize">
-                                    <span class="text-ink-muted"> / </span>
+                                    <span
+                                        v-if="colorEnabled && selectedColor"
+                                        class="text-ink-muted"
+                                    > / </span>
                                     <span class="font-semibold tabular-nums">{{ selectedSize }}</span>
                                 </template>
                             </p>
@@ -197,11 +213,11 @@ const pickerError = computed(
                         </div>
 
                         <p
-                            v-else-if="sizeError"
+                            v-else-if="colorError || sizeError"
                             class="rounded-control border-2 border-danger/40 bg-danger-soft px-3.5 py-2.5 text-sm font-semibold text-danger"
                             role="alert"
                         >
-                            {{ sizeError }}
+                            {{ colorError || sizeError }}
                         </p>
 
                         <AppButton

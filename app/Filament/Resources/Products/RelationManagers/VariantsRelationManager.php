@@ -72,8 +72,9 @@ class VariantsRelationManager extends RelationManager
             ->modalSubmitActionLabel('توليد')
             ->form([
                 Repeater::make('colors')
-                    ->label('الألوان والكميات')
+                    ->label(fn (): string => $this->getOwnerRecord()->color_enabled ? 'الألوان والكميات' : 'الكمية الافتراضية')
                     ->addActionLabel('إضافة لون')
+                    ->addable(fn (): bool => $this->getOwnerRecord()->color_enabled)
                     ->defaultItems(1)
                     ->minItems(1)
                     ->columns(2)
@@ -81,7 +82,8 @@ class VariantsRelationManager extends RelationManager
                         Select::make('color')
                             ->label('اللون')
                             ->searchable()
-                            ->required()
+                            ->required(fn (): bool => $this->getOwnerRecord()->color_enabled)
+                            ->visible(fn (): bool => $this->getOwnerRecord()->color_enabled)
                             ->options(fn (): array => self::colorOptions(null)),
                         TextInput::make('quantity')
                             ->label('الكمية الافتراضية')
@@ -113,39 +115,80 @@ class VariantsRelationManager extends RelationManager
             });
     }
 
+    /**
+     * The same friendly duplicate check is attached to whichever field is
+     * visible for the product's enabled dimensions, because Filament skips
+     * validation rules for hidden fields.
+     */
+    protected function duplicateCombinationRule(Get $get, ?ProductVariant $record): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
+            $product = $this->getOwnerRecord();
+
+            $color = $product->color_enabled ? trim((string) $get('color')) : '';
+            $size = $product->size_enabled ? trim((string) $get('size')) : '';
+
+            if (ProductVariant::existsFor(
+                $product,
+                $color === '' ? null : $color,
+                $size === '' ? null : $size,
+                $record?->getKey(),
+            )) {
+                $fail($this->duplicateCombinationMessage());
+            }
+        };
+    }
+
+    protected function duplicateCombinationMessage(): string
+    {
+        $product = $this->getOwnerRecord();
+
+        return match (true) {
+            $product->color_enabled && $product->size_enabled => 'هذا اللون والمقاس مضافان بالفعل لهذا المنتج.',
+            $product->color_enabled => 'هذا اللون مضاف بالفعل لهذا المنتج.',
+            $product->size_enabled => 'هذا المقاس مضاف بالفعل لهذا المنتج.',
+            default => 'هذا الصنف مضاف بالفعل لهذا المنتج.',
+        };
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
                 Select::make('color')
-                    ->required()
+                    ->required(fn (): bool => $this->getOwnerRecord()->color_enabled)
+                    ->visible(fn (): bool => $this->getOwnerRecord()->color_enabled)
                     ->searchable()
                     ->options(fn (?ProductVariant $record) => self::colorOptions($record))
-                    ->rule(function (Get $get, ?ProductVariant $record): \Closure {
-                        return function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
-                            $size = trim((string) $get('size'));
-
-                            if (ProductVariant::existsFor(
-                                $this->getOwnerRecord(),
-                                trim((string) $value),
-                                $size === '' ? null : $size,
-                                $record?->getKey(),
-                            )) {
-                                $fail('هذا اللون والمقاس مضافان بالفعل لهذا المنتج.');
-                            }
-                        };
-                    }),
+                    ->rule(
+                        function (Get $get, ?ProductVariant $record): \Closure {
+                            return $this->duplicateCombinationRule($get, $record);
+                        },
+                        fn (): bool => $this->getOwnerRecord()->color_enabled,
+                    ),
                 Select::make('size')
                     ->required(fn () => $this->getOwnerRecord()->size_enabled)
                     ->visible(fn () => $this->getOwnerRecord()->size_enabled)
                     ->searchable()
-                    ->options(fn (?ProductVariant $record) => self::sizeOptions($record)),
+                    ->options(fn (?ProductVariant $record) => self::sizeOptions($record))
+                    ->rule(
+                        function (Get $get, ?ProductVariant $record): \Closure {
+                            return $this->duplicateCombinationRule($get, $record);
+                        },
+                        fn (): bool => ! $this->getOwnerRecord()->color_enabled && $this->getOwnerRecord()->size_enabled,
+                    ),
                 TextInput::make('available_quantity')
                     ->label('Available Quantity')
                     ->required()
                     ->integer()
                     ->minValue(0)
-                    ->maxValue(ProductVariant::MAX_QUANTITY),
+                    ->maxValue(ProductVariant::MAX_QUANTITY)
+                    ->rule(
+                        function (Get $get, ?ProductVariant $record): \Closure {
+                            return $this->duplicateCombinationRule($get, $record);
+                        },
+                        fn (): bool => ! $this->getOwnerRecord()->color_enabled && ! $this->getOwnerRecord()->size_enabled,
+                    ),
             ]);
     }
 
@@ -155,6 +198,7 @@ class VariantsRelationManager extends RelationManager
             ->recordTitleAttribute('color')
             ->columns([
                 TextColumn::make('color')
+                    ->placeholder('—')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('size')

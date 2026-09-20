@@ -155,8 +155,12 @@ class OrderStatusActions
 
         foreach ($record->items as $item) {
             /** @var OrderItem $item */
-            $label = $item->product_name.' — '.$item->product_code.' / '.$item->color
-                .($item->size ? ' / '.$item->size : '');
+            $dimensions = collect([$item->color, $item->size])
+                ->filter(fn ($value) => filled($value))
+                ->implode(' / ');
+
+            $label = $item->product_name.' — '.$item->product_code
+                .($dimensions === '' ? '' : ' / '.$dimensions);
 
             $components[] = TextInput::make("deliveries.{$item->id}")
                 ->label($label)

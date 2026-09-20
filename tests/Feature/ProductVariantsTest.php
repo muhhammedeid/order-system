@@ -446,4 +446,177 @@ class ProductVariantsTest extends TestCase
         $this->assertStringContainsString('Red', (string) $variant->color);
         $this->assertFalse($color->active);
     }
+
+    public function test_color_is_required_when_product_color_is_enabled(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => true]);
+
+        $this->expectException(ValidationException::class);
+
+        ProductVariant::validate([
+            'color' => null,
+            'size' => null,
+            'available_quantity' => 5,
+        ], $product);
+    }
+
+    public function test_color_is_optional_when_product_color_is_disabled(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false]);
+
+        $data = ProductVariant::validate([
+            'color' => '   ',
+            'size' => null,
+            'available_quantity' => 5,
+        ], $product);
+
+        $this->assertNull($data['color']);
+    }
+
+    public function test_uncolored_variant_persists_null_color_without_a_fake_value(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false]);
+
+        $variant = $product->variants()->create([
+            'color' => '',
+            'size' => null,
+            'available_quantity' => 5,
+        ]);
+
+        $this->assertNull($variant->refresh()->color);
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $variant->getKey(),
+            'color' => null,
+        ]);
+        $this->assertArrayNotHasKey('color_key', $variant->toArray());
+    }
+
+    public function test_uncolored_variant_is_rejected_when_product_color_is_enabled(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => true]);
+
+        $this->expectException(ValidationException::class);
+
+        $product->variants()->create([
+            'color' => null,
+            'size' => null,
+            'available_quantity' => 5,
+        ]);
+    }
+
+    public function test_non_null_color_is_rejected_when_product_color_is_disabled(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false]);
+
+        $this->expectException(ValidationException::class);
+
+        $product->variants()->create([
+            'color' => 'Black',
+            'size' => null,
+            'available_quantity' => 5,
+        ]);
+    }
+
+    public function test_duplicate_uncolored_variants_are_rejected_by_the_database(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => false]);
+
+        $product->variants()->create([
+            'color' => null,
+            'size' => null,
+            'available_quantity' => 5,
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        $product->variants()->create([
+            'color' => null,
+            'size' => null,
+            'available_quantity' => 7,
+        ]);
+    }
+
+    public function test_unique_index_covers_all_four_color_size_combinations(): void
+    {
+        $combinations = [
+            [
+                'color_enabled' => true,
+                'size_enabled' => true,
+                'first' => ['color' => 'Black', 'size' => '40'],
+                'second' => ['color' => 'Black', 'size' => '41'],
+            ],
+            [
+                'color_enabled' => true,
+                'size_enabled' => false,
+                'first' => ['color' => 'Black', 'size' => null],
+                'second' => ['color' => 'White', 'size' => null],
+            ],
+            [
+                'color_enabled' => false,
+                'size_enabled' => true,
+                'first' => ['color' => null, 'size' => '40'],
+                'second' => ['color' => null, 'size' => '41'],
+            ],
+            [
+                'color_enabled' => false,
+                'size_enabled' => false,
+                'first' => ['color' => null, 'size' => null],
+                'second' => null,
+            ],
+        ];
+
+        foreach ($combinations as $index => $combination) {
+            $product = Product::factory()->create([
+                'color_enabled' => $combination['color_enabled'],
+                'size_enabled' => $combination['size_enabled'],
+            ]);
+
+            $product->variants()->create($combination['first'] + ['available_quantity' => 1]);
+
+            if ($combination['second'] !== null) {
+                $product->variants()->create($combination['second'] + ['available_quantity' => 2]);
+            }
+
+            try {
+                $product->variants()->create($combination['first'] + ['available_quantity' => 3]);
+                $this->fail("Expected QueryException for duplicate combination #{$index}");
+            } catch (QueryException) {
+            }
+
+            $this->assertSame(
+                $combination['second'] === null ? 1 : 2,
+                $product->variants()->count(),
+                "Unexpected variant count for combination #{$index}",
+            );
+        }
+    }
+
+    public function test_generated_color_key_distinguishes_null_and_colored_keys_at_database_level(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => false]);
+
+        // Raw inserts bypass the application guard on purpose: this proves the
+        // generated color_key uniqueness behavior only, not an allowed domain state.
+        DB::table('product_variants')->insert([
+            [
+                'product_id' => $product->getKey(),
+                'color' => null,
+                'size' => null,
+                'available_quantity' => 5,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'product_id' => $product->getKey(),
+                'color' => 'Black',
+                'size' => null,
+                'available_quantity' => 9,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->assertSame(2, $product->variants()->count());
+        $this->assertSame(1, $product->variants()->whereNull('color')->count());
+    }
 }

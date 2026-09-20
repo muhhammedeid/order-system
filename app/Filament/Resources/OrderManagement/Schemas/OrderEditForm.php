@@ -85,11 +85,16 @@ class OrderEditForm
                                             ->orderBy('color')
                                             ->orderBy('size')
                                             ->get()
-                                            ->mapWithKeys(fn (ProductVariant $variant): array => [
-                                                $variant->id => $variant->color
-                                                    .($variant->size ? ' / '.$variant->size : '')
-                                                    .' — المتاح: '.$variant->available_quantity,
-                                            ])
+                                            ->mapWithKeys(function (ProductVariant $variant): array {
+                                                $dimensions = collect([$variant->color, $variant->size])
+                                                    ->filter(fn ($value) => filled($value))
+                                                    ->implode(' / ');
+
+                                                return [
+                                                    $variant->id => ($dimensions === '' ? '' : $dimensions.' — ')
+                                                        .'المتاح: '.$variant->available_quantity,
+                                                ];
+                                            })
                                             ->all();
                                     })
                                     ->searchable()

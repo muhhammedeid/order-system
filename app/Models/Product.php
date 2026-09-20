@@ -17,6 +17,7 @@ class Product extends Model
 
     protected $attributes = [
         'size_enabled' => false,
+        'color_enabled' => true,
     ];
 
     protected $fillable = [
@@ -28,6 +29,7 @@ class Product extends Model
         'price_visibility',
         'price',
         'active',
+        'color_enabled',
         'size_enabled',
     ];
 
@@ -38,6 +40,7 @@ class Product extends Model
             'price_visibility' => PriceVisibility::class,
             'price' => 'decimal:2',
             'active' => 'boolean',
+            'color_enabled' => 'boolean',
             'size_enabled' => 'boolean',
         ];
     }
@@ -61,30 +64,70 @@ class Product extends Model
         });
 
         static::updating(function (self $product) {
-            if (! $product->isDirty('size_enabled')) {
-                return;
+            if ($product->isDirty('size_enabled')) {
+                $hasSizedVariants = $product->variants()
+                    ->whereRaw("TRIM(COALESCE(size, '')) <> ''")
+                    ->exists();
+
+                $hasUnsizedVariants = $product->variants()
+                    ->whereRaw("TRIM(COALESCE(size, '')) = ''")
+                    ->exists();
+
+                if ($product->size_enabled === false && $hasSizedVariants) {
+                    throw ValidationException::withMessages([
+                        'size_enabled' => 'لا يمكن تعطيل المقاسات لأن هذا المنتج يحتوي على مقاسات مسجلة — يجب حل هذه المقاسات أو حذفها أولًا.',
+                    ]);
+                }
+
+                if ($product->size_enabled === true && $hasUnsizedVariants) {
+                    throw ValidationException::withMessages([
+                        'size_enabled' => 'لا يمكن تفعيل المقاسات لأن هذا المنتج يحتوي على أصناف بدون مقاس — يجب تحديد مقاس لكل الأصناف أو حذفها أولًا.',
+                    ]);
+                }
             }
 
-            $hasSizedVariants = $product->variants()
-                ->whereRaw("TRIM(COALESCE(size, '')) <> ''")
-                ->exists();
+            if ($product->isDirty('color_enabled')) {
+                $message = $product->colorEnabledConflictMessage((bool) $product->color_enabled);
 
-            $hasUnsizedVariants = $product->variants()
-                ->whereRaw("TRIM(COALESCE(size, '')) = ''")
-                ->exists();
-
-            if ($product->size_enabled === false && $hasSizedVariants) {
-                throw ValidationException::withMessages([
-                    'size_enabled' => 'لا يمكن تعطيل المقاسات لأن هذا المنتج يحتوي على مقاسات مسجلة — يجب حل هذه المقاسات أو حذفها أولًا.',
-                ]);
-            }
-
-            if ($product->size_enabled === true && $hasUnsizedVariants) {
-                throw ValidationException::withMessages([
-                    'size_enabled' => 'لا يمكن تفعيل المقاسات لأن هذا المنتج يحتوي على أصناف بدون مقاس — يجب تحديد مقاس لكل الأصناف أو حذفها أولًا.',
-                ]);
+                if ($message !== null) {
+                    throw ValidationException::withMessages([
+                        'color_enabled' => $message,
+                    ]);
+                }
             }
         });
+    }
+
+    /**
+     * Friendly message for a requested `color_enabled` state that conflicts
+     * with the product's current variants, or null when the state is allowed.
+     * Shared by the model guard and the Admin form rule so both stay in sync.
+     */
+    public function colorEnabledConflictMessage(bool $enabled): ?string
+    {
+        if ($enabled === false && $this->hasColoredVariants()) {
+            return 'لا يمكن تعطيل اختيار اللون لأن هذا المنتج يحتوي على ألوان مسجلة — يجب حل هذه الألوان أو حذفها أولًا.';
+        }
+
+        if ($enabled === true && $this->hasUncoloredVariants()) {
+            return 'لا يمكن تفعيل اختيار اللون لأن هذا المنتج يحتوي على أصناف بدون لون — يجب تحديد لون لكل الأصناف أو حذفها أولًا.';
+        }
+
+        return null;
+    }
+
+    public function hasColoredVariants(): bool
+    {
+        return $this->variants()
+            ->whereRaw("TRIM(COALESCE(color, '')) <> ''")
+            ->exists();
+    }
+
+    public function hasUncoloredVariants(): bool
+    {
+        return $this->variants()
+            ->whereRaw("TRIM(COALESCE(color, '')) = ''")
+            ->exists();
     }
 
     public function category(): BelongsTo
@@ -129,6 +172,7 @@ class Product extends Model
                 'slug' => ['required', 'string', 'max:255', 'unique:products,slug'.($product ? ','.$product->getKey() : '')],
                 'price_visibility' => ['required', 'in:'.implode(',', array_column(PriceVisibility::cases(), 'value'))],
                 'price' => self::priceRules(),
+                'color_enabled' => ['boolean'],
                 'size_enabled' => ['boolean'],
             ],
         )->validate();

@@ -87,9 +87,11 @@ Each product contains:
 
 Each product can contain variants defined by:
 
-- Color
+- Color (only when the product has `color_enabled = true`; on by default)
 - Size (only when the product has `size_enabled = true`; off by default)
 - Available Quantity (internal Admin reference)
+
+The two controls are independent, so a product can use color only, size only, both, or neither.
 
 Example:
 
@@ -105,6 +107,8 @@ The system does not manage warehouse transactions.
 `available_quantity` is an internal Admin reference only. It is never shown to customers and never blocks ordering: any positive requested quantity is accepted (quantity presets `5`, `10`, or a custom positive integer). Operations may contact the customer and agree on quantities before confirmation.
 
 When `size_enabled` is `false`, the customer selects color and quantity only; no size is required or stored for new variants.
+
+When `color_enabled` is `false`, the customer selects size and quantity only (or quantity only when sizes are also disabled); no color is required or stored for new variants. Disabled dimensions are stored as `NULL`, never as a fake value.
 
 ---
 

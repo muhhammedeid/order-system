@@ -73,6 +73,7 @@ description nullable
 price_visibility
 price nullable
 active
+color_enabled
 size_enabled
 created_at
 updated_at
@@ -85,7 +86,11 @@ Allowed `price_visibility`:
 
 `price` is required whenever `price_visibility = public` (enforced server-side on every write path). `request_price` may store an internal price or `null`.
 
+`color_enabled` (default `true`) controls whether variants for this product use color selection. The default preserves existing products' behavior; disabling it is symmetric to `size_enabled`.
+
 `size_enabled` (default `false`) controls whether variants for this product use size selection (Revision R01).
+
+`color_enabled` and `size_enabled` are independent: all four combinations are supported.
 
 Indexes:
 
@@ -101,7 +106,8 @@ Indexes:
 ```text
 id
 product_id
-color
+color nullable
+color_key (generated column derived from color)
 size nullable
 size_key (generated column derived from size)
 available_quantity
@@ -112,11 +118,11 @@ updated_at
 Constraints:
 
 ```text
-unique(product_id, color, size_key)
+unique(product_id, color_key, size_key)
 available_quantity >= 0
 ```
 
-`size` is only nullable when the parent product has `size_enabled = false`; when sizes are enabled, size is required. The generated `size_key` keeps `NULL` sizes unique per product/color (a plain nullable composite unique would allow duplicates).
+`color` is only nullable when the parent product has `color_enabled = false`; when colors are enabled, color is required. `size` is only nullable when the parent product has `size_enabled = false`; when sizes are enabled, size is required. The generated `color_key`/`size_key` columns keep `NULL` values unique per product (a plain nullable composite unique would allow duplicates), so a product with both dimensions disabled has exactly one meaningful variant (`color = NULL`, `size = NULL`).
 
 `available_quantity` is an internal Admin reference only. It is not exposed to customers and never blocks ordering: the storefront accepts any positive requested quantity (Revision R01).
 
@@ -177,7 +183,7 @@ product_id nullable
 product_variant_id nullable
 product_code
 product_name
-color
+color nullable
 size nullable
 quantity
 delivered_quantity
@@ -189,7 +195,7 @@ updated_at
 
 Important:
 
-`product_code`, `product_name`, color, size, `unit_price`, and `price_visibility` are snapshots.
+`product_code`, `product_name`, color, size, `unit_price`, and `price_visibility` are snapshots. `color`/`size` are `NULL` when the product had that dimension disabled at order time; historical snapshots are never rewritten.
 
 `product_variant_id` is the operational variant reference used by Admin order operations (editing, delivery tracking). It is `nullOnDelete`.
 

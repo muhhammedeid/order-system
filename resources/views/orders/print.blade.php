@@ -302,7 +302,7 @@
                         <tr>
                             <td class="code">{{ $item->product_code }}</td>
                             <td>{{ $item->product_name }}</td>
-                            <td>{{ $item->color }}</td>
+                            <td>{{ $item->color ?? '—' }}</td>
                             <td>{{ $item->size ?? '—' }}</td>
                             <td class="num">{{ $item->quantity }}</td>
                             <td class="num">

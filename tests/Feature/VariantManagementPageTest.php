@@ -159,4 +159,43 @@ class VariantManagementPageTest extends TestCase
 
         $this->assertSame(10, $variant->refresh()->available_quantity);
     }
+
+    public function test_generation_action_creates_uncolored_variants_for_color_disabled_size_enabled_products(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => true]);
+        $this->makeSize('40', 0);
+        $this->makeSize('41', 1);
+
+        $this->relationManager($product)
+            ->callAction('generateVariants', data: [
+                'colors' => [
+                    ['quantity' => 30],
+                ],
+                'sizes' => ['40', '41'],
+            ])
+            ->assertHasNoActionErrors()
+            ->assertNotified();
+
+        $this->assertSame(2, $product->variants()->count());
+        $this->assertSame(2, $product->variants()->whereNull('color')->count());
+        $this->assertSame(2, $product->variants()->where('available_quantity', 30)->count());
+    }
+
+    public function test_generation_action_creates_one_variant_when_both_dimensions_are_disabled(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => false]);
+
+        $this->relationManager($product)
+            ->callAction('generateVariants', data: [
+                'colors' => [
+                    ['quantity' => 30],
+                ],
+            ])
+            ->assertHasNoActionErrors()
+            ->assertNotified();
+
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertNull($product->variants()->first()->color);
+        $this->assertNull($product->variants()->first()->size);
+    }
 }

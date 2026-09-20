@@ -82,9 +82,14 @@ const unitPriceLabel = computed(() =>
                 </p>
 
                 <p class="text-sm text-ink-muted">
-                    <span class="font-semibold text-ink">{{ item.color }}</span>
+                    <template v-if="item.color">
+                        <span class="font-semibold text-ink">{{ item.color }}</span>
+                    </template>
                     <template v-if="item.size">
-                        <span aria-hidden="true"> / </span>
+                        <span
+                            v-if="item.color"
+                            aria-hidden="true"
+                        > / </span>
                         <span class="font-semibold tabular-nums text-ink">{{ item.size }}</span>
                     </template>
                     <span

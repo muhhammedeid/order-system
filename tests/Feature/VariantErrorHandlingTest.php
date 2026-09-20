@@ -228,4 +228,87 @@ class VariantErrorHandlingTest extends TestCase
         $this->assertDatabaseMissing('product_variants', ['id' => $first->getKey()]);
         $this->assertDatabaseMissing('product_variants', ['id' => $second->getKey()]);
     }
+
+    public function test_uncolored_variant_creation_succeeds_from_the_page(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => true]);
+        VariantSize::create(['name' => '40', 'sort_order' => 0, 'active' => true]);
+
+        $this->relationManager($product)
+            ->callAction(TestAction::make('create')->table(), data: [
+                'size' => '40',
+                'available_quantity' => 5,
+            ])
+            ->assertHasNoActionErrors();
+
+        $this->assertDatabaseHas('product_variants', [
+            'product_id' => $product->getKey(),
+            'color' => null,
+            'size' => '40',
+            'available_quantity' => 5,
+        ]);
+    }
+
+    public function test_duplicate_size_variant_is_rejected_for_color_disabled_size_enabled_products(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => true]);
+        VariantSize::create(['name' => '40', 'sort_order' => 0, 'active' => true]);
+        $product->variants()->create(['color' => null, 'size' => '40', 'available_quantity' => 5]);
+
+        $component = $this->relationManager($product)
+            ->callAction(TestAction::make('create')->table(), data: [
+                'size' => '40',
+                'available_quantity' => 9,
+            ])
+            ->assertHasActionErrors(['size']);
+
+        $this->assertStringContainsString(
+            'هذا المقاس مضاف بالفعل لهذا المنتج.',
+            implode(' | ', $component->errors()->all()),
+        );
+
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertSame(5, $product->variants()->first()->available_quantity);
+    }
+
+    public function test_duplicate_uncolored_variant_is_rejected_for_fully_disabled_products(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => false, 'size_enabled' => false]);
+        $product->variants()->create(['color' => null, 'size' => null, 'available_quantity' => 5]);
+
+        $component = $this->relationManager($product)
+            ->callAction(TestAction::make('create')->table(), data: [
+                'available_quantity' => 9,
+            ])
+            ->assertHasActionErrors(['available_quantity']);
+
+        $this->assertStringContainsString(
+            'هذا الصنف مضاف بالفعل لهذا المنتج.',
+            implode(' | ', $component->errors()->all()),
+        );
+
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertSame(5, $product->variants()->first()->available_quantity);
+    }
+
+    public function test_duplicate_colored_variant_is_rejected_for_size_disabled_products(): void
+    {
+        $product = Product::factory()->create(['color_enabled' => true, 'size_enabled' => false]);
+        VariantColor::create(['name' => 'Brown', 'sort_order' => 0, 'active' => true]);
+        $product->variants()->create(['color' => 'Brown', 'size' => null, 'available_quantity' => 5]);
+
+        $component = $this->relationManager($product)
+            ->callAction(TestAction::make('create')->table(), data: [
+                'color' => 'Brown',
+                'available_quantity' => 9,
+            ])
+            ->assertHasActionErrors(['color']);
+
+        $this->assertStringContainsString(
+            'هذا اللون مضاف بالفعل لهذا المنتج.',
+            implode(' | ', $component->errors()->all()),
+        );
+
+        $this->assertSame(1, $product->variants()->count());
+    }
 }
