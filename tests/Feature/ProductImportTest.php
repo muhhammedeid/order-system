@@ -8,6 +8,7 @@ use App\Models\ProductVariant;
 use App\Support\Imports\HeaderContractException;
 use App\Support\Imports\ImportResult;
 use App\Support\Imports\ProductsImporter;
+use App\Support\Imports\RawSheetReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -193,6 +194,59 @@ class ProductImportTest extends TestCase
         $this->assertSame('700.50', $existing->price);
     }
 
+    public function test_existing_request_price_product_cannot_become_public_without_a_price(): void
+    {
+        $existing = Product::factory()->requestPrice()->create([
+            'product_code' => 'SH-300',
+            'name' => 'Secret Shoe',
+            'slug' => 'secret-shoe',
+            'price' => null,
+        ]);
+
+        $result = $this->import([[
+            'Product Code' => 'SH-300',
+            'Product Name' => 'Secret Shoe',
+            'Category' => 'Men Shoes',
+            'Price' => '',
+            'Price Visibility' => 'public',
+            'Active' => '1',
+        ]]);
+
+        $this->assertSame(1, $result->invalid());
+        $this->assertStringContainsString('Price مطلوب', $result->invalidDescriptions()[0]);
+
+        $existing->refresh();
+
+        $this->assertSame('request_price', $existing->price_visibility->value);
+        $this->assertNull($existing->price);
+    }
+
+    public function test_existing_request_price_product_can_become_public_with_a_valid_price(): void
+    {
+        $existing = Product::factory()->requestPrice()->create([
+            'product_code' => 'SH-300',
+            'name' => 'Secret Shoe',
+            'slug' => 'secret-shoe',
+            'price' => null,
+        ]);
+
+        $result = $this->import([[
+            'Product Code' => 'SH-300',
+            'Product Name' => 'Secret Shoe',
+            'Category' => 'Men Shoes',
+            'Price' => '250',
+            'Price Visibility' => 'public',
+            'Active' => '1',
+        ]]);
+
+        $this->assertSame(1, $result->updated());
+
+        $existing->refresh();
+
+        $this->assertSame('public', $existing->price_visibility->value);
+        $this->assertSame('250.00', $existing->price);
+    }
+
     public function test_active_parsing(): void
     {
         $result = $this->import([
@@ -262,6 +316,7 @@ class ProductImportTest extends TestCase
             'product_code' => 'SH-100',
             'name' => 'Old Name',
             'slug' => 'old-name',
+            'size_enabled' => true,
         ]);
         $existing->variants()->create(['color' => 'Black', 'size' => '41', 'available_quantity' => 5]);
 
@@ -277,7 +332,7 @@ class ProductImportTest extends TestCase
 
     public function test_header_contract_is_enforced(): void
     {
-        $reader = new \App\Support\Imports\RawSheetReader;
+        $reader = new RawSheetReader;
         $reader->rows = [
             ['Product Code', 'Product Name', 'Category', 'Price', 'Active'],
         ];

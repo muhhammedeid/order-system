@@ -16,14 +16,14 @@ Lean wholesale ordering platform for a shoe factory.
 This system is only for:
 
 - Product catalog browsing
-- Variant availability by color / size / quantity
+- Variant options by color and optional size (exact stock is Admin-only)
 - Public or hidden product prices
 - WhatsApp price requests
 - Customer data capture
 - Wholesale order submission
-- Admin order management
+- Admin order management and lightweight delivery tracking
 - Product/customer imports
-- Excel order export
+- Excel order export (pending Revision R04)
 
 This system is **not**:
 

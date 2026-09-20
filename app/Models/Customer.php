@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Validator;
 
 class Customer extends Model
@@ -30,6 +31,16 @@ class Customer extends Model
 
             return $trimmed === '' ? null : $trimmed;
         });
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function isReferencedByOrders(): bool
+    {
+        return $this->orders()->exists();
     }
 
     public static function validate(array $data): array

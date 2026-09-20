@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Setting;
 use App\Models\VariantColor;
 use App\Models\VariantSize;
+use App\Support\CatalogPresenter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,42 +17,45 @@ class CatalogController extends Controller
 {
     public function index(Request $request): Response
     {
+        $search = trim((string) $request->query('search', ''));
+        $category = $request->query('category');
+
         $products = Product::query()
             ->where('active', true)
-            ->when($request->query('search'), function ($query, $search) {
-                $search = trim($search);
-
+            ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query
                         ->where('name', 'like', "%{$search}%")
                         ->orWhere('product_code', 'like', "%{$search}%");
                 });
             })
-            ->when($request->query('category'), fn ($query, $category) => $query->where('category_id', (int) $category))
+            ->when($category, fn ($query, $category) => $query->where('category_id', (int) $category))
             ->with([
                 'category:id,name',
                 'images' => fn ($query) => $query->orderBy('sort_order'),
+                'variants:id,product_id,color',
             ])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(24)
             ->withQueryString();
 
-        $products->getCollection()->each(function (Product $product) {
-            if ($product->price_visibility === PriceVisibility::RequestPrice) {
-                $product->price = null;
-            }
-        });
+        $products->through(fn (Product $product) => CatalogPresenter::productCard($product));
 
         return Inertia::render('Catalog/Index', [
             'products' => $products,
             'categories' => Category::query()
                 ->where('active', true)
+                ->withCount(['products as products_count' => fn ($query) => $query->where('active', true)])
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'filters' => [
-                'search' => (string) $request->query('search', ''),
-                'category' => $request->query('category'),
+                'search' => $search,
+                'category' => $category,
+            ],
+            'meta' => [
+                'title' => $search !== '' ? "بحث: {$search}" : 'المتجر',
+                'description' => 'تصفح تشكيلة أحذية MAI SHOES بالجملة مع الألوان والمقاسات والكميات المتاحة لكل منتج.',
             ],
         ]);
     }
@@ -66,6 +70,8 @@ class CatalogController extends Controller
             'variants',
         ]);
 
+        $firstImage = $product->images->first();
+
         return Inertia::render('Catalog/Show', [
             'product' => [
                 'id' => $product->id,
@@ -75,10 +81,20 @@ class CatalogController extends Controller
                 'category' => $product->category?->only('id', 'name'),
                 'price_visibility' => $product->price_visibility->value,
                 'price' => $product->price_visibility === PriceVisibility::PublicPrice ? $product->price : null,
+                'size_enabled' => $product->size_enabled,
                 'images' => $product->images->map(fn ($image) => $image->image_path)->values()->all(),
             ],
             'variants' => $this->variantProps($product),
             'whatsapp' => $this->whatsappProps($product),
+            'related' => $this->relatedProps($product),
+            'meta' => [
+                'title' => $product->name,
+                'description' => $product->description
+                    ? mb_substr(strip_tags($product->description), 0, 155)
+                    : "اطلب {$product->name} بالجملة من MAI SHOES — كود المنتج {$product->product_code}.",
+                'type' => 'product',
+                'image' => $firstImage ? url("/storage/{$firstImage->image_path}") : null,
+            ],
         ]);
     }
 
@@ -95,14 +111,36 @@ class CatalogController extends Controller
         }
 
         $message = "مرحبًا، أريد معرفة سعر المنتج {$product->name}\n"
-            . "Code: {$product->product_code}\n"
-            . 'Product Link: ' . route('product.show', ['product' => $product->slug]);
+            ."Code: {$product->product_code}\n"
+            .'Product Link: '.route('product.show', ['product' => $product->slug]);
 
         return [
             'number' => $number,
             'message' => $message,
-            'href' => "https://wa.me/{$number}?text=" . rawurlencode($message),
+            'href' => "https://wa.me/{$number}?text=".rawurlencode($message),
         ];
+    }
+
+    private function relatedProps(Product $product): array
+    {
+        if (! $product->category_id) {
+            return [];
+        }
+
+        return Product::query()
+            ->where('active', true)
+            ->where('category_id', $product->category_id)
+            ->whereKeyNot($product->getKey())
+            ->with([
+                'category:id,name',
+                'images' => fn ($query) => $query->orderBy('sort_order'),
+                'variants:id,product_id,color',
+            ])
+            ->orderByDesc('id')
+            ->limit(4)
+            ->get()
+            ->map(fn (Product $related) => CatalogPresenter::productCard($related))
+            ->all();
     }
 
     private function variantProps(Product $product): array
@@ -110,7 +148,13 @@ class CatalogController extends Controller
         $colorOrder = VariantColor::query()->pluck('sort_order', 'name');
         $sizeOrder = VariantSize::query()->pluck('sort_order', 'name');
 
-        return $product->variants
+        $variants = $product->variants;
+
+        $variants = $product->size_enabled
+            ? $variants->filter(fn ($variant) => filled($variant->size))
+            : $variants->reject(fn ($variant) => filled($variant->size));
+
+        return $variants
             ->groupBy('color')
             ->map(fn ($variants, $color) => [
                 'color' => $color,
@@ -120,7 +164,6 @@ class CatalogController extends Controller
                     ->map(fn ($variant) => [
                         'id' => $variant->id,
                         'size' => $variant->size,
-                        'available_quantity' => (int) $variant->available_quantity,
                     ])
                     ->values()
                     ->all(),

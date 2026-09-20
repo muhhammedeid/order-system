@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use App\Models\VariantColor;
 use App\Models\VariantSize;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,7 +27,8 @@ class ProductDetailsTest extends TestCase
                 ->where('product.name', 'Details Shoe')
                 ->where('product.product_code', $product->product_code)
                 ->where('product.price', '450.00')
-                ->where('product.price_visibility', 'public'));
+                ->where('product.price_visibility', 'public')
+                ->where('product.size_enabled', false));
     }
 
     public function test_inactive_product_returns_404(): void
@@ -74,9 +74,12 @@ class ProductDetailsTest extends TestCase
         $this->assertSame('888.99', $product->refresh()->price);
     }
 
-    public function test_variants_are_grouped_by_color_and_reflect_quantities(): void
+    public function test_sized_variants_are_grouped_by_color_without_exposing_stock(): void
     {
-        $product = Product::factory()->create();
+        VariantSize::create(['name' => '40', 'sort_order' => 1, 'active' => true]);
+        VariantSize::create(['name' => '41', 'sort_order' => 2, 'active' => true]);
+
+        $product = Product::factory()->create(['size_enabled' => true]);
 
         $product->variants()->createMany([
             ['color' => 'Black', 'size' => '41', 'available_quantity' => 10],
@@ -84,17 +87,37 @@ class ProductDetailsTest extends TestCase
             ['color' => 'White', 'size' => '40', 'available_quantity' => 8],
         ]);
 
+        $response = $this->get("/product/{$product->slug}");
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('product.size_enabled', true)
+            ->has('variants', 2)
+            ->where('variants.0.color', 'Black')
+            ->where('variants.0.sizes.0.size', '40')
+            ->where('variants.0.sizes.1.size', '41')
+            ->where('variants.1.color', 'White')
+            ->where('variants.1.sizes.0.size', '40')
+            ->missing('variants.0.sizes.0.available_quantity'));
+
+        $this->assertStringNotContainsString('available_quantity', $response->getContent());
+    }
+
+    public function test_unsized_product_exposes_color_only_variants(): void
+    {
+        $product = Product::factory()->create(['size_enabled' => false]);
+
+        $product->variants()->createMany([
+            ['color' => 'Black', 'size' => null, 'available_quantity' => 4],
+            ['color' => 'White', 'size' => null, 'available_quantity' => 0],
+        ]);
+
         $this->get("/product/{$product->slug}")
             ->assertInertia(fn (Assert $page) => $page
+                ->where('product.size_enabled', false)
                 ->has('variants', 2)
-                ->where('variants.0.color', 'Black')
-                ->where('variants.0.sizes.0.size', '40')
-                ->where('variants.0.sizes.0.available_quantity', 0)
-                ->where('variants.0.sizes.1.size', '41')
-                ->where('variants.0.sizes.1.available_quantity', 10)
-                ->where('variants.1.color', 'White')
-                ->where('variants.1.sizes.0.size', '40')
-                ->where('variants.1.sizes.0.available_quantity', 8));
+                ->where('variants.0.sizes.0.size', null)
+                ->has('variants.0.sizes', 1)
+                ->has('variants.1.sizes', 1));
     }
 
     public function test_lookup_order_is_used_even_when_lookups_are_inactive(): void
@@ -104,7 +127,7 @@ class ProductDetailsTest extends TestCase
         VariantSize::create(['name' => '42', 'sort_order' => 1, 'active' => false]);
         VariantSize::create(['name' => '40', 'sort_order' => 2, 'active' => false]);
 
-        $product = Product::factory()->create();
+        $product = Product::factory()->create(['size_enabled' => true]);
 
         $product->variants()->createMany([
             ['color' => 'Black', 'size' => '40', 'available_quantity' => 5],

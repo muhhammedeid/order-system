@@ -1,0 +1,93 @@
+<script setup>
+import { ref, watch } from 'vue';
+import AppButton from '@/Components/Ui/AppButton.vue';
+
+const props = defineProps({
+    open: {
+        type: Boolean,
+        default: false,
+    },
+    title: {
+        type: String,
+        required: true,
+    },
+    description: {
+        type: String,
+        default: null,
+    },
+    confirmLabel: {
+        type: String,
+        default: 'تأكيد',
+    },
+    cancelLabel: {
+        type: String,
+        default: 'إلغاء',
+    },
+    tone: {
+        type: String,
+        default: 'primary',
+    },
+});
+
+const emit = defineEmits(['confirm', 'cancel']);
+
+const dialog = ref(null);
+
+watch(
+    () => props.open,
+    (open) => {
+        if (! dialog.value) {
+            return;
+        }
+
+        if (open && ! dialog.value.open) {
+            dialog.value.showModal();
+        }
+
+        if (! open && dialog.value.open) {
+            dialog.value.close();
+        }
+    },
+);
+</script>
+
+<template>
+    <dialog
+        ref="dialog"
+        class="w-[min(28rem,calc(100vw-2rem))] rounded-card border-2 border-line-strong bg-surface-soft p-5 text-ink shadow-retro backdrop:bg-navy/50"
+        aria-labelledby="confirm-dialog-title"
+        @cancel.prevent="emit('cancel')"
+        @close="emit('cancel')"
+    >
+        <h2
+            id="confirm-dialog-title"
+            class="font-display text-xl font-bold"
+        >
+            {{ title }}
+        </h2>
+
+        <p
+            v-if="description"
+            class="mt-2 text-sm text-ink-muted"
+        >
+            {{ description }}
+        </p>
+
+        <div class="mt-5 flex flex-wrap items-center justify-end gap-3">
+            <AppButton
+                variant="secondary"
+                size="sm"
+                @click="emit('cancel')"
+            >
+                {{ cancelLabel }}
+            </AppButton>
+            <AppButton
+                :variant="tone"
+                size="sm"
+                @click="emit('confirm')"
+            >
+                {{ confirmLabel }}
+            </AppButton>
+        </div>
+    </dialog>
+</template>

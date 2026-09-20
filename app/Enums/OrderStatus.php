@@ -6,7 +6,8 @@ enum OrderStatus: string
 {
     case New = 'new';
     case Confirmed = 'confirmed';
-    case Exported = 'exported';
+    case PartiallyDelivered = 'partially_delivered';
+    case Delivered = 'delivered';
     case Cancelled = 'cancelled';
 
     public function label(): string
@@ -14,8 +15,24 @@ enum OrderStatus: string
         return match ($this) {
             self::New => 'جديد',
             self::Confirmed => 'مؤكد',
-            self::Exported => 'مُصدَّر',
+            self::PartiallyDelivered => 'تم التسليم جزئيًا',
+            self::Delivered => 'تم التسليم',
             self::Cancelled => 'ملغي',
         };
+    }
+
+    /**
+     * Statuses whose orders still reference their product variants
+     * operationally; referenced products/variants must not be deleted.
+     *
+     * @return array<int, string>
+     */
+    public static function activeValues(): array
+    {
+        return [
+            self::New->value,
+            self::Confirmed->value,
+            self::PartiallyDelivered->value,
+        ];
     }
 }

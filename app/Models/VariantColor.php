@@ -22,4 +22,17 @@ class VariantColor extends Model
             'active' => 'boolean',
         ];
     }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function activeNames(): array
+    {
+        return static::query()
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
 }

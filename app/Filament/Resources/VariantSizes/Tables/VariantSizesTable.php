@@ -2,15 +2,21 @@
 
 namespace App\Filament\Resources\VariantSizes\Tables;
 
+use App\Filament\Concerns\HasExcelExport;
+use App\Models\VariantSize;
+use App\Support\Exports\VariantSizesExport;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 class VariantSizesTable
 {
+    use HasExcelExport;
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -28,6 +34,11 @@ class VariantSizesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    self::excelExportSelectedAction(
+                        'exportSelected',
+                        'تصدير المحدد Excel',
+                        fn (EloquentCollection $records) => new VariantSizesExport(VariantSize::query()->whereKey($records->modelKeys())),
+                    ),
                     DeleteBulkAction::make(),
                 ]),
             ]);

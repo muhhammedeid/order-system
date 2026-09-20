@@ -8,38 +8,38 @@ The MVP is complete when the following end-to-end flow works reliably.
 2. Client sees active products.
 3. Client opens product.
 4. Client sees available colors.
-5. Client sees available sizes.
-6. Client sees quantity availability.
-7. Client sees public price when allowed.
-8. Client can request hidden price through WhatsApp.
-9. Client adds one or more variants to cart.
-10. Client updates/removes cart items.
-11. Client enters customer data.
-12. System reuses existing customer by mobile when applicable.
-13. Client submits order.
-14. System validates current quantities.
-15. System creates order.
-16. Client receives Order Number.
+5. Client sees available sizes only when the product enables sizes.
+6. Client sees public price when allowed.
+7. Client can request hidden price through WhatsApp.
+8. Client chooses quantity 5, 10 or a custom positive integer and adds variants to cart.
+9. Client updates/removes cart items.
+10. Client enters customer data.
+11. System reuses existing customer by mobile when applicable.
+12. Client submits order.
+13. System validates products, variants and positive quantities (no stock cap, no stock exposure).
+14. System creates order.
+15. Client receives Order Number.
 
 ## Admin Flow
 
-17. Admin logs in.
-18. Admin sees the new order.
-19. Admin opens complete order details.
-20. Admin sees customer data.
-21. Admin sees all variants and quantities.
-22. Admin can confirm or cancel order.
-23. Admin can export one or multiple orders to Excel.
-24. Excel contains accounting Product Codes.
-25. Excel contains Customer Codes when available.
-26. Each ordered variant appears as an individual row.
-27. Admin can mark/export order as exported.
+16. Admin logs in.
+17. Admin sees new orders in Order Management.
+18. Admin opens complete order details.
+19. Admin sees customer data.
+20. Admin sees all variants and quantities.
+21. Admin can edit a pending (`new`) order, confirm it, or cancel it.
+22. Admin can record partial deliveries on confirmed orders until the order is delivered.
+23. Delivered orders remain available in the Delivered Orders history.
+24. Admin can export orders to Excel (Revision R04; pending).
+25. Excel contains accounting Product Codes.
+26. Excel contains Customer Codes when available.
+27. Each ordered variant appears as an individual row; export never changes an order status.
 
 ## Product Management
 
 28. Admin can create/edit products.
 29. Admin can set product as public price or request price.
-30. Admin can manage colors, sizes and available quantities.
+30. Admin can manage colors, optional sizes and available quantities (Admin reference only; never exposed or used to block customers).
 31. Admin can import product data.
 
 ## Customer Management

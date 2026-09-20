@@ -2,23 +2,36 @@
 
 namespace App\Filament\Resources\Products\RelationManagers;
 
+use App\Filament\Concerns\HasExcelExport;
 use App\Models\ProductVariant;
 use App\Models\VariantColor;
 use App\Models\VariantSize;
+use App\Support\Exports\ProductVariantsExport;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 class VariantsRelationManager extends RelationManager
 {
+    use HasExcelExport;
+
     protected static string $relationship = 'variants';
 
     protected static ?string $title = 'Variants';
@@ -42,11 +55,62 @@ class VariantsRelationManager extends RelationManager
             ->pluck('name', 'name')
             ->all();
 
-        if (filled($currentValue) && !array_key_exists($currentValue, $options)) {
+        if (filled($currentValue) && ! array_key_exists($currentValue, $options)) {
             $options[$currentValue] = $currentValue;
         }
 
         return $options;
+    }
+
+    protected function generateVariantsAction(): Action
+    {
+        return Action::make('generateVariants')
+            ->label('توليد أصناف الألوان')
+            ->icon(Heroicon::OutlinedSparkles)
+            ->modalHeading('توليد أصناف الألوان')
+            ->modalDescription('يتم إنشاء الأصناف الناقصة فقط؛ الأصناف الموجودة لا تتغير كمياتها.')
+            ->modalSubmitActionLabel('توليد')
+            ->form([
+                Repeater::make('colors')
+                    ->label('الألوان والكميات')
+                    ->addActionLabel('إضافة لون')
+                    ->defaultItems(1)
+                    ->minItems(1)
+                    ->columns(2)
+                    ->schema([
+                        Select::make('color')
+                            ->label('اللون')
+                            ->searchable()
+                            ->required()
+                            ->options(fn (): array => self::colorOptions(null)),
+                        TextInput::make('quantity')
+                            ->label('الكمية الافتراضية')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(ProductVariant::MAX_QUANTITY)
+                            ->required(),
+                    ]),
+                CheckboxList::make('sizes')
+                    ->label('المقاسات')
+                    ->options(fn (): array => self::sizeOptions(null))
+                    ->default(fn (): array => VariantSize::activeNames())
+                    ->visible(fn (): bool => $this->getOwnerRecord()->size_enabled)
+                    ->required(fn (): bool => $this->getOwnerRecord()->size_enabled),
+            ])
+            ->action(function (array $data): void {
+                $result = ProductVariant::generateMissing(
+                    $this->getOwnerRecord(),
+                    $data['colors'] ?? [],
+                    $data['sizes'] ?? null,
+                );
+
+                Notification::make()
+                    ->title('توليد أصناف الألوان')
+                    ->body("تم إنشاء {$result['created']} صنفًا، وتجاهل {$result['skipped']} صنفًا موجودًا.")
+                    ->success()
+                    ->send();
+            });
     }
 
     public function form(Schema $schema): Schema
@@ -56,16 +120,32 @@ class VariantsRelationManager extends RelationManager
                 Select::make('color')
                     ->required()
                     ->searchable()
-                    ->options(fn (?ProductVariant $record) => self::colorOptions($record)),
+                    ->options(fn (?ProductVariant $record) => self::colorOptions($record))
+                    ->rule(function (Get $get, ?ProductVariant $record): \Closure {
+                        return function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
+                            $size = trim((string) $get('size'));
+
+                            if (ProductVariant::existsFor(
+                                $this->getOwnerRecord(),
+                                trim((string) $value),
+                                $size === '' ? null : $size,
+                                $record?->getKey(),
+                            )) {
+                                $fail('هذا اللون والمقاس مضافان بالفعل لهذا المنتج.');
+                            }
+                        };
+                    }),
                 Select::make('size')
-                    ->required()
+                    ->required(fn () => $this->getOwnerRecord()->size_enabled)
+                    ->visible(fn () => $this->getOwnerRecord()->size_enabled)
                     ->searchable()
                     ->options(fn (?ProductVariant $record) => self::sizeOptions($record)),
                 TextInput::make('available_quantity')
                     ->label('Available Quantity')
                     ->required()
                     ->integer()
-                    ->minValue(0),
+                    ->minValue(0)
+                    ->maxValue(ProductVariant::MAX_QUANTITY),
             ]);
     }
 
@@ -78,23 +158,57 @@ class VariantsRelationManager extends RelationManager
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('size')
+                    ->placeholder('—')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('available_quantity')
+                TextInputColumn::make('available_quantity')
                     ->label('Quantity')
-                    ->numeric()
+                    ->type('number')
+                    ->rules(['required', 'integer', 'min:0', 'max:'.ProductVariant::MAX_QUANTITY])
                     ->sortable(),
             ])
             ->headerActions([
                 CreateAction::make(),
+                $this->generateVariantsAction(),
+                $this->excelExportAction(
+                    'exportExcel',
+                    'تصدير Excel',
+                    fn (Builder $query) => new ProductVariantsExport($query),
+                ),
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->before(function (ProductVariant $record, DeleteAction $action): void {
+                        if (! $record->isReferencedByActiveOrder()) {
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title('تعذّر حذف المقاس')
+                            ->body('لا يمكن حذف هذا المقاس لأنه مرتبط بطلب نشط. يمكنك إبقاء المقاس كما هو أو تعديل الكمية المتاحة بدلًا من حذفه.')
+                            ->danger()
+                            ->send();
+
+                        $action->cancel();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function (EloquentCollection $records, DeleteBulkAction $action): void {
+                            if (! $records->contains(fn (ProductVariant $record): bool => $record->isReferencedByActiveOrder())) {
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title('تعذّر حذف الأصناف المحددة')
+                                ->body('لا يمكن حذف بعض الأصناف المحددة لأنها مرتبطة بطلبات نشطة. لم يتم حذف أي صنف؛ يمكنك تعديل الكميات المتاحة بدلًا من الحذف.')
+                                ->danger()
+                                ->send();
+
+                            $action->cancel();
+                        }),
                 ]),
             ]);
     }

@@ -2,8 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\Settings;
+use App\Filament\Resources\Products\Pages\ListProducts;
+use App\Filament\Resources\VariantColors\VariantColorResource;
+use App\Filament\Resources\VariantSizes\VariantSizeResource;
+use App\Models\Customer;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class FilamentAdminAccessTest extends TestCase
@@ -24,6 +31,16 @@ class FilamentAdminAccessTest extends TestCase
             ->assertStatus(200);
     }
 
+    public function test_admin_panel_renders_right_to_left(): void
+    {
+        $admin = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('dir="rtl"', false);
+    }
+
     public function test_admin_resource_pages_render(): void
     {
         $admin = User::factory()->create();
@@ -35,9 +52,39 @@ class FilamentAdminAccessTest extends TestCase
         $this->actingAs($admin)->get('/admin/variant-colors')->assertStatus(200);
         $this->actingAs($admin)->get('/admin/variant-sizes')->assertStatus(200);
 
-        $product = \App\Models\Product::factory()->create();
+        $product = Product::factory()->create();
 
         $this->actingAs($admin)->get("/admin/products/{$product->getKey()}/edit")->assertStatus(200);
         $this->actingAs($admin)->get('/admin/settings')->assertStatus(200);
+    }
+
+    public function test_customer_edit_page_renders_without_missing_icons(): void
+    {
+        $admin = User::factory()->create();
+        $customer = Customer::factory()->create();
+
+        $this->actingAs($admin)
+            ->get("/admin/customers/{$customer->getKey()}/edit")
+            ->assertOk();
+    }
+
+    public function test_products_list_exposes_the_create_action(): void
+    {
+        $admin = User::factory()->create();
+
+        Livewire::actingAs($admin)
+            ->test(ListProducts::class)
+            ->assertActionExists('create')
+            ->assertSee('إضافة منتج');
+    }
+
+    public function test_variant_lookups_and_settings_share_the_settings_navigation_group(): void
+    {
+        $this->assertSame('الإعدادات', VariantColorResource::getNavigationGroup());
+        $this->assertSame('ألوان الأصناف', VariantColorResource::getNavigationLabel());
+        $this->assertSame('الإعدادات', VariantSizeResource::getNavigationGroup());
+        $this->assertSame('مقاسات الأصناف', VariantSizeResource::getNavigationLabel());
+        $this->assertSame('الإعدادات', Settings::getNavigationGroup());
+        $this->assertSame('الإعدادات العامة', Settings::getNavigationLabel());
     }
 }

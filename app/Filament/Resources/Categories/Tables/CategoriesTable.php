@@ -2,15 +2,21 @@
 
 namespace App\Filament\Resources\Categories\Tables;
 
+use App\Filament\Concerns\HasExcelExport;
+use App\Models\Category;
+use App\Support\Exports\CategoriesExport;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 class CategoriesTable
 {
+    use HasExcelExport;
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -32,6 +38,11 @@ class CategoriesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    self::excelExportSelectedAction(
+                        'exportSelected',
+                        'تصدير المحدد Excel',
+                        fn (EloquentCollection $records) => new CategoriesExport(Category::query()->whereKey($records->modelKeys())),
+                    ),
                     DeleteBulkAction::make(),
                 ]),
             ]);

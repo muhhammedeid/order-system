@@ -22,4 +22,19 @@ class VariantSize extends Model
             'active' => 'boolean',
         ];
     }
+
+    /**
+     * Active size names in display order; the default generation template.
+     *
+     * @return array<int, string>
+     */
+    public static function activeNames(): array
+    {
+        return static::query()
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
 }

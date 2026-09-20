@@ -1,0 +1,95 @@
+<script setup>
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import AppIcon from '@/Components/Ui/AppIcon.vue';
+import BrandMark from '@/Components/Brand/BrandMark.vue';
+
+const page = usePage();
+
+const whatsapp = computed(() => page.props.whatsapp ?? null);
+
+const year = new Date().getFullYear();
+
+const LINKS = [
+    { label: 'المتجر', href: '/catalog' },
+    { label: 'الطلب', href: '/cart' },
+];
+</script>
+
+<template>
+    <footer class="mt-12 border-t-4 border-crimson bg-navy text-cream">
+        <div class="mx-auto grid w-full max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-3 lg:px-8">
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2.5">
+                    <BrandMark :size="34" />
+                    <span class="flex flex-col leading-none">
+                        <span
+                            class="font-brand text-lg"
+                            dir="ltr"
+                        >MAI<span class="text-powder">*</span></span>
+                        <span
+                            class="mt-0.5 font-brand text-[0.5rem] tracking-[0.3em] text-cream/70"
+                            dir="ltr"
+                        >SHOES</span>
+                    </span>
+                </div>
+
+                <p class="max-w-xs text-sm text-cream/80">
+                    منصة طلبات الجملة لأحذية MAI SHOES — تصفح المنتجات، اعرف الكميات المتاحة، وأرسل طلبك في دقائق.
+                </p>
+            </div>
+
+            <nav
+                class="flex flex-col gap-2"
+                aria-label="روابط سريعة"
+            >
+                <h2 class="font-display text-base font-bold text-cream">
+                    روابط سريعة
+                </h2>
+                <Link
+                    v-for="link in LINKS"
+                    :key="link.href"
+                    :href="link.href"
+                    class="w-fit rounded text-sm font-semibold text-cream/85 transition-colors hover:text-white"
+                >
+                    {{ link.label }}
+                </Link>
+            </nav>
+
+            <div class="flex flex-col gap-2">
+                <h2 class="font-display text-base font-bold text-cream">
+                    تواصل معنا
+                </h2>
+
+                <a
+                    v-if="whatsapp"
+                    :href="`https://wa.me/${whatsapp}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex w-fit items-center gap-2 rounded-control border-2 border-cream/25 px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-cream/10"
+                >
+                    <AppIcon
+                        name="whatsapp"
+                        :size="18"
+                    />
+                    واتساب
+                    <span
+                        class="tabular-nums"
+                        dir="ltr"
+                    >{{ whatsapp }}</span>
+                </a>
+
+                <p class="text-xs text-cream/70">
+                    الأسعار غير المتاحة للعرض يمكن طلبها مباشرة عبر واتساب من صفحة المنتج.
+                </p>
+            </div>
+        </div>
+
+        <div class="border-t border-cream/15">
+            <div class="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-cream/70 sm:px-6 lg:px-8">
+                <p>MAI SHOES © {{ year }} — جميع الحقوق محفوظة</p>
+                <p>إرسال الطلب لا يُعد تأكيدًا للبيع أو الدفع.</p>
+            </div>
+        </div>
+    </footer>
+</template>

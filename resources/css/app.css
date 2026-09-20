@@ -5,7 +5,161 @@
 @source '../**/*.vue';
 @source '../**/*.js';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-    --font-sans: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+    --font-sans: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, -apple-system,
+        'Segoe UI', sans-serif;
+    --font-display: 'Reem Kufi', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui,
+        sans-serif;
+    --font-brand: 'Archivo Black', 'Reem Kufi', ui-sans-serif, system-ui, sans-serif;
+    --font-retro: 'Lalezar', 'Archivo Black', 'Reem Kufi', sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* Brand palette */
+    --color-crimson: #c91424;
+    --color-burgundy: #8f0808;
+    --color-navy: #073f57;
+    --color-powder: #75a9c7;
+    --color-powder-ink: #052e40;
+    --color-cream: #fff0d3;
+
+    /* Semantic surfaces */
+    --color-surface: #fff0d3;
+    --color-surface-soft: #fff8e9;
+    --color-surface-muted: #f6e3bd;
+    --color-ink: #073f57;
+    --color-ink-muted: #3f6d80;
+    --color-line: #e6d3ab;
+    --color-line-strong: #073f57;
+
+    /* Semantic actions */
+    --color-primary: #c91424;
+    --color-primary-strong: #a50f1d;
+    --color-primary-soft: #f7d3cf;
+    --color-on-primary: #ffffff;
+    --color-accent: #073f57;
+    --color-accent-soft: #dceaf3;
+    --color-ring: #c91424;
+
+    /* Semantic status */
+    --color-success: #14664a;
+    --color-success-soft: #d6ecdf;
+    --color-warning: #8a5a00;
+    --color-warning-soft: #f8e6bf;
+    --color-danger: #8f0808;
+    --color-danger-soft: #f7d3cf;
+    --color-whatsapp: #0e7a4a;
+
+    --radius-card: 16px;
+    --radius-control: 12px;
+
+    --shadow-retro: 3px 3px 0 0 var(--color-line-strong);
+    --shadow-retro-sm: 2px 2px 0 0 var(--color-line-strong);
+    --shadow-retro-primary: 3px 3px 0 0 var(--color-burgundy);
+}
+
+@layer base {
+    .dark {
+        --color-surface: #04222f;
+        --color-surface-soft: #0a2c3a;
+        --color-surface-muted: #0e3546;
+        --color-ink: #fff0d3;
+        --color-ink-muted: #a9bfca;
+        --color-line: #1b4a5e;
+        --color-line-strong: #2c6b85;
+
+        --color-primary: #ff6b72;
+        --color-primary-strong: #ff8a8f;
+        --color-primary-soft: #421016;
+        --color-on-primary: #04222f;
+        --color-accent: #75a9c7;
+        --color-accent-soft: #123243;
+        --color-ring: #75a9c7;
+
+        --color-success: #5fd3a3;
+        --color-success-soft: #0d3b2b;
+        --color-warning: #ffc46b;
+        --color-warning-soft: #3d2c07;
+        --color-danger: #ff8a8f;
+        --color-danger-soft: #421016;
+        --color-whatsapp: #25d366;
+    }
+
+    *,
+    ::before,
+    ::after {
+        border-color: var(--color-line);
+    }
+
+    html {
+        scroll-padding-top: 5.5rem;
+        scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--color-surface);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-ring);
+        outline-offset: 2px;
+    }
+
+    ::selection {
+        background-color: var(--color-primary);
+        color: var(--color-on-primary);
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+        font-family: inherit;
+    }
+
+    [hidden] {
+        display: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
+
+@keyframes badge-pop {
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.25);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes skeleton-shimmer {
+    from {
+        background-position: 200% 0;
+    }
+
+    to {
+        background-position: -200% 0;
+    }
 }

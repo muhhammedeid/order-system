@@ -2,16 +2,26 @@
 
 namespace App\Filament\Resources\Orders\Pages;
 
+use App\Filament\Concerns\HasExcelExport;
 use App\Filament\Resources\Orders\OrderResource;
-use Filament\Actions\ViewAction;
+use App\Support\Exports\OrderItemsExport;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 
 class ListOrders extends ListRecords
 {
+    use HasExcelExport;
+
     protected static string $resource = OrderResource::class;
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            $this->excelExportAction(
+                'exportExcel',
+                'تصدير النتائج Excel',
+                fn (Builder $orders) => OrderItemsExport::forOrders($orders, 'delivered-orders'),
+            ),
+        ];
     }
 }

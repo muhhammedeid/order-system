@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PriceVisibility;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -115,12 +114,6 @@ class OrderController extends Controller
                 if ($item['quantity'] < 1) {
                     throw ValidationException::withMessages(['cart' => 'الكمية يجب أن تكون أكبر من صفر']);
                 }
-
-                if ($item['quantity'] > $variant->available_quantity) {
-                    throw ValidationException::withMessages([
-                        'cart' => "الكمية المطلوبة من {$variant->product->name} ({$item['color']} / {$item['size']}) أكبر من الكمية المتاحة",
-                    ]);
-                }
             }
 
             $customer = Customer::matchOrCreate($customerData);
@@ -128,29 +121,19 @@ class OrderController extends Controller
             $order = Order::create([
                 'order_number' => Order::nextOrderNumber(),
                 'customer_id' => $customer->id,
-                'status' => 'new',
                 'customer_notes' => $customerData['customer_notes'] ?? null,
                 'total_quantity' => $cart['total_quantity'],
             ]);
 
             foreach ($cartItems as $item) {
                 $variant = $variants->get($item['variant_id']);
-                $product = $variant->product;
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'product_variant_id' => $variant->id,
-                    'product_code' => $product->product_code,
-                    'product_name' => $product->name,
-                    'color' => $item['color'],
-                    'size' => $item['size'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $product->price_visibility === PriceVisibility::PublicPrice
-                        ? $product->price
-                        : null,
-                    'price_visibility' => $product->price_visibility->value,
-                ]);
+                OrderItem::create(
+                    OrderItem::snapshotFromVariant($variant) + [
+                        'order_id' => $order->id,
+                        'quantity' => $item['quantity'],
+                    ]
+                );
             }
 
             return $order;

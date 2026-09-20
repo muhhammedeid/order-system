@@ -2,13 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class OrderCreationTest extends TestCase
@@ -21,6 +20,7 @@ class OrderCreationTest extends TestCase
             ->for(Product::factory()->create([
                 'price_visibility' => 'public',
                 'price' => 450,
+                'size_enabled' => true,
                 ...$productAttributes,
             ]))
             ->create(['available_quantity' => 10, ...$variantAttributes]);
@@ -61,8 +61,25 @@ class OrderCreationTest extends TestCase
         $this->assertSame($variant->color, $item->color);
         $this->assertSame($variant->size, $item->size);
         $this->assertSame(3, $item->quantity);
+        $this->assertSame(0, $item->delivered_quantity);
         $this->assertSame('450.00', $item->unit_price);
         $this->assertSame('public', $item->price_visibility);
+    }
+
+    public function test_unsized_order_item_snapshot_has_null_size(): void
+    {
+        $variant = ProductVariant::factory()
+            ->for(Product::factory()->create(['price_visibility' => 'public', 'price' => 450]))
+            ->create(['color' => 'Black', 'size' => null, 'available_quantity' => 10]);
+
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2]);
+        $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567']);
+
+        $item = OrderItem::query()->first();
+
+        $this->assertNull($item->size);
+        $this->assertSame('Black', $item->color);
+        $this->assertSame('450.00', $item->unit_price);
     }
 
     public function test_empty_cart_is_rejected(): void
@@ -73,20 +90,20 @@ class OrderCreationTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
     }
 
-    public function test_submit_time_quantity_is_revalidated(): void
+    public function test_checkout_accepts_quantities_above_available_stock(): void
     {
         $variant = $this->publicVariant();
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 3]);
 
-        // simulate another concurrent order consuming stock after add-to-cart
+        // stock is only an Admin reference; it must never block an order
         $variant->update(['available_quantity' => 2]);
 
-        $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567'])
-            ->assertSessionHasErrors('cart');
+        $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567']);
 
-        $this->assertDatabaseCount('orders', 0);
-        $this->assertDatabaseCount('customers', 0);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(3, Order::query()->first()->total_quantity);
+        $this->assertSame(2, $variant->refresh()->available_quantity);
     }
 
     public function test_inactive_product_is_rejected_at_submit_time(): void
@@ -106,7 +123,7 @@ class OrderCreationTest extends TestCase
     public function test_request_price_item_has_null_unit_price_and_snapshot(): void
     {
         $variant = ProductVariant::factory()
-            ->for(Product::factory()->requestPrice()->create(['price' => 555.55]))
+            ->for(Product::factory()->requestPrice()->create(['price' => 555.55, 'size_enabled' => true]))
             ->create(['available_quantity' => 10]);
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2]);
@@ -143,12 +160,15 @@ class OrderCreationTest extends TestCase
         $this->get('/cart')->assertInertia(fn ($page) => $page->has('items', 0));
     }
 
-    public function test_available_quantity_is_not_decremented_by_order_submission(): void
+    public function test_available_quantity_is_not_decremented_by_submission_or_confirmation(): void
     {
         $variant = $this->publicVariant();
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 4]);
         $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567']);
+
+        $order = Order::query()->firstOrFail();
+        $order->confirm();
 
         $this->assertSame(10, $variant->refresh()->available_quantity);
     }
@@ -184,16 +204,19 @@ class OrderCreationTest extends TestCase
         $order = Order::query()->first();
         $customer = $order->customer;
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         $customer->delete();
     }
 
-    public function test_order_survives_product_deletion(): void
+    public function test_terminal_order_survives_product_deletion_with_snapshots(): void
     {
         $variant = $this->publicVariant();
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 1]);
         $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567']);
+
+        $order = Order::query()->firstOrFail();
+        $order->cancel();
 
         $item = OrderItem::query()->first();
         $item->product->delete();

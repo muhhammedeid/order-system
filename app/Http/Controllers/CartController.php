@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Support\Cart;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,38 +22,44 @@ class CartController extends Controller
     {
         $validated = $request->validate([
             'variant_id' => ['required', 'integer', 'exists:product_variants,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:'.OrderItem::MAX_QUANTITY],
         ], [
             'quantity.min' => 'الكمية يجب أن تكون أكبر من صفر',
         ]);
 
         $variant = ProductVariant::query()
-            ->with('product:id,active')
+            ->with('product:id,name,active')
             ->find($validated['variant_id']);
 
         if (! $variant || ! $variant->product->active) {
             return back()->withErrors(['variant_id' => 'هذا المنتج غير متوفر حاليًا']);
         }
 
-        if ($validated['quantity'] > $variant->available_quantity) {
-            return back()->withErrors([
-                'quantity' => 'الكمية المطلوبة أكبر من الكمية المتاحة',
-            ]);
-        }
-
         Cart::add($variant->id, $validated['quantity']);
 
-        return redirect()->route('cart.index');
+        return back()->with('success', "تمت إضافة {$variant->product->name} إلى الطلب");
     }
 
     public function update(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'variant_id' => ['required', 'integer'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:'.OrderItem::MAX_QUANTITY],
         ], [
             'quantity.min' => 'الكمية يجب أن تكون أكبر من صفر',
         ]);
+
+        if ($validator->fails()) {
+            $variantId = $request->integer('variant_id');
+
+            if ($variantId > 0 && $validator->errors()->has('quantity')) {
+                $validator->errors()->add('quantity_variant', (string) $variantId);
+            }
+
+            throw new ValidationException($validator);
+        }
+
+        $validated = $validator->validated();
 
         $variant = ProductVariant::query()->find($validated['variant_id']);
 
@@ -58,12 +67,6 @@ class CartController extends Controller
             Cart::remove((int) $validated['variant_id']);
 
             return back();
-        }
-
-        if ($validated['quantity'] > $variant->available_quantity) {
-            return back()->withErrors([
-                'quantity' => 'الكمية المطلوبة أكبر من الكمية المتاحة',
-            ]);
         }
 
         Cart::update($variant->id, $validated['quantity']);
@@ -77,13 +80,13 @@ class CartController extends Controller
 
         Cart::remove((int) $validated['variant_id']);
 
-        return back();
+        return back()->with('info', 'تم حذف المنتج من الطلب');
     }
 
     public function clear()
     {
         Cart::clear();
 
-        return back();
+        return back()->with('info', 'تم إفراغ الطلب');
     }
 }

@@ -4,7 +4,7 @@
 
 Wholesale Order System is a lightweight ordering platform for a shoe factory.
 
-Its purpose is to allow wholesale customers to browse products, check available colors, sizes and quantities, view allowed prices, and submit wholesale orders without online payment.
+Its purpose is to allow wholesale customers to browse products, check available colors and optional sizes, view allowed prices, and submit wholesale orders without online payment. Exact stock levels are never shown to customers.
 
 The existing accounting system remains the source of truth for accounting, financial records and official product/customer codes.
 
@@ -34,11 +34,10 @@ They can:
 
 - Browse catalog.
 - Open product details.
-- View available colors and sizes.
-- View available quantity.
+- View available colors and optional sizes.
 - View price when public.
 - Request hidden price through WhatsApp.
-- Add products to an order.
+- Add products to an order with any positive quantity.
 - Enter customer information.
 - Submit order.
 
@@ -56,8 +55,8 @@ Admin can:
 - Manage product variants.
 - Manage public/hidden pricing.
 - Manage customers.
-- Review orders.
-- Change order status.
+- Review, edit (while pending), confirm or cancel orders.
+- Record partial or complete deliveries.
 - Import customers/products.
 - Export orders to Excel.
 - Manage basic settings.
@@ -89,20 +88,23 @@ Each product contains:
 Each product can contain variants defined by:
 
 - Color
-- Size
-- Available Quantity
+- Size (only when the product has `size_enabled = true`; off by default)
+- Available Quantity (internal Admin reference)
 
 Example:
 
 | Product | Color | Size | Available Qty |
-|---|---|---|---:|
+|---|---|---|---|
 | SH-100 | Black | 40 | 15 |
 | SH-100 | Black | 41 | 10 |
 | SH-100 | White | 40 | 8 |
+| SH-200 | White | — | 12 |
 
 The system does not manage warehouse transactions.
 
-`available_quantity` is only the quantity currently available for ordering.
+`available_quantity` is an internal Admin reference only. It is never shown to customers and never blocks ordering: any positive requested quantity is accepted (quantity presets `5`, `10`, or a custom positive integer). Operations may contact the customer and agree on quantities before confirmation.
+
+When `size_enabled` is `false`, the customer selects color and quantity only; no size is required or stored for new variants.
 
 ---
 
@@ -178,8 +180,8 @@ Client flow:
 Catalog  
 → Product Details  
 → Select Color  
-→ Select Size  
-→ Enter Quantity  
+→ Select Size (only when the product enables sizes)  
+→ Enter Quantity (5, 10 or any custom positive integer)  
 → Add to Order  
 → Cart  
 → Customer Information  
@@ -215,7 +217,7 @@ Client can:
 - Continue shopping
 - Submit order
 
-Quantity cannot exceed current available quantity.
+Quantity must be a positive integer. It is not limited by `available_quantity`.
 
 ---
 
@@ -236,13 +238,17 @@ Quantity cannot exceed current available quantity.
 
 - Order ID
 - Product ID
+- Variant Reference
 - Product Code Snapshot
 - Product Name Snapshot
 - Color
-- Size
+- Size (when the product enables sizes)
 - Quantity
+- Delivered Quantity
 - Unit Price Snapshot
 - Price Visibility Snapshot
+
+Remaining quantity is derived (`quantity - delivered_quantity`) and never stored.
 
 Historical order data must not change when product data changes later.
 
@@ -254,14 +260,17 @@ Allowed statuses:
 
 - `new`
 - `confirmed`
-- `exported`
+- `partially_delivered`
+- `delivered`
 - `cancelled`
 
-No workflow engine.
+Excel export is an action, not a status. No workflow engine.
 
 ---
 
 ## 13. Excel Export
+
+Implementation is pending Revision R04. Export is an action and never changes an order status.
 
 Admin can:
 
@@ -355,11 +364,12 @@ MVP pages:
 2. Dashboard
 3. Product List
 4. Product Form
-5. Order List
-6. Order Details
-7. Customer List
-8. Customer Form
-9. Settings
+5. Order Management (active orders by status)
+6. Order Details / Confirm
+7. Delivered Orders (history)
+8. Customer List
+9. Customer Form
+10. Settings
 
 ---
 

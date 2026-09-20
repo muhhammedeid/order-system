@@ -11,8 +11,8 @@ These rules are mandatory for all agents and developers.
 5. Do not implement client login/authentication.
 6. Do not implement invoices.
 7. Do not implement financial balances or customer credit.
-8. Do not implement stock movements or warehouse transactions.
-9. Do not implement delivery/shipping systems.
+8. Do not implement stock movements or warehouse transactions. No order lifecycle step changes `available_quantity`; it is an Admin reference only.
+9. Do not implement delivery/shipping systems (couriers, shipments, dispatch, shipping integrations). Lightweight fulfillment tracking inside orders (`delivered_quantity`) is approved and is not such a system.
 10. Do not implement advanced analytics unless separately approved.
 
 ## Architecture Rules

@@ -13,12 +13,15 @@ use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use UnitEnum;
 
 class Settings extends Page
 {
     protected string $view = 'filament.pages.settings';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAdjustmentsHorizontal;
+
+    protected static string|UnitEnum|null $navigationGroup = 'الإعدادات';
 
     protected static ?int $navigationSort = 90;
 
@@ -86,6 +89,6 @@ class Settings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return 'Settings';
+        return 'الإعدادات العامة';
     }
 }

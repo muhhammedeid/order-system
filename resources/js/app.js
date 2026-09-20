@@ -4,8 +4,10 @@ import '../css/app.css';
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 
+const appName = import.meta.env.VITE_APP_NAME || 'MAI SHOES';
+
 createInertiaApp({
-    title: (title) => title,
+    title: (title) => (title ? `${title} | ${appName}` : appName),
     resolve: (name) => {
         const pages = import.meta.glob('./Pages/**/*.vue');
         return pages[`./Pages/${name}.vue`]();
@@ -16,6 +18,6 @@ createInertiaApp({
             .mount(el);
     },
     progress: {
-        color: '#4B5563',
+        color: '#C91424',
     },
 });

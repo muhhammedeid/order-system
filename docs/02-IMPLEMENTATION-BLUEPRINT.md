@@ -168,16 +168,13 @@ Before creating the order:
 1. Validate cart is not empty.
 2. Reload relevant product variants from database.
 3. Confirm products are active.
-4. Confirm each requested quantity is greater than zero.
-5. Confirm each requested quantity does not exceed current available quantity.
-6. Resolve/create customer.
-7. Create order.
-8. Create order item snapshots.
-9. Commit.
+4. Confirm each requested quantity is a positive integer.
+5. Resolve/create customer.
+6. Create order.
+7. Create order item snapshots.
+8. Commit.
 
-MVP does not need to automatically reduce accounting inventory.
-
-Whether `available_quantity` is decremented on submitted orders should be a separate explicit business decision before implementation.
+No step of the order lifecycle (creation, confirmation, delivery, cancellation) changes `available_quantity`. It is an internal Admin reference only; stock-based ordering restrictions were removed in Revision R01. The accounting/inventory system remains the external source of truth.
 
 ---
 

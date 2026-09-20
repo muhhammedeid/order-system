@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\PriceVisibility;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 
 class Cart
@@ -80,6 +81,14 @@ class Cart
             ->get()
             ->keyBy('id');
 
+        $images = ProductImage::query()
+            ->whereIn('product_id', $variants->pluck('product.id')->filter()->unique()->values())
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['product_id', 'image_path'])
+            ->groupBy('product_id')
+            ->map(fn ($rows) => $rows->first()->image_path);
+
         $items = [];
         $totalQuantity = 0;
         $publicTotal = 0;
@@ -107,6 +116,7 @@ class Cart
                     'slug' => $product->slug,
                     'price_visibility' => $product->price_visibility->value,
                     'price' => $isPublic ? $product->price : null,
+                    'image' => $images->get($product->id),
                 ],
                 'unit_price' => $isPublic ? $product->price : null,
                 'line_total' => $isPublic ? bcmul((string) $product->price, (string) $quantity, 2) : null,

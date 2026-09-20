@@ -73,6 +73,7 @@ description nullable
 price_visibility
 price nullable
 active
+size_enabled
 created_at
 updated_at
 ```
@@ -81,6 +82,10 @@ Allowed `price_visibility`:
 
 - public
 - request_price
+
+`price` is required whenever `price_visibility = public` (enforced server-side on every write path). `request_price` may store an internal price or `null`.
+
+`size_enabled` (default `false`) controls whether variants for this product use size selection (Revision R01).
 
 Indexes:
 
@@ -97,7 +102,8 @@ Indexes:
 id
 product_id
 color
-size
+size nullable
+size_key (generated column derived from size)
 available_quantity
 created_at
 updated_at
@@ -106,9 +112,13 @@ updated_at
 Constraints:
 
 ```text
-unique(product_id, color, size)
+unique(product_id, color, size_key)
 available_quantity >= 0
 ```
+
+`size` is only nullable when the parent product has `size_enabled = false`; when sizes are enabled, size is required. The generated `size_key` keeps `NULL` sizes unique per product/color (a plain nullable composite unique would allow duplicates).
+
+`available_quantity` is an internal Admin reference only. It is not exposed to customers and never blocks ordering: the storefront accepts any positive requested quantity (Revision R01).
 
 ---
 
@@ -143,8 +153,11 @@ Statuses:
 
 - new
 - confirmed
-- exported
+- partially_delivered
+- delivered
 - cancelled
+
+Excel export is an action, not a lifecycle status (`exported` was removed in Revision R01).
 
 Indexes:
 
@@ -161,11 +174,13 @@ Indexes:
 id
 order_id
 product_id nullable
+product_variant_id nullable
 product_code
 product_name
 color
-size
+size nullable
 quantity
+delivered_quantity
 unit_price nullable
 price_visibility
 created_at
@@ -174,7 +189,11 @@ updated_at
 
 Important:
 
-`product_code`, `product_name`, `unit_price`, and `price_visibility` are snapshots.
+`product_code`, `product_name`, color, size, `unit_price`, and `price_visibility` are snapshots.
+
+`product_variant_id` is the operational variant reference used by Admin order operations (editing, delivery tracking). It is `nullOnDelete`.
+
+`delivered_quantity` is non-negative and never exceeds `quantity`; remaining quantity is derived (`quantity - delivered_quantity`). The invariant is enforced by the model and, on MariaDB/MySQL, by a CHECK constraint.
 
 Historical order data should remain valid even when product data changes later.
 

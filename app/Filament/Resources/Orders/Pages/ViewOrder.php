@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Orders\Pages;
 
+use App\Filament\Resources\OrderManagement\OrderPrintAction;
 use App\Filament\Resources\Orders\OrderResource;
-use Filament\Actions\EditAction;
+use App\Support\Exports\OrderItemsExport;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewOrder extends ViewRecord
@@ -13,7 +15,12 @@ class ViewOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            OrderPrintAction::make(),
+            Action::make('exportItems')
+                ->label('تصدير الطلب Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->action(fn () => OrderItemsExport::forOrder($this->getRecord())->download()),
         ];
     }
 }

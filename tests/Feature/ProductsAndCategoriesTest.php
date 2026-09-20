@@ -20,6 +20,7 @@ class ProductsAndCategoriesTest extends TestCase
 
         Product::validate([
             'product_code' => '',
+            'name' => 'Test Shoe',
             'slug' => 'shoe-a',
             'price_visibility' => 'public',
             'price' => 100,
@@ -34,6 +35,7 @@ class ProductsAndCategoriesTest extends TestCase
 
         Product::validate([
             'product_code' => 'SH-100',
+            'name' => 'Test Shoe',
             'slug' => 'other-slug',
             'price_visibility' => 'public',
             'price' => 100,
@@ -48,6 +50,7 @@ class ProductsAndCategoriesTest extends TestCase
 
         Product::validate([
             'product_code' => 'SH-200',
+            'name' => 'Test Shoe',
             'slug' => 'running-shoe',
             'price_visibility' => 'public',
             'price' => 100,
@@ -69,6 +72,7 @@ class ProductsAndCategoriesTest extends TestCase
 
         Product::validate([
             'product_code' => 'SH-300',
+            'name' => 'Test Shoe',
             'slug' => 'shoe-c',
             'price_visibility' => 'public',
             'price' => null,
@@ -81,6 +85,7 @@ class ProductsAndCategoriesTest extends TestCase
 
         Product::validate([
             'product_code' => 'SH-400',
+            'name' => 'Test Shoe',
             'slug' => 'shoe-d',
             'price_visibility' => 'public',
             'price' => -5,

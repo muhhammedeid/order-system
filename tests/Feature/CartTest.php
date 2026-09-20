@@ -17,8 +17,10 @@ class CartTest extends TestCase
     {
         $variant = ProductVariant::factory()->create(['available_quantity' => 10]);
 
-        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 3])
-            ->assertRedirect('/cart');
+        $this->from('/catalog')
+            ->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 3])
+            ->assertRedirect('/catalog')
+            ->assertSessionHas('success');
 
         $this->get('/cart')->assertInertia(fn (Assert $page) => $page
             ->component('Cart/Index')
@@ -47,20 +49,56 @@ class CartTest extends TestCase
         $this->assertSame([], Cart::items());
     }
 
-    public function test_quantity_cannot_exceed_available(): void
+    public function test_quantity_is_not_limited_by_available_stock(): void
     {
         $variant = ProductVariant::factory()->create(['available_quantity' => 5]);
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 11])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(11, Cart::count());
+    }
+
+    public function test_quantity_presets_five_ten_and_custom_are_accepted(): void
+    {
+        $variant = ProductVariant::factory()->create(['available_quantity' => 0]);
+
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 5]);
+        $this->assertSame(5, Cart::count());
+
+        $this->post('/cart/update', ['variant_id' => $variant->id, 'quantity' => 10]);
+        $this->assertSame(10, Cart::count());
+
+        $this->post('/cart/update', ['variant_id' => $variant->id, 'quantity' => 137]);
+        $this->assertSame(137, Cart::count());
+    }
+
+    public function test_quantity_above_the_technical_upper_bound_is_rejected(): void
+    {
+        $variant = ProductVariant::factory()->create(['available_quantity' => 0]);
+
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 4294967296])
             ->assertSessionHasErrors('quantity');
 
         $this->assertSame([], Cart::items());
     }
 
+    public function test_update_quantity_error_is_scoped_to_the_affected_line(): void
+    {
+        $variant = ProductVariant::factory()->create();
+
+        $this->from('/cart')
+            ->post('/cart/update', ['variant_id' => $variant->id, 'quantity' => 0])
+            ->assertSessionHasErrors([
+                'quantity' => 'الكمية يجب أن تكون أكبر من صفر',
+                'quantity_variant' => (string) $variant->id,
+            ]);
+    }
+
     public function test_inactive_product_cannot_be_added(): void
     {
         $variant = ProductVariant::factory()
-            ->for(Product::factory()->inactive())
+            ->for(Product::factory()->inactive()->create(['size_enabled' => true]))
             ->create();
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 1])
@@ -80,7 +118,7 @@ class CartTest extends TestCase
         $this->assertSame(1, count(Cart::items()));
     }
 
-    public function test_update_quantity_enforces_availability(): void
+    public function test_update_quantity_is_not_limited_by_available_stock(): void
     {
         $variant = ProductVariant::factory()->create(['available_quantity' => 5]);
 
@@ -90,9 +128,9 @@ class CartTest extends TestCase
         $this->assertSame(4, Cart::count());
 
         $this->post('/cart/update', ['variant_id' => $variant->id, 'quantity' => 6])
-            ->assertSessionHasErrors('quantity');
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(4, Cart::count());
+        $this->assertSame(6, Cart::count());
     }
 
     public function test_remove_and_clear_work(): void
@@ -113,11 +151,11 @@ class CartTest extends TestCase
     public function test_request_price_products_never_expose_price_in_cart(): void
     {
         $public = ProductVariant::factory()
-            ->for(Product::factory()->create(['price_visibility' => 'public', 'price' => 450]))
+            ->for(Product::factory()->create(['price_visibility' => 'public', 'price' => 450, 'size_enabled' => true]))
             ->create(['available_quantity' => 5]);
 
         $secret = ProductVariant::factory()
-            ->for(Product::factory()->requestPrice()->create(['name' => 'Secret Cart Shoe', 'price' => 1234.56]))
+            ->for(Product::factory()->requestPrice()->create(['name' => 'Secret Cart Shoe', 'price' => 1234.56, 'size_enabled' => true]))
             ->create(['available_quantity' => 5]);
 
         $this->post('/cart/add', ['variant_id' => $public->id, 'quantity' => 2]);

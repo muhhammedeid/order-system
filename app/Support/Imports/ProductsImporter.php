@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProductsImporter
 {
@@ -21,7 +22,7 @@ class ProductsImporter
 
     public function process(array $keyedRows): ImportResult
     {
-        $result = new ImportResult();
+        $result = new ImportResult;
         $seenCodes = [];
 
         foreach ($keyedRows as $rowNumber => $row) {
@@ -64,8 +65,6 @@ class ProductsImporter
 
         if ($priceProvided) {
             $price = $this->numericPrice($priceCell);
-        } elseif ($visibility === PriceVisibility::PublicPrice && ! Product::query()->where('product_code', $code)->exists()) {
-            throw new \RuntimeException('Price مطلوب للمنتج بسعر معلن');
         }
 
         $existing = Product::query()->where('product_code', $code)->first();
@@ -188,7 +187,11 @@ class ProductsImporter
 
     private function reason(\Throwable $exception): string
     {
-        $message = $exception->getMessage();
+        if ($exception instanceof ValidationException) {
+            $message = (string) (collect($exception->errors())->flatten()->first() ?? '');
+        } else {
+            $message = $exception->getMessage();
+        }
 
         if ($message === '' || str_contains($message, 'SQLSTATE')) {
             $message = 'بيانات غير صالحة في الصف';

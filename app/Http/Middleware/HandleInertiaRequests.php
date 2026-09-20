@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -32,6 +33,13 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'cartCount' => \App\Support\Cart::count(),
+            'appName' => config('app.name'),
+            'whatsapp' => fn () => Setting::whatsappNumber(),
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'info' => fn () => $request->session()->get('info'),
+            ],
         ];
     }
 }

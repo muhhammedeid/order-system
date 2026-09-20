@@ -61,6 +61,10 @@ class ProductForm
                 Toggle::make('active')
                     ->default(true)
                     ->required(),
+                Toggle::make('size_enabled')
+                    ->label('تفعيل اختيار المقاس')
+                    ->helperText('عند تعطيله يختار العميل اللون والكمية فقط. لا يمكن تعطيله إذا كان المنتج يحتوي على مقاسات مسجلة.')
+                    ->default(false),
                 Repeater::make('images')
                     ->relationship('images')
                     ->reorderable()

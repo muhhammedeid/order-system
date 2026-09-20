@@ -1,52 +1,85 @@
 <script setup>
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import AppIcon from '@/Components/Ui/AppIcon.vue';
+import PriceTag from '@/Components/Ui/PriceTag.vue';
+import { formatQuantity } from '@/Utils/format';
 
-defineProps({
+const props = defineProps({
     product: {
         type: Object,
         required: true,
     },
 });
 
-const formatter = new Intl.NumberFormat('ar-EG', {
-    style: 'decimal',
-    maximumFractionDigits: 2,
+const colorsLabel = computed(() => {
+    const colors = Number(props.product.colors_count ?? 0);
+
+    if (colors <= 0) {
+        return null;
+    }
+
+    return colors === 1 ? 'لون واحد' : `${formatQuantity(colors)} ألوان`;
 });
 </script>
 
 <template>
     <Link
         :href="`/product/${product.slug}`"
-        class="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition hover:shadow-md"
+        class="group flex flex-col overflow-hidden rounded-card border-2 border-line bg-surface-soft transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-retro"
     >
-        <div class="aspect-square w-full bg-gray-100">
+        <div class="relative aspect-square w-full overflow-hidden bg-surface-muted">
             <img
-                v-if="product.images && product.images.length"
-                :src="`/storage/${product.images[0].image_path}`"
+                v-if="product.image"
+                :src="`/storage/${product.image}`"
                 :alt="product.name"
-                class="h-full w-full object-cover"
+                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
+                decoding="async"
             >
+            <div
+                v-else
+                class="flex h-full w-full items-center justify-center text-ink-muted/50"
+            >
+                <AppIcon
+                    name="swatch"
+                    :size="42"
+                />
+            </div>
         </div>
 
         <div class="flex flex-1 flex-col gap-1 p-3">
-            <h3 class="text-base font-bold text-gray-900 text-start">
+            <p
+                v-if="product.category"
+                class="text-xs font-semibold text-ink-muted"
+            >
+                {{ product.category.name }}
+            </p>
+
+            <h3 class="font-display text-base font-bold leading-snug text-ink line-clamp-2">
                 {{ product.name }}
             </h3>
-            <p class="text-sm text-gray-500 text-start" dir="ltr">
+
+            <p
+                class="font-mono text-xs text-ink-muted"
+                dir="ltr"
+            >
                 {{ product.product_code }}
             </p>
 
-            <div class="mt-auto pt-2">
-                <p
-                    v-if="product.price_visibility === 'public'"
-                    class="text-lg font-bold text-gray-900 text-start"
+            <div class="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
+                <PriceTag
+                    :value="product.price"
+                    :visibility="product.price_visibility"
+                    size="sm"
+                />
+
+                <span
+                    v-if="colorsLabel"
+                    class="text-xs font-semibold text-ink-muted"
                 >
-                    {{ formatter.format(product.price) }} EGP
-                </p>
-                <p v-else class="text-base font-semibold text-gray-700 text-start">
-                    السعر عند الطلب
-                </p>
+                    {{ colorsLabel }}
+                </span>
             </div>
         </div>
     </Link>

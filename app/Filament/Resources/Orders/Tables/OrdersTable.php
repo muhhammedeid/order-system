@@ -2,15 +2,18 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
-use App\Enums\OrderStatus;
-use App\Models\Order;
+use App\Filament\Concerns\HasExcelExport;
+use App\Support\Exports\OrderItemsExport;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 class OrdersTable
 {
+    use HasExcelExport;
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -27,27 +30,36 @@ class OrdersTable
                     ->label('الموبايل')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('status')
-                    ->label('الحالة')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => $state instanceof OrderStatus ? $state->label() : $state),
                 TextColumn::make('total_quantity')
-                    ->label('إجمالي القطع')
+                    ->label('الكمية المطلوبة')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('items_sum_delivered_quantity')
+                    ->label('تم تسليمه')
+                    ->numeric()
+                    ->default(0),
                 TextColumn::make('created_at')
-                    ->label('التاريخ')
+                    ->label('تاريخ الطلب')
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),
-            ])
-            ->filters([
-                SelectFilter::make('status')
-                    ->label('الحالة')
-                    ->options(collect(OrderStatus::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()])),
+                TextColumn::make('updated_at')
+                    ->label('آخر تحديث')
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
             ])
             ->recordActions([
                 ViewAction::make(),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    self::excelExportSelectedAction(
+                        'exportSelected',
+                        'تصدير المحدد Excel',
+                        fn (EloquentCollection $records) => OrderItemsExport::forOrderIds($records->modelKeys(), 'delivered-orders'),
+                    ),
+                ]),
+            ])
+            ->defaultSort('updated_at', 'desc')
+            ->emptyStateHeading('لا توجد طلبات مُسلَّمة بعد');
     }
 }

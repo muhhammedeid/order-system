@@ -6,6 +6,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class CustomerForm
 {
@@ -19,7 +20,7 @@ class CustomerForm
                             ->label('Customer Code')
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
-                            ->hintIcon('tabler-info-circle')
+                            ->hintIcon(Heroicon::InformationCircle)
                             ->hintIconTooltip('Reference from the accounting system'),
                         TextInput::make('name')
                             ->required()
