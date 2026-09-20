@@ -72,6 +72,7 @@ Each product contains:
 - Product Code
 - Product Name
 - Category
+- Category Image
 - Short Description
 - Main Image
 - Additional Images
@@ -87,11 +88,12 @@ Each product contains:
 
 Each product can contain variants defined by:
 
-- Color (only when the product has `color_enabled = true`; on by default)
-- Size (only when the product has `size_enabled = true`; off by default)
+- Color (availability data; always retained and displayed)
+- Size (availability data; optional per variant)
 - Available Quantity (internal Admin reference)
 
-The two controls are independent, so a product can use color only, size only, both, or neither.
+`color_enabled` and `size_enabled` control customer choice, not whether availability
+data exists. Size choice can only be enabled when color choice is enabled.
 
 Example:
 
@@ -106,9 +108,16 @@ The system does not manage warehouse transactions.
 
 `available_quantity` is an internal Admin reference only. It is never shown to customers and never blocks ordering: any positive requested quantity is accepted (quantity presets `5`, `10`, or a custom positive integer). Operations may contact the customer and agree on quantities before confirmation.
 
-When `size_enabled` is `false`, the customer selects color and quantity only; no size is required or stored for new variants.
+When `size_enabled` is `false`, assigned sizes are displayed beneath each selected
+color without requiring a size choice.
 
-When `color_enabled` is `false`, the customer selects size and quantity only (or quantity only when sizes are also disabled); no color is required or stored for new variants. Disabled dimensions are stored as `NULL`, never as a fake value.
+When `color_enabled` is `false`, all available colors and their assigned sizes are
+displayed without choice and the order includes the complete set. When it is enabled,
+the customer may select multiple colors.
+
+The requested quantity is one global business quantity per order line. It is never
+multiplied in this system by the number of selected colors or available sizes; the
+factory interprets the physical production quantity outside the ordering system.
 
 ---
 

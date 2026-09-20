@@ -121,6 +121,15 @@ class ProductsAndCategoriesTest extends TestCase
         $this->assertTrue($category->products->first()->is($product));
     }
 
+    public function test_category_image_path_can_be_attached(): void
+    {
+        $category = Category::factory()->create([
+            'image_path' => 'categories/images/women-shoes.webp',
+        ]);
+
+        $this->assertSame('categories/images/women-shoes.webp', $category->refresh()->image_path);
+    }
+
     public function test_product_images_persist_and_keep_sort_order(): void
     {
         $product = Product::factory()->create();

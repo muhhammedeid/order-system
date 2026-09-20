@@ -72,9 +72,8 @@ class VariantsRelationManager extends RelationManager
             ->modalSubmitActionLabel('توليد')
             ->form([
                 Repeater::make('colors')
-                    ->label(fn (): string => $this->getOwnerRecord()->color_enabled ? 'الألوان والكميات' : 'الكمية الافتراضية')
+                    ->label('الألوان والكميات')
                     ->addActionLabel('إضافة لون')
-                    ->addable(fn (): bool => $this->getOwnerRecord()->color_enabled)
                     ->defaultItems(1)
                     ->minItems(1)
                     ->columns(2)
@@ -82,8 +81,7 @@ class VariantsRelationManager extends RelationManager
                         Select::make('color')
                             ->label('اللون')
                             ->searchable()
-                            ->required(fn (): bool => $this->getOwnerRecord()->color_enabled)
-                            ->visible(fn (): bool => $this->getOwnerRecord()->color_enabled)
+                            ->required()
                             ->options(fn (): array => self::colorOptions(null)),
                         TextInput::make('quantity')
                             ->label('الكمية الافتراضية')
@@ -96,9 +94,7 @@ class VariantsRelationManager extends RelationManager
                 CheckboxList::make('sizes')
                     ->label('المقاسات')
                     ->options(fn (): array => self::sizeOptions(null))
-                    ->default(fn (): array => VariantSize::activeNames())
-                    ->visible(fn (): bool => $this->getOwnerRecord()->size_enabled)
-                    ->required(fn (): bool => $this->getOwnerRecord()->size_enabled),
+                    ->helperText('اتركها فارغة إذا كان المنتج لا يحتوي على مقاسات.'),
             ])
             ->action(function (array $data): void {
                 $result = ProductVariant::generateMissing(
@@ -125,8 +121,8 @@ class VariantsRelationManager extends RelationManager
         return function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
             $product = $this->getOwnerRecord();
 
-            $color = $product->color_enabled ? trim((string) $get('color')) : '';
-            $size = $product->size_enabled ? trim((string) $get('size')) : '';
+            $color = trim((string) $get('color'));
+            $size = trim((string) $get('size'));
 
             if (ProductVariant::existsFor(
                 $product,
@@ -141,14 +137,7 @@ class VariantsRelationManager extends RelationManager
 
     protected function duplicateCombinationMessage(): string
     {
-        $product = $this->getOwnerRecord();
-
-        return match (true) {
-            $product->color_enabled && $product->size_enabled => 'هذا اللون والمقاس مضافان بالفعل لهذا المنتج.',
-            $product->color_enabled => 'هذا اللون مضاف بالفعل لهذا المنتج.',
-            $product->size_enabled => 'هذا المقاس مضاف بالفعل لهذا المنتج.',
-            default => 'هذا الصنف مضاف بالفعل لهذا المنتج.',
-        };
+        return 'هذا اللون والمقاس مضافان بالفعل لهذا المنتج.';
     }
 
     public function form(Schema $schema): Schema
@@ -156,39 +145,26 @@ class VariantsRelationManager extends RelationManager
         return $schema
             ->components([
                 Select::make('color')
-                    ->required(fn (): bool => $this->getOwnerRecord()->color_enabled)
-                    ->visible(fn (): bool => $this->getOwnerRecord()->color_enabled)
+                    ->required()
                     ->searchable()
                     ->options(fn (?ProductVariant $record) => self::colorOptions($record))
                     ->rule(
                         function (Get $get, ?ProductVariant $record): \Closure {
                             return $this->duplicateCombinationRule($get, $record);
                         },
-                        fn (): bool => $this->getOwnerRecord()->color_enabled,
+                        true,
                     ),
                 Select::make('size')
-                    ->required(fn () => $this->getOwnerRecord()->size_enabled)
-                    ->visible(fn () => $this->getOwnerRecord()->size_enabled)
+                    ->nullable()
                     ->searchable()
                     ->options(fn (?ProductVariant $record) => self::sizeOptions($record))
-                    ->rule(
-                        function (Get $get, ?ProductVariant $record): \Closure {
-                            return $this->duplicateCombinationRule($get, $record);
-                        },
-                        fn (): bool => ! $this->getOwnerRecord()->color_enabled && $this->getOwnerRecord()->size_enabled,
-                    ),
+                    ->rule(fn (Get $get, ?ProductVariant $record): \Closure => $this->duplicateCombinationRule($get, $record)),
                 TextInput::make('available_quantity')
                     ->label('Available Quantity')
                     ->required()
                     ->integer()
                     ->minValue(0)
-                    ->maxValue(ProductVariant::MAX_QUANTITY)
-                    ->rule(
-                        function (Get $get, ?ProductVariant $record): \Closure {
-                            return $this->duplicateCombinationRule($get, $record);
-                        },
-                        fn (): bool => ! $this->getOwnerRecord()->color_enabled && ! $this->getOwnerRecord()->size_enabled,
-                    ),
+                    ->maxValue(ProductVariant::MAX_QUANTITY),
             ]);
     }
 

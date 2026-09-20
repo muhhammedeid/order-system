@@ -17,12 +17,17 @@ class Cart
         return is_array($items) ? $items : [];
     }
 
-    public static function add(int $variantId, int $quantity): void
+    /** @param array<int, int>|int $variantIds */
+    public static function add(array|int $variantIds, int $quantity): void
     {
+        $variantIds = is_array($variantIds) ? $variantIds : [$variantIds];
+        $variantIds = array_values(array_unique(array_map('intval', $variantIds)));
+        sort($variantIds);
+        $lineId = sha1(implode(',', $variantIds));
         $items = self::items();
 
         foreach ($items as $index => $item) {
-            if ($item['variant_id'] === $variantId) {
+            if (($item['line_id'] ?? null) === $lineId) {
                 $items[$index]['quantity'] += $quantity;
                 session()->put(self::SESSION_KEY, $items);
 
@@ -30,17 +35,22 @@ class Cart
             }
         }
 
-        $items[] = ['variant_id' => $variantId, 'quantity' => $quantity];
+        $items[] = [
+            'line_id' => $lineId,
+            'variant_id' => $variantIds[0],
+            'variant_ids' => $variantIds,
+            'quantity' => $quantity,
+        ];
 
         session()->put(self::SESSION_KEY, $items);
     }
 
-    public static function update(int $variantId, int $quantity): void
+    public static function update(string|int $identifier, int $quantity): void
     {
         $items = self::items();
 
         foreach ($items as $index => $item) {
-            if ($item['variant_id'] === $variantId) {
+            if (self::matches($item, $identifier)) {
                 $items[$index]['quantity'] = $quantity;
                 session()->put(self::SESSION_KEY, $items);
 
@@ -49,11 +59,11 @@ class Cart
         }
     }
 
-    public static function remove(int $variantId): void
+    public static function remove(string|int $identifier): void
     {
         $items = array_values(array_filter(
             self::items(),
-            fn ($item) => $item['variant_id'] !== $variantId,
+            fn (array $item): bool => ! self::matches($item, $identifier),
         ));
 
         session()->put(self::SESSION_KEY, $items);
@@ -69,14 +79,17 @@ class Cart
         return array_sum(array_column(self::items(), 'quantity'));
     }
 
-    /**
-     * Hydrated cart lines with variant/product data for display.
-     * Hidden prices are never included for request_price products.
-     */
     public static function hydrated(): array
     {
+        $variantIds = collect(self::items())
+            ->flatMap(fn (array $item): array => $item['variant_ids'] ?? [$item['variant_id']])
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         $variants = ProductVariant::query()
-            ->whereIn('id', array_column(self::items(), 'variant_id'))
+            ->whereIn('id', $variantIds)
             ->with(['product:id,slug,name,product_code,price_visibility,price,active'])
             ->get()
             ->keyBy('id');
@@ -91,24 +104,34 @@ class Cart
 
         $items = [];
         $totalQuantity = 0;
-        $publicTotal = 0;
+        $publicTotal = '0.00';
 
-        foreach (self::items() as $item) {
-            $variant = $variants->get($item['variant_id']);
+        foreach (self::items() as $storedItem) {
+            $ids = array_values(array_unique(array_map(
+                'intval',
+                $storedItem['variant_ids'] ?? [$storedItem['variant_id']],
+            )));
+            $selected = collect($ids)->map(fn (int $id) => $variants->get($id))->filter()->values();
 
-            if (! $variant) {
+            if ($selected->count() !== count($ids) || $selected->pluck('product_id')->unique()->count() !== 1) {
                 continue;
             }
 
-            $product = $variant->product;
+            $anchor = $selected->first();
+            $product = $anchor->product;
             $isPublic = $product->price_visibility === PriceVisibility::PublicPrice;
-            $quantity = (int) $item['quantity'];
+            $quantity = (int) $storedItem['quantity'];
+            $colors = $selected->pluck('color')->filter()->unique()->values()->all();
+            $sizes = $selected->pluck('size')->filter()->unique()->values()->all();
+            $lineId = $storedItem['line_id'] ?? sha1(implode(',', $ids));
 
             $items[] = [
-                'variant_id' => $variant->id,
+                'line_id' => $lineId,
+                'variant_id' => $anchor->id,
+                'variant_ids' => $ids,
                 'quantity' => $quantity,
-                'color' => $variant->color,
-                'size' => $variant->size,
+                'color' => implode('، ', $colors),
+                'size' => implode('، ', $sizes),
                 'product' => [
                     'id' => $product->id,
                     'name' => $product->name,
@@ -125,14 +148,20 @@ class Cart
             $totalQuantity += $quantity;
 
             if ($isPublic) {
-                $publicTotal = bcadd((string) $publicTotal, bcmul((string) $product->price, (string) $quantity, 2), 2);
+                $publicTotal = bcadd($publicTotal, bcmul((string) $product->price, (string) $quantity, 2), 2);
             }
         }
 
         return [
             'items' => $items,
             'total_quantity' => $totalQuantity,
-            'total_price' => $publicTotal > 0 ? $publicTotal : null,
+            'total_price' => bccomp($publicTotal, '0.00', 2) === 1 ? $publicTotal : null,
         ];
+    }
+
+    private static function matches(array $item, string|int $identifier): bool
+    {
+        return (string) ($item['line_id'] ?? '') === (string) $identifier
+            || (int) ($item['variant_id'] ?? 0) === (int) $identifier;
     }
 }

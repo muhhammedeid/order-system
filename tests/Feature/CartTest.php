@@ -91,7 +91,7 @@ class CartTest extends TestCase
             ->post('/cart/update', ['variant_id' => $variant->id, 'quantity' => 0])
             ->assertSessionHasErrors([
                 'quantity' => 'الكمية يجب أن تكون أكبر من صفر',
-                'quantity_variant' => (string) $variant->id,
+                'quantity_line' => (string) $variant->id,
             ]);
     }
 

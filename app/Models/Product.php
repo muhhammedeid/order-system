@@ -55,6 +55,12 @@ class Product extends Model
                     'price' => 'Price مطلوب للمنتج بسعر معلن',
                 ]);
             }
+
+            if (! $product->color_enabled && $product->size_enabled) {
+                throw ValidationException::withMessages([
+                    'size_enabled' => 'لا يمكن تفعيل اختيار المقاس إلا عند تفعيل اختيار اللون.',
+                ]);
+            }
         });
 
         static::deleting(function (self $product) {
@@ -63,71 +69,6 @@ class Product extends Model
             }
         });
 
-        static::updating(function (self $product) {
-            if ($product->isDirty('size_enabled')) {
-                $hasSizedVariants = $product->variants()
-                    ->whereRaw("TRIM(COALESCE(size, '')) <> ''")
-                    ->exists();
-
-                $hasUnsizedVariants = $product->variants()
-                    ->whereRaw("TRIM(COALESCE(size, '')) = ''")
-                    ->exists();
-
-                if ($product->size_enabled === false && $hasSizedVariants) {
-                    throw ValidationException::withMessages([
-                        'size_enabled' => 'لا يمكن تعطيل المقاسات لأن هذا المنتج يحتوي على مقاسات مسجلة — يجب حل هذه المقاسات أو حذفها أولًا.',
-                    ]);
-                }
-
-                if ($product->size_enabled === true && $hasUnsizedVariants) {
-                    throw ValidationException::withMessages([
-                        'size_enabled' => 'لا يمكن تفعيل المقاسات لأن هذا المنتج يحتوي على أصناف بدون مقاس — يجب تحديد مقاس لكل الأصناف أو حذفها أولًا.',
-                    ]);
-                }
-            }
-
-            if ($product->isDirty('color_enabled')) {
-                $message = $product->colorEnabledConflictMessage((bool) $product->color_enabled);
-
-                if ($message !== null) {
-                    throw ValidationException::withMessages([
-                        'color_enabled' => $message,
-                    ]);
-                }
-            }
-        });
-    }
-
-    /**
-     * Friendly message for a requested `color_enabled` state that conflicts
-     * with the product's current variants, or null when the state is allowed.
-     * Shared by the model guard and the Admin form rule so both stay in sync.
-     */
-    public function colorEnabledConflictMessage(bool $enabled): ?string
-    {
-        if ($enabled === false && $this->hasColoredVariants()) {
-            return 'لا يمكن تعطيل اختيار اللون لأن هذا المنتج يحتوي على ألوان مسجلة — يجب حل هذه الألوان أو حذفها أولًا.';
-        }
-
-        if ($enabled === true && $this->hasUncoloredVariants()) {
-            return 'لا يمكن تفعيل اختيار اللون لأن هذا المنتج يحتوي على أصناف بدون لون — يجب تحديد لون لكل الأصناف أو حذفها أولًا.';
-        }
-
-        return null;
-    }
-
-    public function hasColoredVariants(): bool
-    {
-        return $this->variants()
-            ->whereRaw("TRIM(COALESCE(color, '')) <> ''")
-            ->exists();
-    }
-
-    public function hasUncoloredVariants(): bool
-    {
-        return $this->variants()
-            ->whereRaw("TRIM(COALESCE(color, '')) = ''")
-            ->exists();
     }
 
     public function category(): BelongsTo
@@ -164,7 +105,7 @@ class Product extends Model
 
     public static function validate(array $data, ?self $product = null): void
     {
-        Validator::make(
+        $validator = Validator::make(
             $data,
             [
                 'product_code' => ['required', 'string', 'max:255', 'unique:products,product_code'.($product ? ','.$product->getKey() : '')],
@@ -175,6 +116,17 @@ class Product extends Model
                 'color_enabled' => ['boolean'],
                 'size_enabled' => ['boolean'],
             ],
-        )->validate();
+        );
+
+        $validator->after(function ($validator) use ($data): void {
+            if (! (bool) ($data['color_enabled'] ?? true) && (bool) ($data['size_enabled'] ?? false)) {
+                $validator->errors()->add(
+                    'size_enabled',
+                    'لا يمكن تفعيل اختيار المقاس إلا عند تفعيل اختيار اللون.',
+                );
+            }
+        });
+
+        $validator->validate();
     }
 }

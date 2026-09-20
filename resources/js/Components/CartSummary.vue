@@ -26,7 +26,7 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
         <ul class="flex flex-col gap-3">
             <li
                 v-for="item in items"
-                :key="item.variant_id"
+                :key="item.line_id"
                 class="flex flex-wrap items-start justify-between gap-2 text-sm"
             >
                 <span class="min-w-0 flex-1">
@@ -55,7 +55,7 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
 
         <dl class="flex flex-col gap-2 border-t-2 border-line pt-3">
             <div class="flex items-center justify-between text-sm">
-                <dt class="text-ink-muted">إجمالي القطع</dt>
+                <dt class="text-ink-muted">إجمالي الكميات الشاملة</dt>
                 <dd class="font-bold tabular-nums text-ink">
                     {{ formatQuantity(totalQuantity) }}
                 </dd>

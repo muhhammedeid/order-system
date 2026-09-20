@@ -7,6 +7,7 @@ use App\Filament\Concerns\HasImportAction;
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Support\Exports\CustomersExport;
 use App\Support\Imports\ImportRunner;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 
@@ -20,6 +21,8 @@ class ListCustomers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            CreateAction::make()
+                ->label('إضافة عميل'),
             $this->importAction(
                 'importCustomers',
                 'استيراد العملاء',

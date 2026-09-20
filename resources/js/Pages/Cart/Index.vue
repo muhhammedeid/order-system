@@ -30,20 +30,20 @@ const { loading } = useInertiaLoading();
 
 const errors = computed(() => page.props.errors ?? {});
 const rowScopedError = computed(() =>
-    errors.value.quantity_variant ? errors.value.quantity ?? null : null,
+    errors.value.quantity_line ? errors.value.quantity ?? null : null,
 );
 const topError = computed(() => {
     if (rowScopedError.value) {
         return null;
     }
 
-    return errors.value.quantity ?? errors.value.cart ?? errors.value.variant_id ?? null;
+    return errors.value.quantity ?? errors.value.cart ?? errors.value.variant_ids ?? errors.value.variant_id ?? null;
 });
 
 function rowError(item) {
-    const flagged = errors.value.quantity_variant;
+    const flagged = errors.value.quantity_line;
 
-    if (! flagged || String(flagged) !== String(item.variant_id)) {
+    if (! flagged || String(flagged) !== String(item.line_id)) {
         return null;
     }
 
@@ -56,7 +56,7 @@ function updateQuantity(item, quantity) {
     }
 
     router.post('/cart/update', {
-        variant_id: item.variant_id,
+        line_id: item.line_id,
         quantity,
     }, {
         preserveScroll: true,
@@ -86,7 +86,7 @@ function confirmDialog() {
     dialog.value.open = false;
 
     if (type === 'remove' && item) {
-        router.post('/cart/remove', { variant_id: item.variant_id }, { preserveScroll: true });
+        router.post('/cart/remove', { line_id: item.line_id }, { preserveScroll: true });
 
         return;
     }
@@ -108,7 +108,7 @@ function confirmDialog() {
                     v-if="items.length"
                     class="text-sm text-ink-muted"
                 >
-                    {{ items.length }} صنف · {{ total_quantity }} قطعة
+                    {{ items.length }} صنف · الكمية الشاملة {{ total_quantity }}
                 </p>
             </div>
 
@@ -127,7 +127,7 @@ function confirmDialog() {
                 <div class="flex flex-col gap-3">
                     <CartItemRow
                         v-for="item in items"
-                        :key="item.variant_id"
+                        :key="item.line_id"
                         :item="item"
                         :error="rowError(item)"
                         :busy="loading"

@@ -18,6 +18,7 @@ Fields depend on standard Laravel/Filament auth requirements.
 id
 name
 slug
+image_path nullable
 active
 created_at
 updated_at
@@ -86,11 +87,14 @@ Allowed `price_visibility`:
 
 `price` is required whenever `price_visibility = public` (enforced server-side on every write path). `request_price` may store an internal price or `null`.
 
-`color_enabled` (default `true`) controls whether variants for this product use color selection. The default preserves existing products' behavior; disabling it is symmetric to `size_enabled`.
+`color_enabled` (default `true`) controls whether the customer may select one or
+more available colors. Disabling it keeps all variant colors visible and orders the
+complete available set.
 
-`size_enabled` (default `false`) controls whether variants for this product use size selection (Revision R01).
+`size_enabled` (default `false`) controls whether the customer must select a size.
+When disabled, assigned sizes remain visible under their colors without choice.
 
-`color_enabled` and `size_enabled` are independent: all four combinations are supported.
+`size_enabled = true` requires `color_enabled = true`.
 
 Indexes:
 
@@ -106,7 +110,7 @@ Indexes:
 ```text
 id
 product_id
-color nullable
+color
 color_key (generated column derived from color)
 size nullable
 size_key (generated column derived from size)
@@ -122,7 +126,10 @@ unique(product_id, color_key, size_key)
 available_quantity >= 0
 ```
 
-`color` is only nullable when the parent product has `color_enabled = false`; when colors are enabled, color is required. `size` is only nullable when the parent product has `size_enabled = false`; when sizes are enabled, size is required. The generated `color_key`/`size_key` columns keep `NULL` values unique per product (a plain nullable composite unique would allow duplicates), so a product with both dimensions disabled has exactly one meaningful variant (`color = NULL`, `size = NULL`).
+`color` is required for new variants so available colors remain displayable regardless
+of the choice toggle. `size` is optional because some products are genuinely size-less.
+The generated `color_key`/`size_key` columns preserve combination uniqueness and
+legacy nullable rows remain readable.
 
 `available_quantity` is an internal Admin reference only. It is not exposed to customers and never blocks ordering: the storefront accepts any positive requested quantity (Revision R01).
 
@@ -195,7 +202,13 @@ updated_at
 
 Important:
 
-`product_code`, `product_name`, color, size, `unit_price`, and `price_visibility` are snapshots. `color`/`size` are `NULL` when the product had that dimension disabled at order time; historical snapshots are never rewritten.
+`product_code`, `product_name`, color, size, `unit_price`, and `price_visibility`
+are snapshots. `color` and `size` are nullable text fields and may contain a
+human-readable list when one order line includes multiple variants. Historical
+snapshots are never rewritten.
+
+`quantity` is the single global requested quantity for the order line. It is not
+multiplied by the number of colors or sizes represented by that line.
 
 `product_variant_id` is the operational variant reference used by Admin order operations (editing, delivery tracking). It is `nullOnDelete`.
 

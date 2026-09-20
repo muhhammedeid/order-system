@@ -334,22 +334,22 @@ class ProductImportTest extends TestCase
     {
         $existing = Product::factory()->create([
             'product_code' => 'SH-300',
-            'name' => 'Old Colorless Name',
-            'slug' => 'old-colorless-name',
+            'name' => 'Old Forced Colors Name',
+            'slug' => 'old-forced-colors-name',
             'color_enabled' => false,
-            'size_enabled' => true,
+            'size_enabled' => false,
         ]);
-        $existing->variants()->create(['color' => null, 'size' => '41', 'available_quantity' => 5]);
+        $existing->variants()->create(['color' => 'Black', 'size' => '41', 'available_quantity' => 5]);
 
         $this->import([
             ['Product Code' => 'SH-300', 'Product Name' => 'New Name', 'Category' => 'C', 'Price' => '10', 'Price Visibility' => 'public', 'Active' => '1'],
         ]);
 
         $this->assertFalse($existing->refresh()->color_enabled);
-        $this->assertTrue($existing->size_enabled);
+        $this->assertFalse($existing->size_enabled);
         $this->assertDatabaseHas('product_variants', [
             'product_id' => $existing->getKey(),
-            'color' => null,
+            'color' => 'Black',
             'size' => '41',
         ]);
     }

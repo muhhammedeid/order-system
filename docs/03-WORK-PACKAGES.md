@@ -560,10 +560,10 @@ documents live in `Revision phase/`.
   inline `TextInputColumn` with server-side column rules, with `ProductVariant::validate()`
   and the `(product_id, color, size_key)` unique index remaining authoritative for every
   generated record.
-- **Out-of-package — Optional Color Selection (user-approved): implemented.** `products.color_enabled`
-  (default `true`, so existing products keep their behavior) mirrors the R01 optional-size pattern:
-  `color_enabled` and `size_enabled` are independent; disabled dimensions store `NULL` (never a fake
-  value); uniqueness is `unique(product_id, color_key, size_key)` with generated
-  `color_key = COALESCE(color, '')`; storefront and Admin respect both flags; order-item snapshots are
-  unchanged. This note documents an approved out-of-package feature and does not alter the phase plan.
+- **Out-of-package — Wholesale selection rules (user-approved): implemented.** Product
+  variants retain their available colors and optional sizes independently from the storefront
+  choice toggles. Disabled color choice displays and orders the complete set; enabled color
+  choice supports multiple colors; disabled size choice displays assigned sizes without asking
+  the customer to choose; size choice requires color choice. One global requested quantity is
+  stored per order line and is not multiplied by colors or sizes.
 

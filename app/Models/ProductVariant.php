@@ -37,36 +37,11 @@ class ProductVariant extends Model
     protected static function booted(): void
     {
         static::saving(function (self $variant) {
-            $product = $variant->product;
-
-            if (! $product) {
-                return;
-            }
-
             $color = trim((string) $variant->color);
-            $size = trim((string) $variant->size);
 
-            if ($product->color_enabled && $color === '') {
+            if ($color === '') {
                 throw ValidationException::withMessages([
-                    'color' => 'اللون مطلوب لأن اختيار الألوان مُفعّل لهذا المنتج.',
-                ]);
-            }
-
-            if (! $product->color_enabled && $color !== '') {
-                throw ValidationException::withMessages([
-                    'color' => 'هذا المنتج لا يستخدم الألوان — يجب ألا يحتوي الصنف على قيمة لون.',
-                ]);
-            }
-
-            if ($product->size_enabled && $size === '') {
-                throw ValidationException::withMessages([
-                    'size' => 'المقاس مطلوب لأن اختيار المقاسات مُفعّل لهذا المنتج.',
-                ]);
-            }
-
-            if (! $product->size_enabled && $size !== '') {
-                throw ValidationException::withMessages([
-                    'size' => 'هذا المنتج لا يستخدم المقاسات — يجب ألا يحتوي الصنف على قيمة مقاس.',
+                    'color' => 'اللون مطلوب لكل صنف حتى يظهر ضمن الألوان المتاحة للعميل.',
                 ]);
             }
         });
@@ -131,27 +106,19 @@ class ProductVariant extends Model
     }
 
     /**
-     * Color is required only when the parent product has color selection
-     * enabled; size is required only when size selection is enabled.
-     * Disabled dimensions store NULL (never a fake value).
+     * Availability data is independent from the storefront choice toggles:
+     * every variant has a color, while size remains optional for size-less products.
      */
     public static function validate(array $data, ?Product $product = null): array
     {
         $data['color'] = trim((string) ($data['color'] ?? ''));
         $data['size'] = trim((string) ($data['size'] ?? ''));
 
-        $colorEnabled = (bool) ($product?->color_enabled ?? true);
-        $sizeEnabled = (bool) ($product?->size_enabled ?? false);
-
         Validator::make(
             $data,
             [
-                'color' => $colorEnabled
-                    ? ['required', 'string', 'max:255']
-                    : ['nullable', 'string', 'max:255'],
-                'size' => $sizeEnabled
-                    ? ['required', 'string', 'max:255']
-                    : ['nullable', 'string', 'max:255'],
+                'color' => ['required', 'string', 'max:255'],
+                'size' => ['nullable', 'string', 'max:255'],
                 'available_quantity' => ['required', 'integer', 'min:0', 'max:'.self::MAX_QUANTITY],
             ],
         )->validate();
@@ -169,8 +136,7 @@ class ProductVariant extends Model
 
     /**
      * Creates only the missing Product + Color + Size combinations for the
-     * submitted color rows (when color selection is disabled the product uses
-     * a single color row without a color), copying each row's default quantity
+     * submitted color rows, copying each row's default quantity
      * into the new variants. Existing variants are never read back into state,
      * updated or deleted; the default quantity is a creation convenience only.
      *
@@ -238,18 +204,16 @@ class ProductVariant extends Model
      */
     protected static function generationSizes(Product $product, ?array $selectedSizes): array
     {
-        if (! $product->size_enabled) {
+        if ($selectedSizes === null || $selectedSizes === []) {
             return [null];
         }
 
         $activeSizes = VariantSize::activeNames();
 
-        $sizes = ($selectedSizes === null || $selectedSizes === [])
-            ? $activeSizes
-            : array_values(array_intersect(
-                $activeSizes,
-                array_map(fn ($size): string => trim((string) $size), $selectedSizes),
-            ));
+        $sizes = array_values(array_intersect(
+            $activeSizes,
+            array_map(fn ($size): string => trim((string) $size), $selectedSizes),
+        ));
 
         if ($sizes === []) {
             throw ValidationException::withMessages([

@@ -94,16 +94,27 @@ class OrderController extends Controller
                 throw ValidationException::withMessages(['cart' => 'السلة فارغة']);
             }
 
+            $variantIds = collect($cartItems)
+                ->flatMap(fn (array $item): array => $item['variant_ids'])
+                ->unique()
+                ->values()
+                ->all();
+
             $variants = ProductVariant::query()
-                ->whereIn('id', array_column($cartItems, 'variant_id'))
+                ->whereIn('id', $variantIds)
                 ->with(['product:id,product_code,name,price_visibility,price,active'])
                 ->get()
                 ->keyBy('id');
 
             foreach ($cartItems as $item) {
-                $variant = $variants->get($item['variant_id']);
+                $selected = collect($item['variant_ids'])
+                    ->map(fn (int $id) => $variants->get($id))
+                    ->filter()
+                    ->values();
+                $variant = $selected->first();
 
-                if (! $variant) {
+                if ($selected->count() !== count($item['variant_ids'])
+                    || $selected->pluck('product_id')->unique()->count() !== 1) {
                     throw ValidationException::withMessages(['cart' => 'أحد المنتجات في الطلب لم يعد متوفرًا']);
                 }
 
@@ -127,9 +138,12 @@ class OrderController extends Controller
 
             foreach ($cartItems as $item) {
                 $variant = $variants->get($item['variant_id']);
+                $snapshot = OrderItem::snapshotFromVariant($variant);
+                $snapshot['color'] = $item['color'] !== '' ? $item['color'] : null;
+                $snapshot['size'] = $item['size'] !== '' ? $item['size'] : null;
 
                 OrderItem::create(
-                    OrderItem::snapshotFromVariant($variant) + [
+                    $snapshot + [
                         'order_id' => $order->id,
                         'quantity' => $item['quantity'],
                     ]

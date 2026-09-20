@@ -82,7 +82,7 @@ class OrderCreationTest extends TestCase
         $this->assertSame('450.00', $item->unit_price);
     }
 
-    public function test_uncolored_order_item_snapshot_has_null_color(): void
+    public function test_forced_color_order_item_snapshot_contains_all_available_colors(): void
     {
         $product = Product::factory()->create([
             'price_visibility' => 'public',
@@ -92,8 +92,13 @@ class OrderCreationTest extends TestCase
         ]);
 
         $variant = $product->variants()->create([
-            'color' => null,
-            'size' => null,
+            'color' => 'Black',
+            'size' => '40',
+            'available_quantity' => 10,
+        ]);
+        $product->variants()->create([
+            'color' => 'White',
+            'size' => '41',
             'available_quantity' => 10,
         ]);
 
@@ -102,8 +107,8 @@ class OrderCreationTest extends TestCase
 
         $item = OrderItem::query()->first();
 
-        $this->assertNull($item->color);
-        $this->assertNull($item->size);
+        $this->assertSame('Black، White', $item->color);
+        $this->assertSame('40، 41', $item->size);
         $this->assertSame('450.00', $item->unit_price);
     }
 

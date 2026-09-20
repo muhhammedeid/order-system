@@ -149,17 +149,7 @@ class CatalogController extends Controller
         $colorOrder = VariantColor::query()->pluck('sort_order', 'name');
         $sizeOrder = VariantSize::query()->pluck('sort_order', 'name');
 
-        $variants = $product->variants;
-
-        $variants = $product->size_enabled
-            ? $variants->filter(fn ($variant) => filled($variant->size))
-            : $variants->reject(fn ($variant) => filled($variant->size));
-
-        $variants = $product->color_enabled
-            ? $variants->filter(fn ($variant) => filled($variant->color))
-            : $variants->reject(fn ($variant) => filled($variant->color));
-
-        return $variants
+        return $product->variants
             ->groupBy('color')
             ->map(fn ($variants, $color) => [
                 'color' => filled($color) ? $color : null,

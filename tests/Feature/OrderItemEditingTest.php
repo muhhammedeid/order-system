@@ -379,7 +379,7 @@ class OrderItemEditingTest extends TestCase
         $this->assertSame('Brown', $item->color);
     }
 
-    public function test_uncolored_variant_edit_keeps_null_color(): void
+    public function test_forced_color_variant_edit_keeps_color_snapshot(): void
     {
         $order = $this->newOrder();
 
@@ -387,10 +387,10 @@ class OrderItemEditingTest extends TestCase
             'price_visibility' => 'public',
             'price' => 250,
             'color_enabled' => false,
-            'size_enabled' => true,
+            'size_enabled' => false,
         ]);
         $uncoloredVariant = $uncoloredProduct->variants()->create([
-            'color' => null,
+            'color' => 'Black',
             'size' => '40',
             'available_quantity' => 0,
         ]);
@@ -404,7 +404,7 @@ class OrderItemEditingTest extends TestCase
 
         $item->refresh();
 
-        $this->assertNull($item->color);
+        $this->assertSame('Black', $item->color);
         $this->assertSame('40', $item->size);
         $this->assertSame(6, $item->quantity);
     }

@@ -36,14 +36,14 @@ const props = defineProps({
     },
 });
 
-const selectedColor = ref(props.variants.length ? (props.variants[0].color ?? '') : '');
+const selectedColors = ref([]);
 const selectedSize = ref('');
 const colorError = ref(null);
 const sizeError = ref(null);
 const quantityError = ref(null);
 
 const form = useForm({
-    variant_id: null,
+    variant_ids: [],
     quantity: 5,
 });
 
@@ -56,20 +56,30 @@ const flatVariants = computed(() =>
     ),
 );
 
-const selectedVariant = computed(() => {
-    if (colorEnabled.value && ! selectedColor.value) {
-        return null;
+const selectedVariantIds = computed(() => {
+    if (! colorEnabled.value) {
+        return flatVariants.value.map((variant) => variant.id);
     }
 
-    if (sizeEnabled.value && ! selectedSize.value) {
-        return null;
+    if (! selectedColors.value.length) {
+        return [];
     }
 
-    return flatVariants.value.find(
-        (variant) =>
-            (! colorEnabled.value || variant.color === selectedColor.value)
-            && (! sizeEnabled.value || variant.size === selectedSize.value),
-    ) ?? null;
+    if (sizeEnabled.value) {
+        if (! selectedSize.value) {
+            return [];
+        }
+
+        return selectedColors.value
+            .map((color) => flatVariants.value.find(
+                (variant) => variant.color === color && variant.size === selectedSize.value,
+            )?.id)
+            .filter(Boolean);
+    }
+
+    return flatVariants.value
+        .filter((variant) => selectedColors.value.includes(variant.color))
+        .map((variant) => variant.id);
 });
 
 const breadcrumbs = computed(() => [
@@ -81,7 +91,7 @@ const breadcrumbs = computed(() => [
     { label: props.product.name },
 ]);
 
-watch([selectedColor, selectedSize], () => {
+watch([selectedColors, selectedSize], () => {
     colorError.value = null;
     sizeError.value = null;
     quantityError.value = null;
@@ -89,11 +99,11 @@ watch([selectedColor, selectedSize], () => {
 });
 
 function addToOrder() {
-    if (! selectedVariant.value) {
-        if (colorEnabled.value && ! selectedColor.value) {
-            colorError.value = 'اختر اللون المطلوب أولًا';
+    if (! selectedVariantIds.value.length) {
+        if (colorEnabled.value && ! selectedColors.value.length) {
+            colorError.value = 'اختر لونًا واحدًا على الأقل';
         } else {
-            sizeError.value = 'اختر المقاس المطلوب أولًا';
+            sizeError.value = 'اختر مقاسًا متاحًا لكل الألوان المحددة';
         }
 
         return;
@@ -108,19 +118,19 @@ function addToOrder() {
     colorError.value = null;
     sizeError.value = null;
     quantityError.value = null;
-    form.variant_id = selectedVariant.value.id;
+    form.variant_ids = selectedVariantIds.value;
 
     form.post('/cart/add', {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
-            form.variant_id = null;
+            form.variant_ids = [];
         },
     });
 }
 
 const pickerError = computed(
-    () => quantityError.value ?? form.errors.quantity ?? form.errors.variant_id ?? null,
+    () => quantityError.value ?? form.errors.quantity ?? form.errors.variant_ids ?? null,
 );
 </script>
 
@@ -175,7 +185,7 @@ const pickerError = computed(
                         class="flex flex-col gap-5 rounded-card border-2 border-line bg-surface-soft p-4 shadow-retro-sm sm:p-5"
                     >
                         <VariantSelector
-                            v-model:selected-color="selectedColor"
+                            v-model:selected-colors="selectedColors"
                             v-model:selected-size="selectedSize"
                             :variants="variants"
                             :color-enabled="colorEnabled"
@@ -185,20 +195,20 @@ const pickerError = computed(
                         />
 
                         <div
-                            v-if="selectedVariant"
+                            v-if="selectedVariantIds.length"
                             class="flex flex-col gap-3 rounded-control border-2 border-line bg-surface p-3.5"
                         >
                             <p
-                                v-if="(colorEnabled && selectedColor) || (sizeEnabled && selectedSize)"
+                                v-if="(colorEnabled && selectedColors.length) || (sizeEnabled && selectedSize)"
                                 class="text-sm text-ink"
                             >
                                 <span
-                                    v-if="colorEnabled && selectedColor"
+                                    v-if="colorEnabled && selectedColors.length"
                                     class="font-semibold"
-                                >{{ selectedColor }}</span>
+                                >{{ selectedColors.join('، ') }}</span>
                                 <template v-if="sizeEnabled && selectedSize">
                                     <span
-                                        v-if="colorEnabled && selectedColor"
+                                        v-if="colorEnabled && selectedColors.length"
                                         class="text-ink-muted"
                                     > / </span>
                                     <span class="font-semibold tabular-nums">{{ selectedSize }}</span>
