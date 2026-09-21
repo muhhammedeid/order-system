@@ -106,6 +106,11 @@ class OrderInfolist
                                 TextEntry::make('remaining_quantity')
                                     ->label(__('filament.fields.remaining_quantity'))
                                     ->numeric(),
+                                TextEntry::make('unallocated_delivered_quantity')
+                                    ->label(__('filament.orders.unallocated_delivered'))
+                                    ->badge()
+                                    ->color('warning')
+                                    ->visible(fn (OrderItem $record): bool => $record->hasUnallocatedDeliveries()),
                                 TextEntry::make('price_visibility')
                                     ->label(__('filament.fields.price_type'))
                                     ->formatStateUsing(fn ($state) => $state === 'public'

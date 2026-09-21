@@ -5,14 +5,18 @@ namespace App\Filament\Resources\OrderManagement;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 /**
  * Operational order actions, shared by the Order Management table, view and
@@ -121,6 +125,47 @@ class OrderStatusActions
             });
     }
 
+    /**
+     * One-time allocation of the historical unallocated delivered quantity
+     * to the exact colors that received it. Available only while an item
+     * still carries unallocated pieces.
+     */
+    public static function reconcileDeliveries(): Action
+    {
+        return Action::make('reconcileDeliveries')
+            ->label(__('filament.orders.actions.reconcile_deliveries'))
+            ->icon('heroicon-o-wrench-screwdriver')
+            ->color('warning')
+            ->visible(fn (Order $record): bool => $record->hasUnallocatedDeliveries())
+            ->modalHeading(fn (Order $record): string => __('filament.orders.actions.reconcile_heading', ['order' => $record->order_number]))
+            ->modalDescription(__('filament.orders.actions.reconcile_description'))
+            ->modalSubmitActionLabel(__('filament.orders.actions.reconcile_submit'))
+            ->form(fn (Order $record): array => self::reconciliationForm($record))
+            ->action(function (Order $record, array $data): void {
+                $allocations = self::normalizeReallocations($data);
+
+                if ($allocations === []) {
+                    Notification::make()
+                        ->title(__('filament.orders.actions.failed'))
+                        ->body(__('filament.orders.actions.reconcile_incomplete'))
+                        ->danger()
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
+                if (! self::run($record, fn () => $record->reconcileUnallocatedDeliveries($allocations))) {
+                    return;
+                }
+
+                Notification::make()
+                    ->title(__('filament.orders.actions.reconciled', ['order' => $record->order_number]))
+                    ->success()
+                    ->send();
+            });
+    }
+
     public static function deliverAll(): Action
     {
         return Action::make('deliverAll')
@@ -145,43 +190,102 @@ class OrderStatusActions
     }
 
     /**
+     * One delivery row per ordered color: requested, previously delivered,
+     * remaining and the quantity delivered now for that color only.
+     *
      * @return array<int, mixed>
      */
     private static function deliveryForm(Order $record): array
     {
-        $record->loadMissing('items');
+        $record->loadMissing('items.colorQuantities');
 
         $components = [];
 
         foreach ($record->items as $item) {
             /** @var OrderItem $item */
-            $dimensions = collect([$item->color, $item->size])
-                ->filter(fn ($value) => filled($value))
-                ->implode(' / ');
+            $sizes = filled($item->size) ? ' / '.$item->size : '';
 
-            $label = $item->product_name.' — '.$item->product_code
-                .($dimensions === '' ? '' : ' / '.$dimensions);
+            if ($item->hasUnallocatedDeliveries()) {
+                $components[] = Placeholder::make("unallocated.{$item->id}")
+                    ->label($item->product_name.' — '.$item->product_code.$sizes)
+                    ->content(__('filament.orders.actions.unallocated_warning', [
+                        'count' => $item->unallocated_delivered_quantity,
+                    ]));
 
-            $components[] = TextInput::make("deliveries.{$item->id}")
-                ->label($label)
-                ->helperText(__('filament.orders.actions.delivery_per_color_summary', [
-                    'required' => $item->requested_quantity,
-                    'colors' => $item->effectiveColorCount(),
-                    'delivered' => $item->delivered_quantity_per_color,
-                    'deliverable' => $item->deliverable_quantity_per_color,
-                ]))
-                ->numeric()
-                ->integer()
-                ->minValue(0)
-                ->maxValue($item->deliverable_quantity_per_color)
-                ->default(0)
-                ->live(onBlur: true)
-                ->hint(fn (Get $get): string => __('filament.orders.actions.remaining_after', [
-                    'remaining' => max(0, $item->deliverable_quantity_per_color - (int) $get("deliveries.{$item->id}")),
+                continue;
+            }
+
+            foreach ($item->colorQuantities as $colorRow) {
+                /** @var OrderItemColorQuantity $colorRow */
+                $label = $item->product_name.' — '.$item->product_code.$sizes.' / '.$colorRow->color;
+
+                $components[] = TextInput::make("deliveries.{$colorRow->id}")
+                    ->label($label)
+                    ->helperText(__('filament.orders.actions.delivery_color_summary', [
+                        'color' => $colorRow->color,
+                        'required' => $colorRow->requested_quantity,
+                        'delivered' => $colorRow->delivered_quantity,
+                        'remaining' => $colorRow->remaining_quantity,
+                    ]))
+                    ->numeric()
+                    ->integer()
+                    ->minValue(0)
+                    ->maxValue($colorRow->remaining_quantity)
+                    ->default(0)
+                    ->live(onBlur: true)
+                    ->hint(fn (Get $get): string => __('filament.orders.actions.remaining_after', [
+                        'remaining' => max(0, $colorRow->remaining_quantity - (int) $get("deliveries.{$colorRow->id}")),
+                    ]));
+
+                $components[] = Hidden::make("expected.{$colorRow->id}")
+                    ->default((int) $colorRow->delivered_quantity);
+            }
+        }
+
+        return $components;
+    }
+
+    /**
+     * Per-color allocation inputs for every item that still carries an
+     * unallocated historical delivered quantity.
+     *
+     * @return array<int, mixed>
+     */
+    private static function reconciliationForm(Order $record): array
+    {
+        $record->loadMissing('items.colorQuantities');
+
+        $components = [];
+
+        foreach ($record->items as $item) {
+            /** @var OrderItem $item */
+            if (! $item->hasUnallocatedDeliveries()) {
+                continue;
+            }
+
+            $sizes = filled($item->size) ? ' / '.$item->size : '';
+
+            $components[] = Placeholder::make("unallocated_total.{$item->id}")
+                ->label($item->product_name.' — '.$item->product_code.$sizes)
+                ->content(__('filament.orders.actions.unallocated_warning', [
+                    'count' => $item->unallocated_delivered_quantity,
                 ]));
 
-            $components[] = Hidden::make("expected.{$item->id}")
-                ->default((int) $item->delivered_quantity);
+            foreach ($item->colorQuantities as $colorRow) {
+                /** @var OrderItemColorQuantity $colorRow */
+                $components[] = TextInput::make("allocations.{$colorRow->id}")
+                    ->label($item->product_name.' / '.$colorRow->color)
+                    ->helperText(__('filament.orders.actions.reconcile_color_summary', [
+                        'required' => $colorRow->requested_quantity,
+                        'delivered' => $colorRow->delivered_quantity,
+                        'remaining' => $colorRow->remaining_quantity,
+                    ]))
+                    ->numeric()
+                    ->integer()
+                    ->minValue(0)
+                    ->maxValue($colorRow->remaining_quantity)
+                    ->default(0);
+            }
         }
 
         return $components;
@@ -197,14 +301,34 @@ class OrderStatusActions
         $rawQuantities = $data['deliveries'] ?? [];
         $rawExpected = $data['expected'] ?? [];
 
-        foreach ($rawQuantities as $itemId => $quantity) {
-            $deliveries[(int) $itemId] = [
+        foreach ($rawQuantities as $colorRowId => $quantity) {
+            $deliveries[(int) $colorRowId] = [
                 'quantity' => $quantity,
-                'expected_delivered' => $rawExpected[$itemId] ?? null,
+                'expected_delivered' => $rawExpected[$colorRowId] ?? null,
             ];
         }
 
         return $deliveries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<int, mixed> allocations keyed by color row id
+     */
+    private static function normalizeReallocations(array $data): array
+    {
+        $allocations = [];
+        $raw = $data['allocations'] ?? [];
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        foreach ($raw as $colorRowId => $amount) {
+            $allocations[(int) $colorRowId] = ($amount === null || $amount === '') ? 0 : $amount;
+        }
+
+        return $allocations;
     }
 
     /**
@@ -222,7 +346,8 @@ class OrderStatusActions
     /**
      * Runs a transition and refreshes the record so the page reflects the new
      * state. Domain failures become a danger notification; unexpected
-     * exceptions keep their normal reporting behavior.
+     * exceptions are reported and surfaced safely instead of breaking the
+     * admin page.
      */
     private static function run(Order $record, callable $transition): bool
     {
@@ -230,10 +355,21 @@ class OrderStatusActions
             $transition();
 
             $record->refresh();
-        } catch (RuntimeException $exception) {
+        } catch (RuntimeException|ValidationException $exception) {
             Notification::make()
                 ->title(__('filament.orders.actions.failed'))
-                ->body($exception->getMessage())
+                ->body(self::failureBody($exception))
+                ->danger()
+                ->persistent()
+                ->send();
+
+            return false;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            Notification::make()
+                ->title(__('filament.orders.actions.failed'))
+                ->body(__('filament.orders.actions.failed_body'))
                 ->danger()
                 ->persistent()
                 ->send();
@@ -242,5 +378,17 @@ class OrderStatusActions
         }
 
         return true;
+    }
+
+    private static function failureBody(Throwable $exception): string
+    {
+        if ($exception instanceof ValidationException) {
+            return (string) (collect($exception->errors())->flatten()->first()
+                ?? __('filament.orders.actions.failed_body'));
+        }
+
+        return $exception->getMessage() !== ''
+            ? $exception->getMessage()
+            : __('filament.orders.actions.failed_body');
     }
 }

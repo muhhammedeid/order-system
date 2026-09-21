@@ -49,32 +49,39 @@
                                 class="production-section-label"
                                 id="production-required-{{ $requirement['id'] }}"
                             >
-                                {{ __('admin.production.required_per_color') }}
+                                {{ __('admin.production.outstanding_by_color') }}
                             </p>
-                            <p class="production-quantity tabular-nums">
-                                {{ number_format($requirement['required_quantity']) }}
-                            </p>
+
+                            @if ($requirement['uniform_remaining'] !== null)
+                                <p class="production-quantity tabular-nums">
+                                    {{ number_format($requirement['uniform_remaining']) }}
+                                    <span class="production-quantity-unit">{{ __('admin.production.per_color') }}</span>
+                                </p>
+                            @else
+                                <p class="production-quantity production-quantity-mixed">
+                                    {{ __('admin.production.mixed_color_quantities') }}
+                                </p>
+                            @endif
                         </section>
 
-                        <section class="production-breakdown-section" aria-label="{{ __('admin.production.color_breakdown') }}">
+                        <section
+                            class="production-breakdown-section"
+                            aria-label="{{ __('admin.production.remaining_colors') }}"
+                        >
                             <p class="production-section-label">
-                                {{ __('admin.production.color_breakdown') }}
+                                {{ __('admin.production.remaining_colors') }}
                             </p>
 
-                            @if (count($requirement['color_breakdown']))
-                                <div class="production-breakdown">
-                                    @foreach ($requirement['color_breakdown'] as $color)
-                                        <div class="production-breakdown-item">
-                                            <p class="production-breakdown-color">{{ $color['color'] }}</p>
-                                            <p class="production-breakdown-quantity tabular-nums">
-                                                {{ trans_choice('admin.production.pieces', $color['quantity'], ['count' => number_format($color['quantity'])]) }}
-                                            </p>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <p class="production-breakdown-empty">{{ __('admin.production.color_breakdown_empty') }}</p>
-                            @endif
+                            <div class="production-breakdown">
+                                @foreach ($requirement['pending_colors'] as $color)
+                                    <div class="production-breakdown-item">
+                                        <p class="production-breakdown-color">{{ $color['color'] }}</p>
+                                        <p class="production-breakdown-quantity tabular-nums">
+                                            {{ trans_choice('admin.production.pieces_remaining', $color['remaining'], ['count' => number_format($color['remaining'])]) }}
+                                        </p>
+                                    </div>
+                                @endforeach
+                            </div>
                         </section>
 
                         <div class="production-card-footer">

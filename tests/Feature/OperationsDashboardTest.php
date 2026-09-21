@@ -10,6 +10,7 @@ use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
@@ -89,10 +90,47 @@ class OperationsDashboardTest extends TestCase
         $order->recalculateTotalQuantity();
 
         if ($delivered > 0) {
-            $order->recordDeliveries([$item->id => ['quantity' => $delivered, 'expected_delivered' => 0]]);
+            $item->colorQuantities()->firstOrFail()->setDeliveredQuantity($delivered);
+            $order->refreshDeliveryStatus();
         }
 
         return [$order->refresh(), $item->refresh()];
+    }
+
+    /**
+     * Confirmed order with one line covering several snapshot colors.
+     *
+     * @param  array<int, string>  $colors
+     * @return array{0: Order, 1: OrderItem}
+     */
+    private function multiColorOrder(array $colors = ['Black', 'White'], int $requestedPerColor = 10, OrderStatus $status = OrderStatus::Confirmed): array
+    {
+        $product = $this->newProduct([
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+
+        $variants = collect($colors)->map(fn (string $color): ProductVariant => $this->newVariant($product, $color, '37'));
+
+        $order = $this->newOrder($status);
+
+        $snapshot = OrderItem::snapshotFromVariant($variants->first());
+        $snapshot['color'] = implode('، ', $colors);
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => $requestedPerColor,
+            'color_count' => count($colors),
+            'quantity' => $requestedPerColor * count($colors),
+        ]);
+
+        $order->recalculateTotalQuantity();
+
+        return [$order->refresh(), $item->refresh()];
+    }
+
+    private function colorRow(OrderItem $item, string $color): OrderItemColorQuantity
+    {
+        return $item->colorQuantities()->where('color', $color)->firstOrFail();
     }
 
     /**
@@ -139,18 +177,20 @@ class OperationsDashboardTest extends TestCase
         $this->assertSame(2, Order::confirmedInExecutionCount());
         $this->assertSame(2, $this->statsByLabel()['طلبات مؤكدة']->getValue());
 
-        $confirmedOrder->recordDeliveries([$confirmedItem->id => ['quantity' => 25, 'expected_delivered' => 0]]);
+        $this->colorRow($confirmedItem, 'Black')->setDeliveredQuantity(25);
+        $confirmedOrder->refreshDeliveryStatus();
 
         $this->assertSame(1, Order::confirmedInExecutionCount());
         $this->assertSame(1, $this->statsByLabel()['طلبات مؤكدة']->getValue());
 
-        $partialOrder->recordDeliveries([$partialItem->id => ['quantity' => 15, 'expected_delivered' => 10]]);
+        $this->colorRow($partialItem, 'Black')->setDeliveredQuantity(25);
+        $partialOrder->refreshDeliveryStatus();
 
         $this->assertSame(0, Order::confirmedInExecutionCount());
         $this->assertSame(0, $this->statsByLabel()['طلبات مؤكدة']->getValue());
     }
 
-    public function test_outstanding_kpi_includes_only_confirmed_and_partially_delivered_remaining_units(): void
+    public function test_outstanding_kpi_counts_colors_still_requiring_production(): void
     {
         $this->orderWithItem(OrderStatus::New, 10);
         $this->orderWithItem(OrderStatus::Cancelled, 10);
@@ -160,25 +200,38 @@ class OperationsDashboardTest extends TestCase
 
         $stats = $this->statsByLabel();
 
-        $this->assertSame(10, $stats['المطلوب للتشغيل']->getValue());
+        $this->assertSame(2, $stats['ألوان مطلوبة للتشغيل']->getValue());
         $this->assertSame(5, $partialItem->remaining_quantity);
+        $this->assertSame(5, $this->colorRow($partialItem, 'Black')->remaining_quantity);
 
-        $partialOrder->recordDeliveries([$partialItem->id => ['quantity' => 2, 'expected_delivered' => 3]]);
+        $partialOrder->recordDeliveries([
+            $this->colorRow($partialItem, 'Black')->id => ['quantity' => 2, 'expected_delivered' => 3],
+        ]);
 
-        $this->assertSame(8, $this->statsByLabel()['المطلوب للتشغيل']->getValue());
+        // Still one pending color on the partially delivered order.
+        $this->assertSame(2, $this->statsByLabel()['ألوان مطلوبة للتشغيل']->getValue());
+
+        $partialOrder->recordDeliveries([
+            $this->colorRow($partialItem, 'Black')->id => ['quantity' => 3, 'expected_delivered' => 5],
+        ]);
+
+        // Its color is complete now, so only the confirmed order remains.
+        $this->assertSame(1, $this->statsByLabel()['ألوان مطلوبة للتشغيل']->getValue());
     }
 
-    public function test_outstanding_kpi_excludes_fully_delivered_items_and_zero_outstanding_products(): void
+    public function test_outstanding_kpi_excludes_fully_delivered_colors_and_zero_outstanding_products(): void
     {
         $product = $this->newProduct();
 
         [$order, $item] = $this->orderWithItem(OrderStatus::Confirmed, 4, 0, $product);
 
-        $order->recordDeliveries([$item->id => ['quantity' => 4, 'expected_delivered' => 0]]);
+        $order->recordDeliveries([
+            $this->colorRow($item, 'Black')->id => ['quantity' => 4, 'expected_delivered' => 0],
+        ]);
 
-        $this->assertSame(0, OrderItem::productionRemainingQuantityTotal());
-        $this->assertSame(0, $this->statsByLabel()['المطلوب للتشغيل']->getValue());
-        $this->assertTrue(OrderItem::productProductionTotals()->isEmpty());
+        $this->assertSame(0, OrderItemColorQuantity::outstandingColorCount());
+        $this->assertSame(0, $this->statsByLabel()['ألوان مطلوبة للتشغيل']->getValue());
+        $this->assertTrue(OrderItemColorQuantity::productionCards()->isEmpty());
     }
 
     public function test_active_products_and_customers_cards(): void
@@ -223,7 +276,7 @@ class OperationsDashboardTest extends TestCase
         $this->assertStringContainsString('/admin/order-management?tab=confirmed', $stats['طلبات مؤكدة']->getUrl());
         $this->assertStringContainsString('/admin/order-management?tab=partially_delivered', $stats['تسليم جزئي']->getUrl());
         $this->assertStringContainsString('/admin/orders', $stats['طلبات مُسلَّمة']->getUrl());
-        $this->assertStringContainsString('/admin/production-requirements', $stats['المطلوب للتشغيل']->getUrl());
+        $this->assertStringContainsString('/admin/production-requirements', $stats['ألوان مطلوبة للتشغيل']->getUrl());
         $this->assertStringContainsString('/admin/products?filters', $stats['منتجات نشطة']->getUrl());
         $this->assertStringContainsString('/admin/customers', $stats['العملاء']->getUrl());
     }
@@ -250,21 +303,19 @@ class OperationsDashboardTest extends TestCase
 
         $rowA = $requirements->firstWhere('id', $productA->id);
 
-        $this->assertSame(8, $rowA['required_quantity']);
+        $this->assertSame([
+            ['color' => 'Black', 'remaining' => 5],
+            ['color' => 'White', 'remaining' => 3],
+        ], $rowA['pending_colors']);
+        $this->assertNull($rowA['uniform_remaining']);
         $this->assertSame(2, $rowA['orders_count']);
         $this->assertSame(url('/storage/products/images/a.jpg'), $rowA['image']);
         $this->assertSame('SH-A', $rowA['code']);
-        $this->assertSame([
-            ['color' => 'Black', 'quantity' => 5],
-            ['color' => 'White', 'quantity' => 3],
-        ], $rowA['color_breakdown']);
 
         $rowB = $requirements->firstWhere('id', $productB->id);
 
-        $this->assertSame(4, $rowB['required_quantity']);
-        $this->assertSame([
-            ['color' => 'Red', 'quantity' => 4],
-        ], $rowB['color_breakdown']);
+        $this->assertSame([['color' => 'Red', 'remaining' => 3]], $rowB['pending_colors']);
+        $this->assertSame(3, $rowB['uniform_remaining']);
         $this->assertNull($rowB['image']);
     }
 
@@ -281,143 +332,130 @@ class OperationsDashboardTest extends TestCase
         $this->assertFalse($requirements->first()['active']);
     }
 
-    public function test_non_selectable_color_card_uses_order_quantity_and_breaks_it_down_per_color(): void
+    public function test_card_shows_the_outstanding_quantity_of_every_pending_color(): void
+    {
+        [, $item] = $this->multiColorOrder(['Black', 'White']);
+
+        $this->colorRow($item, 'Black')->setDeliveredQuantity(5);
+        $this->colorRow($item, 'White')->setDeliveredQuantity(5);
+
+        $requirement = ProductionRequirementsWidget::requirementsFor()->first();
+
+        $this->assertSame([
+            ['color' => 'Black', 'remaining' => 5],
+            ['color' => 'White', 'remaining' => 5],
+        ], $requirement['pending_colors']);
+        $this->assertSame(5, $requirement['uniform_remaining']);
+    }
+
+    public function test_fully_delivered_colors_disappear_from_the_card(): void
+    {
+        [, $item] = $this->multiColorOrder(['Black', 'White', 'Beige']);
+
+        $this->colorRow($item, 'Black')->setDeliveredQuantity(10);
+        $this->colorRow($item, 'White')->setDeliveredQuantity(5);
+
+        $requirement = ProductionRequirementsWidget::requirementsFor()->first();
+
+        $this->assertSame([
+            ['color' => 'White', 'remaining' => 5],
+            ['color' => 'Beige', 'remaining' => 10],
+        ], $requirement['pending_colors']);
+        $this->assertNull($requirement['uniform_remaining']);
+    }
+
+    public function test_card_never_shows_the_original_quantity_after_a_partial_delivery(): void
+    {
+        [, $item] = $this->multiColorOrder(['Black', 'White'], requestedPerColor: 10);
+
+        $this->colorRow($item, 'Black')->setDeliveredQuantity(5);
+        $this->colorRow($item, 'White')->setDeliveredQuantity(5);
+
+        $rendered = Livewire::actingAs(User::factory()->create())
+            ->test(ProductionRequirementsWidget::class)
+            ->assertSee('المتبقي للتشغيل حسب اللون')
+            ->assertSee('الألوان المتبقية')
+            ->assertSee('5 قطعة متبقية')
+            ->assertDontSee('10 قطعة متبقية');
+
+        $requirement = ProductionRequirementsWidget::requirementsFor()->first();
+
+        $this->assertSame(5, $requirement['uniform_remaining']);
+        $this->assertSame($rendered->html() !== '', true);
+    }
+
+    public function test_card_shows_mixed_quantities_label_when_remainders_differ(): void
+    {
+        [, $item] = $this->multiColorOrder(['Black', 'White', 'Beige']);
+
+        $this->colorRow($item, 'Black')->setDeliveredQuantity(10);
+        $this->colorRow($item, 'White')->setDeliveredQuantity(5);
+
+        $requirement = ProductionRequirementsWidget::requirementsFor()->first();
+
+        $this->assertNull($requirement['uniform_remaining']);
+
+        Livewire::actingAs(User::factory()->create())
+            ->test(ProductionRequirementsWidget::class)
+            ->assertSee('كميات مختلفة حسب اللون')
+            ->assertSee('5 قطعة متبقية')
+            ->assertSee('10 قطعة متبقية');
+    }
+
+    public function test_products_without_pending_colors_disappear_from_the_cards(): void
+    {
+        [, $item] = $this->multiColorOrder(['Black', 'White']);
+
+        $this->colorRow($item, 'Black')->setDeliveredQuantity(10);
+        $this->colorRow($item, 'White')->setDeliveredQuantity(10);
+
+        $this->assertTrue(ProductionRequirementsWidget::requirementsFor()->isEmpty());
+        $this->assertSame(0, OrderItemColorQuantity::outstandingColorCount());
+
+        Livewire::actingAs(User::factory()->create())
+            ->test(ProductionRequirementsWidget::class)
+            ->assertSee('لا توجد كميات مطلوبة للتشغيل حالياً');
+    }
+
+    public function test_cards_use_snapshot_colors_after_product_colors_change(): void
     {
         $product = $this->newProduct([
             'color_enabled' => false,
             'size_enabled' => false,
         ]);
+
         $black = $this->newVariant($product, 'Black', '37');
         $this->newVariant($product, 'White', '37');
-
-        $order = $this->newOrder(OrderStatus::Confirmed);
-        $order->items()->create(OrderItem::snapshotFromVariant($black) + [
-            'requested_quantity' => 5,
-            'color_count' => 2,
-            'quantity' => 10,
-        ]);
-        $order->recalculateTotalQuantity();
-
-        $requirement = ProductionRequirementsWidget::requirementsFor()->first();
-
-        $this->assertSame(5, $requirement['required_quantity']);
-        $this->assertSame([
-            ['color' => 'Black', 'quantity' => 5],
-            ['color' => 'White', 'quantity' => 5],
-        ], $requirement['color_breakdown']);
-    }
-
-    public function test_selectable_color_card_breaks_down_the_customer_selected_colors(): void
-    {
-        $product = $this->newProduct(['color_enabled' => true]);
-        $black = $this->newVariant($product, 'Black', '41');
 
         $order = $this->newOrder(OrderStatus::Confirmed);
 
         $snapshot = OrderItem::snapshotFromVariant($black);
         $snapshot['color'] = 'Black، White';
 
-        $order->items()->create($snapshot + [
-            'requested_quantity' => 5,
-            'color_count' => 2,
-            'quantity' => 10,
-        ]);
-        $order->recalculateTotalQuantity();
-
-        $requirement = ProductionRequirementsWidget::requirementsFor()->first();
-
-        $this->assertSame(5, $requirement['required_quantity']);
-        $this->assertSame([
-            ['color' => 'Black', 'quantity' => 5],
-            ['color' => 'White', 'quantity' => 5],
-        ], $requirement['color_breakdown']);
-    }
-
-    public function test_card_aggregation_sums_requested_quantities_per_color_without_multiplying(): void
-    {
-        $product = $this->newProduct();
-        $black = $this->newVariant($product, 'Black', '41');
-
-        $order = $this->newOrder(OrderStatus::Confirmed);
-
-        $multiColor = OrderItem::snapshotFromVariant($black);
-        $multiColor['color'] = 'Black، White';
-
-        $order->items()->create($multiColor + [
-            'requested_quantity' => 5,
-            'color_count' => 2,
-            'quantity' => 10,
-        ]);
-
-        $order->items()->create(OrderItem::snapshotFromVariant($black) + [
+        $item = $order->items()->create($snapshot + [
             'requested_quantity' => 10,
-            'color_count' => 1,
-            'quantity' => 10,
+            'color_count' => 2,
+            'quantity' => 20,
         ]);
 
         $order->recalculateTotalQuantity();
+
+        // The product later gains and loses colors; the order must not change.
+        $this->newVariant($product, 'Beige', '37');
+        $product->variants()->where('color', 'Black')->delete();
 
         $requirement = ProductionRequirementsWidget::requirementsFor()->first();
 
-        // 5 + 10 per color, never 5 + 10 multiplied by the color count.
-        $this->assertSame(15, $requirement['required_quantity']);
         $this->assertSame([
-            ['color' => 'Black', 'quantity' => 15],
-            ['color' => 'White', 'quantity' => 5],
-        ], $requirement['color_breakdown']);
-        $this->assertNotSame(20, $requirement['required_quantity']);
-    }
+            ['color' => 'Black', 'remaining' => 10],
+            ['color' => 'White', 'remaining' => 10],
+        ], $requirement['pending_colors']);
 
-    public function test_cards_share_one_structure_for_forced_and_customer_selected_colors(): void
-    {
-        $forced = $this->newProduct(['name' => 'Forced Colors', 'color_enabled' => false, 'size_enabled' => false]);
-        $forcedVariant = $this->newVariant($forced, 'Black', '37');
-        $this->newVariant($forced, 'Beige', '37');
-
-        $selected = $this->newProduct(['name' => 'Selected Colors', 'color_enabled' => true]);
-        $selectedVariant = $this->newVariant($selected, 'White', '41');
-
-        $order = $this->newOrder(OrderStatus::Confirmed);
-
-        $order->items()->create(OrderItem::snapshotFromVariant($forcedVariant) + [
-            'color' => 'Black،Beige',
-            'requested_quantity' => 5,
-            'color_count' => 2,
-            'quantity' => 10,
-        ]);
-
-        $order->items()->create(OrderItem::snapshotFromVariant($selectedVariant) + [
-            'color' => 'White',
-            'requested_quantity' => 5,
-            'color_count' => 1,
-            'quantity' => 5,
-        ]);
-
-        $order->recalculateTotalQuantity();
-
-        $requirements = ProductionRequirementsWidget::requirementsFor();
-
-        $this->assertCount(2, $requirements);
-
-        foreach ($requirements as $requirement) {
-            // Identical structure and keys regardless of color_enabled.
-            $this->assertSame(
-                ['id', 'name', 'code', 'active', 'image', 'required_quantity', 'color_breakdown', 'orders_count'],
-                array_keys($requirement),
-            );
-            $this->assertSame(5, $requirement['required_quantity']);
-            $this->assertNotEmpty($requirement['color_breakdown']);
-        }
-
-        $rendered = Livewire::actingAs(User::factory()->create())
+        Livewire::actingAs(User::factory()->create())
             ->test(ProductionRequirementsWidget::class)
-            ->assertSee('الكمية المطلوبة لكل لون')
-            ->assertSee('توزيع الألوان المطلوبة')
             ->assertSee('Black')
-            ->assertSee('Beige')
-            ->assertSee('White');
-
-        $this->assertSame(2, substr_count($rendered->html(), 'production-breakdown-section'));
+            ->assertSee('White')
+            ->assertDontSee('Beige');
     }
 
     public function test_active_products_kpi_filter_matches_the_products_source_view(): void
@@ -451,7 +489,7 @@ class OperationsDashboardTest extends TestCase
         Livewire::actingAs(User::factory()->create())
             ->test(OrderStatsWidget::class)
             ->assertSee('طلبات جديدة')
-            ->assertSee('المطلوب للتشغيل')
+            ->assertSee('ألوان مطلوبة للتشغيل')
             ->assertSee('منتجات نشطة')
             ->assertSee('العملاء');
     }
@@ -463,9 +501,9 @@ class OperationsDashboardTest extends TestCase
         Livewire::actingAs(User::factory()->create())
             ->test(ProductionRequirementsWidget::class)
             ->assertSee('المطلوب للتشغيل حالياً')
-            ->assertSee('الكمية المطلوبة لكل لون')
-            ->assertSee('توزيع الألوان المطلوبة')
+            ->assertSee('المتبقي للتشغيل حسب اللون')
             ->assertSee('5')
+            ->assertSee('5 قطعة متبقية')
             ->assertSee('عرض الطلبات المساهمة');
     }
 

@@ -14,10 +14,12 @@ use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Products\RelationManagers\VariantsRelationManager;
 use App\Filament\Resources\VariantColors\Pages\ListVariantColors;
 use App\Filament\Resources\VariantSizes\Pages\ListVariantSizes;
+use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -118,7 +120,8 @@ class AdminExcelExportTest extends TestCase
             );
 
             if (($line['deliver'] ?? 0) > 0) {
-                $deliveries[$item->id] = ['quantity' => $line['deliver'], 'expected_delivered' => 0];
+                $colorRow = $item->colorQuantities()->firstOrFail();
+                $deliveries[$colorRow->id] = ['quantity' => $line['deliver'], 'expected_delivered' => 0];
             }
         }
 
@@ -417,7 +420,7 @@ class AdminExcelExportTest extends TestCase
         $this->assertNotContains('SH-B', $this->column($sheet, 'F'));
     }
 
-    public function test_production_requirements_export_uses_per_color_quantities(): void
+    public function test_production_requirements_export_lists_one_row_per_pending_color(): void
     {
         $product = $this->makeProduct([
             'product_code' => 'SH-M',
@@ -448,7 +451,13 @@ class AdminExcelExportTest extends TestCase
         $order->recalculateTotalQuantity();
         $order->confirm();
 
-        $order->recordDeliveries([$item->id => ['quantity' => 2, 'expected_delivered' => 0]]);
+        $blackRow = $item->colorQuantities()->where('color', 'Black')->firstOrFail();
+        $whiteRow = $item->colorQuantities()->where('color', 'White')->firstOrFail();
+
+        // Black is fully delivered, White is partially delivered.
+        $blackRow->setDeliveredQuantity(5);
+        $whiteRow->setDeliveredQuantity(2);
+        $order->refreshDeliveryStatus();
 
         $sheet = $this->sheetFromDownload(
             Livewire::actingAs($this->admin())
@@ -457,21 +466,95 @@ class AdminExcelExportTest extends TestCase
             $this->timestamped('production-requirements'),
         );
 
-        $this->assertSame(2, $sheet->getHighestRow());
+        // One row per pending color: White and Beige only.
+        $this->assertSame(3, $sheet->getHighestRow());
 
         $this->assertSame([
             'Order No', 'Order Date', 'Customer Code', 'Customer Name', 'Phone',
             'Product Code', 'Product Name', 'Color', 'Size',
-            'Required Qty Per Color', 'Delivered Per Color', 'Remaining Per Color', 'Status',
+            'Requested Qty', 'Delivered Qty', 'Remaining Qty', 'Status',
         ], $this->headers($sheet));
 
-        $this->assertSame('Black، White، Beige', $sheet->getCell('H2')->getValue());
+        $this->assertSame('White', $sheet->getCell('H2')->getValue());
         $this->assertSame(5, (int) $sheet->getCell('J2')->getValue());
         $this->assertSame(2, (int) $sheet->getCell('K2')->getValue());
         $this->assertSame(3, (int) $sheet->getCell('L2')->getValue());
 
-        // 2 per color x 3 colors stored as the physical total.
-        $this->assertSame(6, $item->refresh()->delivered_quantity);
+        $this->assertSame('Beige', $sheet->getCell('H3')->getValue());
+        $this->assertSame(5, (int) $sheet->getCell('J3')->getValue());
+        $this->assertSame(0, (int) $sheet->getCell('K3')->getValue());
+        $this->assertSame(5, (int) $sheet->getCell('L3')->getValue());
+
+        $this->assertNotContains('Black', $this->column($sheet, 'H'));
+        $this->assertSame('SH-M', $sheet->getCell('F2')->getValue());
+        $this->assertSame('37', $sheet->getCell('I2')->getValue());
+
+        // The stored aggregate still reflects the physical delivered total.
+        $this->assertSame(7, $item->refresh()->delivered_quantity);
+    }
+
+    public function test_production_requirements_surfaces_agree_on_color_level_remainders(): void
+    {
+        $product = $this->makeProduct([
+            'product_code' => 'SH-X',
+            'name' => 'Consistent',
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+
+        $black = $this->makeVariant($product, 'Black', '37');
+        $this->makeVariant($product, 'White', '37');
+        $this->makeVariant($product, 'Beige', '37');
+
+        $order = Order::create([
+            'order_number' => Order::nextOrderNumber(),
+            'customer_id' => Customer::factory()->create()->id,
+            'total_quantity' => 0,
+        ]);
+
+        $snapshot = OrderItem::snapshotFromVariant($black);
+        $snapshot['color'] = 'Black، White، Beige';
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => 10,
+            'color_count' => 3,
+            'quantity' => 30,
+        ]);
+
+        $order->recalculateTotalQuantity();
+        $order->confirm();
+
+        $item->colorQuantities()->where('color', 'Black')->firstOrFail()->setDeliveredQuantity(10);
+        $item->colorQuantities()->where('color', 'White')->firstOrFail()->setDeliveredQuantity(4);
+        $order->refreshDeliveryStatus();
+
+        $expected = [
+            'White' => 6,
+            'Beige' => 10,
+        ];
+
+        // Cards.
+        $card = ProductionRequirementsWidget::requirementsFor()->first();
+        $cardRemainders = collect($card['pending_colors'])->pluck('remaining', 'color')->all();
+
+        // Drill-down table.
+        $page = Livewire::actingAs($this->admin())->test(ProductionRequirements::class);
+        $tableRemainders = OrderItemColorQuantity::outstandingForProduction()
+            ->get()
+            ->pluck('remaining_quantity', 'color')
+            ->all();
+
+        // Excel export.
+        $sheet = $this->sheetFromDownload($page->callAction('exportExcel'), $this->timestamped('production-requirements'));
+        $exportRemainders = [];
+
+        foreach (range(2, $sheet->getHighestRow()) as $row) {
+            $exportRemainders[(string) $sheet->getCell("H{$row}")->getValue()] = (int) $sheet->getCell("L{$row}")->getValue();
+        }
+
+        $this->assertSame($expected, $cardRemainders);
+        $this->assertSame($expected, $tableRemainders);
+        $this->assertSame($expected, $exportRemainders);
     }
 
     public function test_selected_orders_bulk_export_contains_only_selected_orders(): void

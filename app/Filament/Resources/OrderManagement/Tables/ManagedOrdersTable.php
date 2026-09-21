@@ -62,6 +62,7 @@ class ManagedOrdersTable
                 OrderStatusActions::cancel(),
                 OrderStatusActions::recordDelivery(),
                 OrderStatusActions::deliverAll(),
+                OrderStatusActions::reconcileDeliveries(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

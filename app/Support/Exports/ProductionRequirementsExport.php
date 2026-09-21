@@ -2,13 +2,16 @@
 
 namespace App\Support\Exports;
 
-use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 
 /**
- * Production Requirements export at the approved unit: every quantity is
- * the quantity per color (the requested quantity), never the physical
- * piece total. Delivered and remaining are the same per-color unit.
+ * Production Requirements export at the approved grain: one row per ordered
+ * color that still requires production, with that color's requested,
+ * delivered and remaining quantities. Quantities come exclusively from the
+ * immutable order snapshots, never from the product's current colors, and
+ * different color requirements are never summed into one manufactured
+ * quantity.
  */
 class ProductionRequirementsExport extends BusinessExport
 {
@@ -20,13 +23,9 @@ class ProductionRequirementsExport extends BusinessExport
     public function query(): Builder
     {
         return $this->query
-            ->with([
-                'order:id,order_number,status,customer_id,created_at',
-                'order.customer:id,name,phone,customer_code',
-            ])
             ->reorder()
             ->orderBy('order_items.order_id')
-            ->orderBy('order_items.id');
+            ->orderBy('order_item_color_quantities.id');
     }
 
     /**
@@ -44,35 +43,35 @@ class ProductionRequirementsExport extends BusinessExport
             'Product Name',
             'Color',
             'Size',
-            'Required Qty Per Color',
-            'Delivered Per Color',
-            'Remaining Per Color',
+            'Requested Qty',
+            'Delivered Qty',
+            'Remaining Qty',
             'Status',
         ];
     }
 
     /**
-     * @param  OrderItem  $record
+     * @param  OrderItemColorQuantity  $record
      * @return array<int, mixed>
      */
     public function map($record): array
     {
-        $order = $record->order;
+        $order = $record->orderItem?->order;
 
         return [
-            $order->order_number,
-            $this->localDateTime($order->created_at),
-            $order->customer?->customer_code,
-            $order->customer?->name,
-            $order->customer?->phone,
+            $order?->order_number,
+            $this->localDateTime($order?->created_at),
+            $order?->customer?->customer_code,
+            $order?->customer?->name,
+            $order?->customer?->phone,
             $record->product_code,
             $record->product_name,
             $record->color,
             $record->size,
             $record->requested_quantity,
-            $record->delivered_quantity_per_color,
-            $record->remaining_quantity_per_color,
-            $order->status->label(),
+            $record->delivered_quantity,
+            $record->remaining_quantity,
+            $order?->status?->label(),
         ];
     }
 

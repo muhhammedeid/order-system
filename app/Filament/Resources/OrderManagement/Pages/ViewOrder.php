@@ -22,6 +22,7 @@ class ViewOrder extends ViewRecord
             OrderStatusActions::cancel(),
             OrderStatusActions::recordDelivery(),
             OrderStatusActions::deliverAll(),
+            OrderStatusActions::reconcileDeliveries(),
             OrderPrintAction::make(),
             Action::make('exportItems')
                 ->label(__('filament.orders.export_order'))

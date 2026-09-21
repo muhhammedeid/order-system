@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Order extends Model
@@ -284,19 +285,19 @@ class Order extends Model
     }
 
     /**
-     * Records partial deliveries for the given items. Submitted quantities
-     * are expressed in the production-requirements unit — the quantity per
-     * color — and converted to the stored physical piece total here, in one
-     * place, through the item model.
+     * Records partial deliveries for individual ordered colors. Submitted
+     * quantities are the pieces delivered now for one color row and are
+     * validated against that color's own remaining quantity; the aggregate
+     * order-item delivered total is then synchronized from the color rows.
      *
-     * @param  array<int, array{quantity: mixed, expected_delivered: mixed}>  $deliveries  keyed by order_item id
+     * @param  array<int|string, array{quantity: mixed, expected_delivered: mixed}>  $deliveries  keyed by color-quantity id
      */
     public function recordDeliveries(array $deliveries): void
     {
         DB::transaction(function () use ($deliveries) {
             $order = $this->lockForDelivery();
 
-            $this->applyDeliveries($order, $deliveries);
+            $this->applyColorDeliveries($order, $deliveries);
         });
 
         $this->refresh();
@@ -304,16 +305,115 @@ class Order extends Model
     }
 
     /**
-     * Marks every remaining quantity as delivered. Remaining values are
-     * computed only after the order and its items are locked inside the
-     * mutation transaction; the client never supplies totals.
+     * Marks every remaining color quantity as delivered. Remaining values
+     * are computed only after the order, its items and their color rows are
+     * locked inside the mutation transaction; the client never supplies
+     * totals.
      */
     public function deliverAllRemaining(): void
     {
         DB::transaction(function () {
             $order = $this->lockForDelivery();
 
-            $this->applyDeliveries($order, [], deliverAll: true);
+            $this->applyDeliverAll($order);
+        });
+
+        $this->refresh();
+        $this->unsetRelation('items');
+    }
+
+    /**
+     * Total delivered pieces that the historical migration could not
+     * attribute to a color. Partial delivery stays blocked while it is
+     * greater than zero.
+     */
+    public function hasUnallocatedDeliveries(): bool
+    {
+        return $this->items()->where('unallocated_delivered_quantity', '>', 0)->exists();
+    }
+
+    /**
+     * One-time allocation of the legacy unallocated delivered quantities to
+     * the exact colors that received them. The physical totals stay
+     * unchanged; only their color attribution is recorded. Every submitted
+     * item allocation is validated before anything is written, so a wrong
+     * allocation never leaves a partially reconciled order behind.
+     *
+     * @param  array<int|string, mixed>  $allocations  keyed by color row id
+     */
+    public function reconcileUnallocatedDeliveries(array $allocations): void
+    {
+        DB::transaction(function () use ($allocations): void {
+            $order = $this->lockForDelivery();
+
+            $items = $order->items()->lockForUpdate()->get()->keyBy('id');
+
+            $colorRows = OrderItemColorQuantity::query()
+                ->whereIn('order_item_id', $items->keys())
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            $prepared = [];
+            $totalsPerItem = [];
+
+            foreach ($allocations as $colorRowId => $amount) {
+                $colorRow = $colorRows->get((int) $colorRowId);
+
+                if (! $colorRow) {
+                    throw new OrderDeliveryException('أحد ألوان بنود الطلب غير موجود ضمن هذا الطلب');
+                }
+
+                if (! is_numeric($amount) || (int) $amount != $amount || (int) $amount < 0) {
+                    throw new OrderDeliveryException('الكمية الموزّعة لكل لون يجب أن تكون عددًا صحيحًا غير سالب');
+                }
+
+                $amount = (int) $amount;
+
+                if ($amount > (int) $colorRow->remaining_quantity) {
+                    throw new OrderDeliveryException(
+                        "الكمية الموزّعة تتجاوز المتبقي للون {$colorRow->color} — المتاح: {$colorRow->remaining_quantity}"
+                    );
+                }
+
+                $itemId = (int) $colorRow->order_item_id;
+                $totalsPerItem[$itemId] = ($totalsPerItem[$itemId] ?? 0) + $amount;
+
+                if ($amount > 0) {
+                    $prepared[] = ['row' => $colorRow, 'amount' => $amount];
+                }
+            }
+
+            foreach ($totalsPerItem as $itemId => $total) {
+                $item = $items->get($itemId);
+                $unallocated = (int) ($item?->unallocated_delivered_quantity ?? 0);
+
+                if ($unallocated < 1) {
+                    throw new OrderDeliveryException('لا توجد كميات تسليم غير موزّعة على الألوان لهذا البند');
+                }
+
+                if ($total !== $unallocated) {
+                    throw new OrderDeliveryException("يجب توزيع كامل الكمية غير الموزّعة ({$unallocated}) على الألوان المحددة");
+                }
+            }
+
+            // Clear the legacy remainders first so the authoritative color
+            // rows become the only source of the delivered aggregates.
+            foreach ($totalsPerItem as $itemId => $total) {
+                $items->get($itemId)?->forceFill(['unallocated_delivered_quantity' => 0])->save();
+            }
+
+            foreach ($prepared as $entry) {
+                /** @var OrderItemColorQuantity $colorRow */
+                $colorRow = $entry['row'];
+                $colorRow->setDeliveredQuantity((int) $colorRow->delivered_quantity + (int) $entry['amount']);
+            }
+
+            foreach ($items->whereIn('id', array_keys($totalsPerItem)) as $item) {
+                $item->refresh()->syncDeliveredAggregate();
+            }
+
+            $order->refreshDeliveryStatus();
         });
 
         $this->refresh();
@@ -339,105 +439,146 @@ class Order extends Model
     }
 
     /**
-     * Validates and applies delivery deltas against the locked item set,
-     * then derives the resulting order status. Throws and rolls back the
-     * surrounding transaction on any invalid entry.
+     * Validates and applies per-color delivery deltas against the locked
+     * color rows, synchronizes the affected order-item totals and derives
+     * the resulting order status. Throws and rolls back the surrounding
+     * transaction on any invalid entry.
      *
-     * Partial deliveries are submitted per color; `$deliverAll` entries are
-     * already exact physical remainders computed from the locked rows.
-     *
-     * @param  array<int, array{quantity: mixed, expected_delivered: mixed}>  $deliveries
+     * @param  array<int|string, array{quantity: mixed, expected_delivered: mixed}>  $deliveries
      */
-    private function applyDeliveries(self $order, array $deliveries, bool $deliverAll = false): void
+    private function applyColorDeliveries(self $order, array $deliveries): void
     {
-        $items = $order->items()->lockForUpdate()->get()->keyBy('id');
-
-        if ($deliverAll) {
-            $deliveries = [];
-
-            foreach ($items as $item) {
-                $remaining = (int) $item->remaining_quantity;
-
-                if ($remaining > 0) {
-                    $deliveries[$item->id] = [
-                        'quantity' => $remaining,
-                        'expected_delivered' => (int) $item->delivered_quantity,
-                    ];
-                }
-            }
-
-            if ($deliveries === []) {
-                throw new OrderDeliveryException('لا توجد كميات متبقية للتسليم');
-            }
-        }
-
         if ($deliveries === []) {
             throw new OrderDeliveryException('يجب تسجيل تسليم وحدة واحدة على الأقل');
         }
 
+        $items = $order->items()->lockForUpdate()->get()->keyBy('id');
+
+        $this->guardAgainstUnallocatedDeliveries($items);
+
+        $colorRows = OrderItemColorQuantity::query()
+            ->whereIn('order_item_id', $items->keys())
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
         $prepared = [];
         $total = 0;
 
-        foreach ($deliveries as $itemId => $row) {
-            $item = $items->get((int) $itemId);
+        foreach ($deliveries as $colorRowId => $row) {
+            $colorRow = $colorRows->get((int) $colorRowId);
 
-            if (! $item) {
-                throw new OrderDeliveryException('أحد بنود الطلب غير موجود ضمن هذا الطلب');
+            if (! $colorRow) {
+                throw new OrderDeliveryException('أحد ألوان بنود الطلب غير موجود ضمن هذا الطلب');
             }
 
             $quantity = $row['quantity'] ?? null;
             $expected = $row['expected_delivered'] ?? null;
 
             if (! is_numeric($quantity) || (int) $quantity != $quantity || (int) $quantity < 0) {
-                throw new OrderDeliveryException('كمية التسليم لكل لون يجب أن تكون عددًا صحيحًا غير سالب');
+                throw new OrderDeliveryException('كمية التسليم للون يجب أن تكون عددًا صحيحًا غير سالب');
             }
 
             if (! is_numeric($expected) || (int) $expected != $expected || (int) $expected < 0) {
                 throw new OrderDeliveryException('تعذر التحقق من حالة التسليم الحالية — يرجى إعادة فتح النافذة والمحاولة مرة أخرى');
             }
 
-            if ((int) $item->delivered_quantity !== (int) $expected) {
+            if ((int) $colorRow->delivered_quantity !== (int) $expected) {
                 throw new OrderDeliveryException('تم تحديث كميات التسليم من جلسة أخرى — يرجى إعادة فتح النافذة والمحاولة مرة أخرى');
             }
 
-            $physicalQuantity = $deliverAll
-                ? (int) $quantity
-                : $item->physicalQuantityForPerColor((int) $quantity);
+            $quantity = (int) $quantity;
 
-            if ($physicalQuantity > (int) $item->remaining_quantity) {
+            if ($quantity > (int) $colorRow->remaining_quantity) {
                 throw new OrderDeliveryException(
-                    "كمية التسليم تتجاوز المتبقي للبند {$item->product_name} ({$item->product_code}) — المتاح للتسليم {$item->deliverable_quantity_per_color} لكل لون"
+                    "كمية التسليم تتجاوز المتبقي للون {$colorRow->color} — المتاح: {$colorRow->remaining_quantity}"
                 );
             }
 
-            $total += $physicalQuantity;
-            $prepared[] = ['item' => $item, 'quantity' => $physicalQuantity];
+            $total += $quantity;
+            $prepared[] = ['row' => $colorRow, 'quantity' => $quantity];
         }
 
         if ($total < 1) {
             throw new OrderDeliveryException('يجب تسجيل تسليم وحدة واحدة على الأقل');
         }
 
+        $touchedItemIds = [];
+
         foreach ($prepared as $entry) {
-            $entry['item']->setDeliveredQuantity((int) $entry['item']->delivered_quantity + $entry['quantity']);
+            /** @var OrderItemColorQuantity $colorRow */
+            $colorRow = $entry['row'];
+            // Saving a color row synchronizes its order item's aggregate.
+            $colorRow->setDeliveredQuantity((int) $colorRow->delivered_quantity + (int) $entry['quantity']);
+            $touchedItemIds[(int) $colorRow->order_item_id] = true;
         }
 
-        $order->unsetRelation('items');
-        $order->load('items');
+        $order->refreshDeliveryStatus();
+    }
 
-        $status = $order->deriveDeliveryStatus() ?? OrderStatus::Confirmed;
+    /**
+     * Marks every outstanding color quantity as delivered in one guarded
+     * transaction.
+     */
+    private function applyDeliverAll(self $order): void
+    {
+        $items = $order->items()->lockForUpdate()->get();
 
-        if ($order->status !== $status) {
-            $order->status = $status;
-            $order->save();
+        $this->guardAgainstUnallocatedDeliveries($items);
+
+        $colorRows = OrderItemColorQuantity::query()
+            ->whereIn('order_item_id', $items->pluck('id'))
+            ->lockForUpdate()
+            ->get()
+            ->filter(fn (OrderItemColorQuantity $row): bool => $row->remaining_quantity > 0);
+
+        if ($colorRows->isEmpty()) {
+            throw new OrderDeliveryException('لا توجد كميات متبقية للتسليم');
+        }
+
+        foreach ($colorRows as $colorRow) {
+            $colorRow->setDeliveredQuantity((int) $colorRow->requested_quantity);
+        }
+
+        $order->refreshDeliveryStatus();
+    }
+
+    /**
+     * @param  Collection<int, OrderItem>  $items
+     */
+    private function guardAgainstUnallocatedDeliveries($items): void
+    {
+        if ($items->contains(fn (OrderItem $item): bool => $item->hasUnallocatedDeliveries())) {
+            throw new OrderDeliveryException(
+                'يوجد تسليم غير موزّع على الألوان في هذا الطلب — يلزم إجراء تسوية التسليمات قبل تسجيل تسليم جديد'
+            );
         }
     }
 
     /**
-     * Derives the delivery status from current item delivered quantities:
-     * null when nothing is delivered yet (status stays `confirmed`),
-     * `partially_delivered` when some quantity was delivered and some
-     * remains, `delivered` when nothing remains.
+     * Re-derives and persists the delivery status after color-level
+     * mutations: the aggregate item quantities still decide between
+     * confirmed, partially delivered and delivered.
+     */
+    public function refreshDeliveryStatus(): void
+    {
+        $this->unsetRelation('items');
+        $this->load('items');
+
+        $status = $this->deriveDeliveryStatus() ?? OrderStatus::Confirmed;
+
+        if ($this->status !== $status) {
+            $this->status = $status;
+            $this->save();
+        }
+    }
+
+    /**
+     * Derives the delivery status from the current item aggregates and the
+     * authoritative color rows: null when nothing is delivered yet (status
+     * stays `confirmed`), `partially_delivered` when some quantity was
+     * delivered and something still remains, `delivered` only when nothing
+     * remains at item level and no ordered color is still outstanding.
      */
     public function deriveDeliveryStatus(): ?OrderStatus
     {
@@ -456,6 +597,15 @@ class Order extends Model
             return null;
         }
 
-        return $remaining === 0 ? OrderStatus::Delivered : OrderStatus::PartiallyDelivered;
+        if ($remaining > 0) {
+            return OrderStatus::PartiallyDelivered;
+        }
+
+        $outstandingColors = OrderItemColorQuantity::query()
+            ->whereIn('order_item_id', $items->pluck('id'))
+            ->outstanding()
+            ->exists();
+
+        return $outstandingColors ? OrderStatus::PartiallyDelivered : OrderStatus::Delivered;
     }
 }

@@ -46,7 +46,9 @@ class DeliveredOrdersHistoryTest extends TestCase
         }
 
         if ($status === OrderStatus::PartiallyDelivered) {
-            $order->recordDeliveries([$item->id => ['quantity' => 1, 'expected_delivered' => 0]]);
+            $order->recordDeliveries([
+                $item->colorQuantities()->firstOrFail()->id => ['quantity' => 1, 'expected_delivered' => 0],
+            ]);
         }
 
         if ($status === OrderStatus::Delivered) {

@@ -50,7 +50,9 @@ class OrderManagementPageTest extends TestCase
         }
 
         if ($status === OrderStatus::PartiallyDelivered) {
-            $order->recordDeliveries([$item->id => ['quantity' => 2, 'expected_delivered' => 0]]);
+            $order->recordDeliveries([
+                $item->colorQuantities()->firstOrFail()->id => ['quantity' => 2, 'expected_delivered' => 0],
+            ]);
         }
 
         if ($status === OrderStatus::Delivered) {
@@ -322,10 +324,11 @@ class OrderManagementPageTest extends TestCase
         $this->assertSame(3, $item->remaining_quantity);
     }
 
-    public function test_record_delivery_action_submits_the_quantity_per_color(): void
+    /**
+     * @return array{0: Order, 1: OrderItem, 2: array<string, OrderItemColorQuantity>}
+     */
+    private function multiColorOrder(): array
     {
-        $admin = User::factory()->create();
-
         $product = Product::factory()->create([
             'color_enabled' => false,
             'size_enabled' => false,
@@ -356,20 +359,93 @@ class OrderManagementPageTest extends TestCase
         $order->confirm();
         $order->refresh();
 
+        return [
+            $order,
+            $item->refresh(),
+            $item->colorQuantities->keyBy('color')->all(),
+        ];
+    }
+
+    public function test_record_delivery_modal_lists_one_row_per_ordered_color(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item] = $this->multiColorOrder();
+
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->mountAction('recordDelivery')
+            ->assertMountedActionModalSee('Black')
+            ->assertMountedActionModalSee('White')
+            ->assertMountedActionModalSee('Beige');
+    }
+
+    public function test_record_delivery_action_submits_one_quantity_per_color(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
         Livewire::actingAs($admin)
             ->test(ViewOrder::class, ['record' => $order->getKey()])
             ->callAction('recordDelivery', data: [
-                'deliveries' => [$item->id => 3],
-                'expected' => [$item->id => 0],
+                'deliveries' => [
+                    $colors['Black']->id => 5,
+                    $colors['White']->id => 2,
+                    $colors['Beige']->id => 0,
+                ],
+                'expected' => [
+                    $colors['Black']->id => 0,
+                    $colors['White']->id => 0,
+                    $colors['Beige']->id => 0,
+                ],
             ])
             ->assertNotified();
 
+        $this->assertSame(5, $colors['Black']->refresh()->delivered_quantity);
+        $this->assertSame(0, $colors['Black']->remaining_quantity);
+        $this->assertSame(2, $colors['White']->refresh()->delivered_quantity);
+        $this->assertSame(3, $colors['White']->remaining_quantity);
+        $this->assertSame(0, $colors['Beige']->refresh()->delivered_quantity);
+        $this->assertSame(7, $item->refresh()->delivered_quantity);
+        $this->assertSame(OrderStatus::PartiallyDelivered, $order->refresh()->status);
+    }
+
+    public function test_reconcile_deliveries_action_allocates_legacy_unallocated_pieces(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        $item->forceFill([
+            'delivered_quantity' => 4,
+            'unallocated_delivered_quantity' => 4,
+        ])->save();
         $item->refresh();
 
-        $this->assertSame(9, $item->delivered_quantity);
-        $this->assertSame(3, $item->delivered_quantity_per_color);
-        $this->assertSame(2, $item->remaining_quantity_per_color);
-        $this->assertSame(OrderStatus::PartiallyDelivered, $order->refresh()->status);
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->assertActionVisible('reconcileDeliveries')
+            ->callAction('reconcileDeliveries', data: [
+                'allocations' => [
+                    $colors['Black']->id => 3,
+                    $colors['White']->id => 1,
+                ],
+            ])
+            ->assertNotified();
+
+        $this->assertSame(3, $colors['Black']->refresh()->delivered_quantity);
+        $this->assertSame(1, $colors['White']->refresh()->delivered_quantity);
+        $this->assertSame(0, (int) $item->refresh()->unallocated_delivered_quantity);
+        $this->assertSame(4, (int) $item->delivered_quantity);
+        $this->assertFalse($item->hasUnallocatedDeliveries());
+    }
+
+    public function test_reconcile_action_is_hidden_without_unallocated_deliveries(): void
+    {
+        $admin = User::factory()->create();
+        [$order] = $this->multiColorOrder();
+
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->assertActionHidden('reconcileDeliveries');
     }
 
     public function test_deliver_all_action_completes_the_order_from_the_view_page(): void
@@ -393,17 +469,19 @@ class OrderManagementPageTest extends TestCase
         $admin = User::factory()->create();
         [$order, $item] = $this->makeOrder(OrderStatus::Confirmed, 5);
 
-        $order->recordDeliveries([$item->id => ['quantity' => 1, 'expected_delivered' => 0]]);
+        $colorRow = $item->colorQuantities()->firstOrFail();
+
+        $order->recordDeliveries([$colorRow->id => ['quantity' => 1, 'expected_delivered' => 0]]);
 
         Livewire::actingAs($admin)
             ->test(ViewOrder::class, ['record' => $order->getKey()])
             ->callAction('recordDelivery', data: [
-                'deliveries' => [$item->id => 1],
-                'expected' => [$item->id => 0],
+                'deliveries' => [$colorRow->id => 1],
+                'expected' => [$colorRow->id => 0],
             ])
             ->assertNotified();
 
-        $this->assertSame(1, $item->refresh()->delivered_quantity);
+        $this->assertSame(1, $colorRow->refresh()->delivered_quantity);
     }
 
     public function test_actions_follow_status_on_the_view_page(): void

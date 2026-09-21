@@ -8,7 +8,7 @@ use App\Filament\Resources\OrderManagement\OrderManagementResource;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Models\Customer;
 use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use App\Models\Product;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -57,7 +57,7 @@ class OrderStatsWidget extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-archive-box')
                 ->color('gray')
                 ->url(OrderResource::getUrl('index')),
-            Stat::make(__('admin.stats.production_required'), OrderItem::productionRemainingQuantityTotal())
+            Stat::make(__('admin.stats.production_required'), OrderItemColorQuantity::outstandingColorCount())
                 ->description(__('admin.stats.production_required_description'))
                 ->descriptionIcon('heroicon-m-cog-6-tooth')
                 ->color('danger')

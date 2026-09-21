@@ -6,7 +6,7 @@ use App\Enums\OrderStatus;
 use App\Filament\Concerns\HasExcelExport;
 use App\Filament\Resources\OrderManagement\OrderManagementResource;
 use App\Filament\Widgets\ProductionRequirementsWidget;
-use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use App\Models\Product;
 use App\Support\Exports\ProductionRequirementsExport;
 use BackedEnum;
@@ -27,14 +27,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 
 /**
- * Transparent source view for the production requirement KPI: one row per
- * ordered line of confirmed / partially delivered orders with a positive
- * remaining quantity. Every quantity is expressed in the approved
- * per-color unit (the requested quantity is the quantity required for each
- * color). Optionally filtered by product for the card drill-down.
+ * Transparent source view for the current production requirements: one row
+ * per ordered color of confirmed / partially delivered orders that still
+ * has a positive remaining quantity. Colors that were fully delivered never
+ * appear, and every quantity belongs to a single snapshot color, so no row
+ * mixes colors with different delivered or remaining quantities.
  *
- * The unified requirement cards appear first, directly under the page title
- * and actions, and follow the same product filter.
+ * The color cards appear first, directly under the page title and actions,
+ * and follow the same product filter.
  */
 class ProductionRequirements extends Page implements HasTable
 {
@@ -66,26 +66,16 @@ class ProductionRequirements extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(
-                OrderItem::query()
-                    ->inProduction()
-                    ->withOutstandingQuantity()
-                    ->when($this->product, fn (Builder $query, int $productId) => $query->where('order_items.product_id', $productId))
-                    ->with([
-                        'order' => fn ($query) => $query
-                            ->select('id', 'order_number', 'status', 'customer_id')
-                            ->with('customer:id,name,phone'),
-                    ]),
-            )
+            ->query(OrderItemColorQuantity::outstandingForProduction($this->product))
             ->columns([
-                TextColumn::make('order.order_number')
+                TextColumn::make('orderItem.order.order_number')
                     ->label(__('admin.production.order_number'))
                     ->searchable()
-                    ->url(fn (OrderItem $record): string => OrderManagementResource::getUrl('view', ['record' => $record->order_id])),
-                TextColumn::make('order.customer.name')
+                    ->url(fn (OrderItemColorQuantity $record): string => OrderManagementResource::getUrl('view', ['record' => $record->order_id])),
+                TextColumn::make('orderItem.order.customer.name')
                     ->label(__('admin.production.customer'))
                     ->searchable(),
-                TextColumn::make('order.customer.phone')
+                TextColumn::make('orderItem.order.customer.phone')
                     ->label(__('admin.production.phone'))
                     ->searchable()
                     ->toggleable(),
@@ -97,22 +87,21 @@ class ProductionRequirements extends Page implements HasTable
                     ->searchable(),
                 TextColumn::make('color')
                     ->label(__('admin.production.color'))
-                    ->placeholder('—')
-                    ->wrap(),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('order_item_color_quantities.color', 'like', "%{$search}%")),
                 TextColumn::make('size')
                     ->label(__('admin.production.size'))
                     ->placeholder('—')
-                    ->wrap(),
+                    ->toggleable(),
                 TextColumn::make('requested_quantity')
-                    ->label(__('admin.production.required_per_color'))
+                    ->label(__('admin.production.requested_per_color'))
                     ->numeric(),
-                TextColumn::make('delivered_quantity_per_color')
+                TextColumn::make('delivered_quantity')
                     ->label(__('admin.production.delivered_per_color'))
                     ->numeric(),
-                TextColumn::make('remaining_quantity_per_color')
+                TextColumn::make('remaining_quantity')
                     ->label(__('admin.production.remaining_per_color'))
                     ->numeric(),
-                TextColumn::make('order.status')
+                TextColumn::make('orderItem.order.status')
                     ->label(__('admin.production.status'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof OrderStatus ? $state->label() : $state)
@@ -135,7 +124,7 @@ class ProductionRequirements extends Page implements HasTable
                 ])->key('production-requirements-'.($this->product ?? 'all')),
                 Section::make()
                     ->schema([
-                        Text::make(fn (): string => __('admin.production.total_heading', ['count' => number_format($this->remainingTotal())]))
+                        Text::make(fn (): string => __('admin.production.pending_colors_heading', ['count' => number_format($this->pendingColorsCount())]))
                             ->weight(FontWeight::Bold),
                         Text::make(fn (): string => $this->selectedProductLabel())
                             ->visible(fn (): bool => filled($this->product)),
@@ -161,13 +150,13 @@ class ProductionRequirements extends Page implements HasTable
     }
 
     /**
-     * Same aggregate criterion as the Production Requirements KPI and the
-     * table's remaining column, restricted to the optional product filter,
-     * so the header always reconciles with the displayed rows.
+     * Number of ordered colors that still require production, restricted to
+     * the optional product filter. Different color requirements are never
+     * summed into one manufactured quantity.
      */
-    public function remainingTotal(): int
+    public function pendingColorsCount(): int
     {
-        return OrderItem::productionRemainingQuantityTotal($this->product);
+        return OrderItemColorQuantity::outstandingColorCount($this->product);
     }
 
     private function selectedProductLabel(): string
