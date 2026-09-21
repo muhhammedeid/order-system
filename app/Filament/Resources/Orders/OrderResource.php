@@ -26,15 +26,29 @@ class OrderResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArchiveBox;
 
-    protected static ?string $navigationLabel = 'الطلبات المُسلَّمة';
-
-    protected static ?string $modelLabel = 'طلب مُسلَّم';
-
-    protected static ?string $pluralModelLabel = 'الطلبات المُسلَّمة';
-
     protected static ?int $navigationSort = -9;
 
     protected static ?string $recordTitleAttribute = 'order_number';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.navigation.delivered_orders');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.operations');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.models.delivered_order');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.navigation.delivered_orders');
+    }
 
     public static function infolist(Schema $schema): Schema
     {

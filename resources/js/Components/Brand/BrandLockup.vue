@@ -1,5 +1,8 @@
 <script setup>
 import BrandMark from '@/Components/Brand/BrandMark.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 defineProps({
     showTagline: {
@@ -21,7 +24,7 @@ defineProps({
     <a
         :href="href"
         class="group inline-flex items-center gap-2.5 rounded-control"
-        aria-label="MAI SHOES — الصفحة الرئيسية"
+        :aria-label="t('brand.home_label')"
     >
         <BrandMark
             :size="markSize"
@@ -47,7 +50,7 @@ defineProps({
             v-if="showTagline"
             class="hidden border-s border-cream/25 ps-2.5 font-display text-sm text-cream/90 lg:block"
         >
-            طلبات الجملة
+            {{ t('brand.tagline') }}
         </span>
     </a>
 </template>

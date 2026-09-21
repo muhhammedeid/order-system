@@ -1,6 +1,9 @@
 <script setup>
 import { computed, watch } from 'vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { locale, t } = useTranslations();
 
 const props = defineProps({
     variants: { type: Array, required: true },
@@ -60,7 +63,7 @@ function selectSize(size) {
             class="min-w-0"
         >
             <legend class="mb-2 text-sm font-semibold text-ink">
-                اختر لونًا أو أكثر
+                {{ t('variants.choose_colors') }}
             </legend>
 
             <div class="flex flex-wrap gap-2">
@@ -83,7 +86,7 @@ function selectSize(size) {
                             ? 'border-line-strong bg-navy text-cream'
                             : 'border-line bg-surface-soft text-ink hover:border-line-strong'"
                     >
-                        {{ group.color || 'غير محدد' }}
+                        {{ group.color || t('variants.unspecified') }}
                     </span>
                 </label>
             </div>
@@ -102,7 +105,7 @@ function selectSize(size) {
             class="min-w-0"
         >
             <h3 class="mb-2 text-sm font-semibold text-ink">
-                الألوان والمقاسات المتاحة
+                {{ t('variants.available_colors_sizes') }}
             </h3>
             <div class="grid gap-2 sm:grid-cols-2">
                 <div
@@ -110,18 +113,18 @@ function selectSize(size) {
                     :key="group.color ?? 'default'"
                     class="rounded-control border-2 border-line bg-surface px-3.5 py-3"
                 >
-                    <p class="font-semibold text-ink">{{ group.color || 'غير محدد' }}</p>
+                    <p class="font-semibold text-ink">{{ group.color || t('variants.unspecified') }}</p>
                     <p
                         v-if="group.sizes.some((variant) => variant.size)"
                         class="mt-1 text-xs text-ink-muted"
                     >
-                        المقاسات:
-                        {{ group.sizes.map((variant) => variant.size).filter(Boolean).join('، ') }}
+                        {{ t('variants.sizes') }}
+                        {{ group.sizes.map((variant) => variant.size).filter(Boolean).join(locale === 'ar' ? '، ' : ', ') }}
                     </p>
                 </div>
             </div>
             <p class="mt-2 text-xs text-ink-muted">
-                الطلب يشمل جميع الألوان والمقاسات الموضحة، والكمية تُسجل مرة واحدة كتوزيعة شاملة.
+                {{ t('variants.all_included') }}
             </p>
         </section>
 
@@ -129,7 +132,7 @@ function selectSize(size) {
             v-if="colorEnabled && ! sizeEnabled && selectedGroups.length"
             class="min-w-0"
         >
-            <h3 class="mb-2 text-sm font-semibold text-ink">المقاسات المتاحة</h3>
+            <h3 class="mb-2 text-sm font-semibold text-ink">{{ t('variants.available_sizes') }}</h3>
             <div class="grid gap-2 sm:grid-cols-2">
                 <div
                     v-for="group in selectedGroups"
@@ -138,12 +141,12 @@ function selectSize(size) {
                 >
                     <p class="font-semibold text-ink">{{ group.color }}</p>
                     <p class="mt-1 text-xs text-ink-muted">
-                        {{ group.sizes.map((variant) => variant.size).filter(Boolean).join('، ') || 'بدون مقاس' }}
+                        {{ group.sizes.map((variant) => variant.size).filter(Boolean).join(locale === 'ar' ? '، ' : ', ') || t('variants.no_size') }}
                     </p>
                 </div>
             </div>
             <p class="mt-2 text-xs text-ink-muted">
-                المقاسات للعرض فقط ولا يلزم اختيارها.
+                {{ t('variants.display_only') }}
             </p>
         </section>
 
@@ -152,7 +155,7 @@ function selectSize(size) {
             class="min-w-0"
         >
             <legend class="mb-2 text-sm font-semibold text-ink">
-                المقاس
+                {{ t('variants.size') }}
             </legend>
 
             <div
@@ -186,7 +189,7 @@ function selectSize(size) {
                 v-else
                 class="rounded-control border-2 border-dashed border-line px-3.5 py-3 text-sm text-ink-muted"
             >
-                لا يوجد مقاس مشترك بين الألوان المحددة. عدّل اختيار الألوان.
+                {{ t('variants.no_common_size') }}
             </p>
 
             <p
@@ -203,8 +206,7 @@ function selectSize(size) {
             class="flex items-center gap-2 rounded-control border-2 border-dashed border-line px-3.5 py-3 text-sm text-ink-muted"
         >
             <AppIcon name="swatch" :size="18" />
-            اختر لونًا واحدًا على الأقل لعرض المقاسات المشتركة المتاحة
+            {{ t('variants.choose_color_for_sizes') }}
         </p>
     </div>
 </template>
-

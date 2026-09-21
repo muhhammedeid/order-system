@@ -21,8 +21,6 @@ class Settings extends Page
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAdjustmentsHorizontal;
 
-    protected static string|UnitEnum|null $navigationGroup = 'الإعدادات';
-
     protected static ?int $navigationSort = 90;
 
     /**
@@ -49,8 +47,8 @@ class Settings extends Page
     {
         return $schema->components([
             TextInput::make('whatsapp_number')
-                ->label('WhatsApp Number')
-                ->hint('International format, e.g. 201234567890 — digits only')
+                ->label(__('admin.settings.whatsapp_number'))
+                ->hint(__('admin.settings.whatsapp_hint'))
                 ->required()
                 ->maxLength(32)
                 ->regex('/^\+?[0-9\s\-]+$/')
@@ -65,7 +63,7 @@ class Settings extends Page
         Setting::set('whatsapp_number', trim($data['whatsapp_number']));
 
         Notification::make()
-            ->title('Settings saved')
+            ->title(__('admin.settings.saved'))
             ->success()
             ->send();
     }
@@ -80,7 +78,7 @@ class Settings extends Page
                     ->footer([
                         Actions::make([
                             Action::make('save')
-                                ->label('Save')
+                                ->label(__('admin.settings.save'))
                                 ->submit('save'),
                         ]),
                     ]),
@@ -89,6 +87,11 @@ class Settings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return 'الإعدادات العامة';
+        return __('admin.navigation.general_settings');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.settings');
     }
 }

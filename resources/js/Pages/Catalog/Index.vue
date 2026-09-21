@@ -10,6 +10,7 @@ import EmptyState from '@/Components/Ui/EmptyState.vue';
 import PaginationNav from '@/Components/Ui/PaginationNav.vue';
 import { useInertiaLoading } from '@/composables/useInertiaLoading';
 import { formatQuantity } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
 
 const props = defineProps({
     products: {
@@ -31,6 +32,7 @@ const props = defineProps({
 });
 
 const { loading } = useInertiaLoading();
+const { t } = useTranslations();
 
 const search = ref(props.filters.search ?? '');
 const category = ref(props.filters.category ? String(props.filters.category) : '');
@@ -112,18 +114,22 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
 
 <template>
     <StorefrontLayout>
-        <Head :title="meta.title ?? 'المتجر'" />
+        <Head :title="meta.title ?? t('catalog.title')" />
 
         <div class="flex flex-col gap-5">
             <div class="flex flex-col gap-1">
                 <h1 class="font-display text-3xl font-bold text-ink sm:text-4xl">
-                    {{ activeCategoryName ?? (search ? `نتائج البحث: ${search}` : 'كل المنتجات') }}
+                    {{ activeCategoryName ?? (search ? t('catalog.search_results', { search }) : t('catalog.all_products')) }}
                 </h1>
                 <p
                     v-if="total > 0"
                     class="text-sm text-ink-muted"
                 >
-                    عرض {{ formatQuantity(from) }}–{{ formatQuantity(to) }} من {{ formatQuantity(total) }} منتج
+                    {{ t('catalog.range', {
+                        from: formatQuantity(from),
+                        to: formatQuantity(to),
+                        total: formatQuantity(total),
+                    }) }}
                 </p>
             </div>
 
@@ -143,8 +149,8 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                             v-model="search"
                             type="search"
                             inputmode="search"
-                            placeholder="ابحث بالاسم أو كود المنتج"
-                            aria-label="البحث في المنتجات"
+                            :placeholder="t('catalog.search_placeholder')"
+                            :aria-label="t('catalog.search_label')"
                             class="min-h-12 w-full rounded-control border-2 border-line bg-surface ps-11 pe-11 text-base text-ink placeholder:text-ink-muted/60 hover:border-ink-muted focus:border-line-strong"
                             @input="onSearchInput"
                         >
@@ -152,7 +158,7 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                             v-if="search"
                             type="button"
                             class="absolute end-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
-                            aria-label="مسح البحث"
+                            :aria-label="t('catalog.clear_search')"
                             @click="clearSearch"
                         >
                             <AppIcon
@@ -168,7 +174,7 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                         :loading="loading"
                         :disable-while-loading="false"
                     >
-                        بحث
+                        {{ t('catalog.search') }}
                     </AppButton>
                 </form>
 
@@ -176,7 +182,7 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                     v-if="categories.length"
                     class="flex flex-wrap items-center gap-2"
                     role="group"
-                    aria-label="تصفية حسب الفئة"
+                    :aria-label="t('catalog.filter_categories')"
                 >
                     <button
                         type="button"
@@ -187,7 +193,7 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                         :aria-pressed="category === ''"
                         @click="selectCategory('')"
                     >
-                        كل الفئات
+                        {{ t('catalog.all_categories') }}
                     </button>
 
                     <button
@@ -217,13 +223,13 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                             name="close"
                             :size="16"
                         />
-                        مسح الفلاتر
+                        {{ t('catalog.clear_filters') }}
                     </button>
                 </div>
             </div>
 
             <h2 class="sr-only">
-                المنتجات
+                {{ t('catalog.products') }}
             </h2>
 
             <div
@@ -252,8 +258,8 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
             <EmptyState
                 v-else
                 icon="search"
-                title="لا توجد منتجات مطابقة"
-                description="جرّب كلمات بحث أقصر أو اختر فئة مختلفة."
+                :title="t('catalog.empty_title')"
+                :description="t('catalog.empty_description')"
             >
                 <AppButton
                     v-if="hasFilters"
@@ -261,13 +267,13 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                     icon="close"
                     @click="clearFilters"
                 >
-                    مسح الفلاتر
+                    {{ t('catalog.clear_filters') }}
                 </AppButton>
                 <AppButton
                     variant="secondary"
                     href="/catalog"
                 >
-                    عرض كل المنتجات
+                    {{ t('catalog.show_all') }}
                 </AppButton>
             </EmptyState>
 

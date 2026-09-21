@@ -3,9 +3,11 @@ import { computed, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import { useToast } from '@/composables/useToast';
+import { useTranslations } from '@/composables/useTranslations';
 
 const page = usePage();
 const { items, dismiss } = useToast();
+const { t } = useTranslations();
 
 const flash = computed(() => page.props.flash ?? {});
 
@@ -47,7 +49,7 @@ const TONES = {
     <div
         class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4"
         role="region"
-        aria-label="التنبيهات"
+        :aria-label="t('accessibility.notifications')"
     >
         <TransitionGroup
             enter-active-class="transition duration-200 ease-out"
@@ -76,7 +78,7 @@ const TONES = {
                 <button
                     type="button"
                     class="rounded p-1 opacity-70 transition-opacity hover:opacity-100"
-                    aria-label="إغلاق التنبيه"
+                    :aria-label="t('accessibility.close_notification')"
                     @click="dismiss(item.id)"
                 >
                     <AppIcon

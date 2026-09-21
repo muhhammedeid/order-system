@@ -22,35 +22,35 @@ class ManagedOrdersTable
         return $table
             ->columns([
                 TextColumn::make('order_number')
-                    ->label('رقم الطلب')
+                    ->label(__('filament.fields.order_number'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.name')
-                    ->label('العميل')
+                    ->label(__('filament.fields.customer'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.phone')
-                    ->label('الموبايل')
+                    ->label(__('filament.fields.phone'))
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('status')
-                    ->label('الحالة')
+                    ->label(__('filament.fields.status'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof OrderStatus ? $state->label() : $state),
                 TextColumn::make('total_quantity')
-                    ->label('الكمية المطلوبة')
+                    ->label(__('filament.fields.ordered_quantity'))
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('items_sum_delivered_quantity')
-                    ->label('تم تسليمه')
+                    ->label(__('filament.fields.delivered_quantity'))
                     ->numeric()
                     ->default(0),
                 TextColumn::make('remaining_quantity')
-                    ->label('المتبقي')
+                    ->label(__('filament.fields.remaining_quantity'))
                     ->numeric()
                     ->state(fn (Order $record): int => max(0, (int) $record->total_quantity - (int) ($record->items_sum_delivered_quantity ?? 0))),
                 TextColumn::make('created_at')
-                    ->label('التاريخ')
+                    ->label(__('filament.fields.order_date'))
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),
             ])
@@ -67,12 +67,12 @@ class ManagedOrdersTable
                 BulkActionGroup::make([
                     self::excelExportSelectedAction(
                         'exportSelected',
-                        'تصدير المحدد Excel',
+                        __('filament.common.export_selected_excel'),
                         fn (EloquentCollection $records) => OrderItemsExport::forOrderIds($records->modelKeys()),
                     ),
                 ]),
             ])
             ->defaultSort('created_at', 'desc')
-            ->emptyStateHeading('لا توجد طلبات في هذه الحالة');
+            ->emptyStateHeading(__('filament.orders.status_empty'));
     }
 }

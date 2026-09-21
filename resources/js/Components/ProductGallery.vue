@@ -1,6 +1,9 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     images: {
@@ -60,7 +63,7 @@ function step(delta) {
                 <button
                     type="button"
                     class="absolute start-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-line-strong bg-surface-soft/95 text-ink opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
-                    aria-label="الصورة السابقة"
+                    :aria-label="t('gallery.previous')"
                     @click="step(-1)"
                 >
                     <AppIcon
@@ -71,7 +74,7 @@ function step(delta) {
                 <button
                     type="button"
                     class="absolute end-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-line-strong bg-surface-soft/95 text-ink opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
-                    aria-label="الصورة التالية"
+                    :aria-label="t('gallery.next')"
                     @click="step(1)"
                 >
                     <AppIcon
@@ -90,7 +93,7 @@ function step(delta) {
             v-if="images.length > 1"
             class="grid grid-cols-5 gap-2"
             role="group"
-            aria-label="صور المنتج"
+            :aria-label="t('gallery.group')"
         >
             <button
                 v-for="(image, index) in images"
@@ -100,13 +103,13 @@ function step(delta) {
                 :class="index === mainIndex
                     ? 'border-line-strong'
                     : 'border-line opacity-75 hover:opacity-100'"
-                :aria-label="`عرض الصورة ${index + 1}`"
+                :aria-label="t('gallery.show', { number: index + 1 })"
                 :aria-current="index === mainIndex ? 'true' : undefined"
                 @click="mainIndex = index"
             >
                 <img
                     :src="image"
-                    :alt="`${alt} — صورة ${index + 1}`"
+                    :alt="t('gallery.image_alt', { alt, number: index + 1 })"
                     class="h-full w-full object-cover"
                     loading="lazy"
                     decoding="async"

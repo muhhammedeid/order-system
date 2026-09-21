@@ -274,3 +274,4 @@ class ProductionRequirementsPageTest extends TestCase
         $this->actingAs($admin)->get("/admin/production-requirements?product={$product->id}")->assertOk();
     }
 }
+

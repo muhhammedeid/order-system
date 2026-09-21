@@ -170,17 +170,19 @@ class OrderItem extends Model
      * production-requirements catalog. Products with no positive
      * outstanding quantity are excluded.
      *
-     * @return Collection<int, object{product_id: int, required_quantity: int, orders_count: int}>
+     * @return Collection<int, object{product_id: int, required_quantity: int, requested_quantity: int, orders_count: int}>
      */
     public static function productProductionTotals(): Collection
     {
         return static::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->whereIn('orders.status', self::productionStatuses())
+            ->whereColumn('order_items.delivered_quantity', '<', 'order_items.quantity')
             ->whereNotNull('order_items.product_id')
             ->groupBy('order_items.product_id')
             ->selectRaw('order_items.product_id as product_id')
             ->selectRaw('SUM(order_items.quantity - order_items.delivered_quantity) as required_quantity')
+            ->selectRaw('SUM(CASE WHEN order_items.requested_quantity IS NULL OR order_items.requested_quantity < 1 THEN order_items.quantity ELSE order_items.requested_quantity END) as requested_quantity')
             ->selectRaw('COUNT(DISTINCT order_items.order_id) as orders_count')
             ->havingRaw('SUM(order_items.quantity - order_items.delivered_quantity) > 0')
             ->orderByDesc('required_quantity')

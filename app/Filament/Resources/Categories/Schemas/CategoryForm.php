@@ -15,6 +15,7 @@ class CategoryForm
         return $schema
             ->components([
                 TextInput::make('name')
+                    ->label(__('filament.fields.name'))
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
@@ -24,17 +25,19 @@ class CategoryForm
                         }
                     }),
                 TextInput::make('slug')
+                    ->label(__('filament.fields.slug'))
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 FileUpload::make('image_path')
-                    ->label('صورة القسم')
+                    ->label(__('filament.fields.category_image'))
                     ->image()
                     ->acceptedFileTypes(['image/*'])
                     ->disk(config('filesystems.product_images_disk'))
                     ->directory('categories/images')
                     ->columnSpanFull(),
                 Toggle::make('active')
+                    ->label(__('filament.fields.active'))
                     ->default(true)
                     ->required(),
             ]);

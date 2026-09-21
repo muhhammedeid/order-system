@@ -22,11 +22,14 @@ class VariantColorsTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('filament.fields.name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('sort_order')
+                    ->label(__('filament.fields.sort_order'))
                     ->sortable(),
                 IconColumn::make('active')
+                    ->label(__('filament.fields.active'))
                     ->boolean(),
             ])
             ->recordActions([
@@ -36,7 +39,7 @@ class VariantColorsTable
                 BulkActionGroup::make([
                     self::excelExportSelectedAction(
                         'exportSelected',
-                        'تصدير المحدد Excel',
+                        __('filament.common.export_selected_excel'),
                         fn (EloquentCollection $records) => new VariantColorsExport(VariantColor::query()->whereKey($records->modelKeys())),
                     ),
                     DeleteBulkAction::make(),

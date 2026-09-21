@@ -17,7 +17,7 @@ class ViewOrder extends ViewRecord
         return [
             OrderPrintAction::make(),
             Action::make('exportItems')
-                ->label('تصدير الطلب Excel')
+                ->label(__('filament.orders.export_order'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(fn () => OrderItemsExport::forOrder($this->getRecord())->download()),

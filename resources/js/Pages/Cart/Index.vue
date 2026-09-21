@@ -9,6 +9,7 @@ import AppCard from '@/Components/Ui/AppCard.vue';
 import ConfirmDialog from '@/Components/Ui/ConfirmDialog.vue';
 import EmptyState from '@/Components/Ui/EmptyState.vue';
 import { useInertiaLoading } from '@/composables/useInertiaLoading';
+import { useTranslations } from '@/composables/useTranslations';
 
 const props = defineProps({
     items: {
@@ -27,6 +28,7 @@ const props = defineProps({
 
 const page = usePage();
 const { loading } = useInertiaLoading();
+const { t } = useTranslations();
 
 const errors = computed(() => page.props.errors ?? {});
 const rowScopedError = computed(() =>
@@ -66,11 +68,11 @@ function updateQuantity(item, quantity) {
 const dialog = ref({ open: false, type: null, item: null });
 
 const dialogTitle = computed(() => (dialog.value.type === 'clear'
-    ? 'إفراغ الطلب بالكامل؟'
-    : 'حذف هذا المنتج من الطلب؟'));
+    ? t('cart.clear_title')
+    : t('cart.remove_title')));
 
 const dialogDescription = computed(() => (dialog.value.type === 'clear'
-    ? 'سيتم حذف جميع الأصناف من الطلب ولا يمكن التراجع عن هذه الخطوة.'
+    ? t('cart.clear_description')
     : dialog.value.item?.product?.name ?? null));
 
 function askRemove(item) {
@@ -97,18 +99,18 @@ function confirmDialog() {
 
 <template>
     <StorefrontLayout>
-        <Head title="الطلب" />
+        <Head :title="t('cart.title')" />
 
         <div class="flex flex-col gap-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <h1 class="font-display text-3xl font-bold text-ink sm:text-4xl">
-                    الطلب
+                    {{ t('cart.title') }}
                 </h1>
                 <p
                     v-if="items.length"
                     class="text-sm text-ink-muted"
                 >
-                    {{ items.length }} صنف · إجمالي {{ total_quantity }} قطعة
+                    {{ t('cart.count_summary', { items: items.length, pieces: total_quantity }) }}
                 </p>
             </div>
 
@@ -141,7 +143,7 @@ function confirmDialog() {
                     shadow
                 >
                     <h2 class="mb-4 font-display text-xl font-bold text-ink">
-                        ملخص الطلب
+                        {{ t('cart.summary') }}
                     </h2>
 
                     <CartSummary
@@ -158,14 +160,14 @@ function confirmDialog() {
                             icon="check"
                             block
                         >
-                            إتمام الطلب
+                            {{ t('cart.checkout') }}
                         </AppButton>
                         <AppButton
                             href="/catalog"
                             variant="secondary"
                             block
                         >
-                            مواصلة التسوق
+                            {{ t('cart.continue_shopping') }}
                         </AppButton>
                         <AppButton
                             variant="danger"
@@ -173,7 +175,7 @@ function confirmDialog() {
                             icon="trash"
                             @click="askClear"
                         >
-                            إفراغ الطلب
+                            {{ t('cart.clear') }}
                         </AppButton>
                     </div>
                 </AppCard>
@@ -182,8 +184,8 @@ function confirmDialog() {
             <EmptyState
                 v-else
                 icon="cart"
-                title="الطلب فارغ"
-                description="تصفح المتجر وأضف الأصناف التي تحتاجها، ثم أكمل بياناتك لإرسال الطلب."
+                :title="t('cart.empty_title')"
+                :description="t('cart.empty_description')"
             >
                 <AppButton
                     href="/catalog"
@@ -191,7 +193,7 @@ function confirmDialog() {
                     size="lg"
                     icon="search"
                 >
-                    تسوق الآن
+                    {{ t('cart.shop_now') }}
                 </AppButton>
             </EmptyState>
         </div>
@@ -200,7 +202,7 @@ function confirmDialog() {
             :open="dialog.open"
             :title="dialogTitle"
             :description="dialogDescription"
-            :confirm-label="dialog.type === 'clear' ? 'إفراغ الطلب' : 'حذف'"
+            :confirm-label="dialog.type === 'clear' ? t('cart.clear') : t('cart.remove')"
             tone="danger"
             @confirm="confirmDialog"
             @cancel="dialog.open = false"

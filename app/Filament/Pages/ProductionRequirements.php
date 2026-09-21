@@ -37,8 +37,6 @@ class ProductionRequirements extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
-    protected static ?string $title = 'المطلوب للتشغيل';
-
     protected static ?int $navigationSort = -10;
 
     #[Url]
@@ -46,7 +44,17 @@ class ProductionRequirements extends Page implements HasTable
 
     public static function getNavigationLabel(): string
     {
-        return 'المطلوب للتشغيل';
+        return __('admin.navigation.production_requirements');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.operations');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.navigation.production_requirements');
     }
 
     public function table(Table $table): Table
@@ -65,40 +73,40 @@ class ProductionRequirements extends Page implements HasTable
             )
             ->columns([
                 TextColumn::make('order.order_number')
-                    ->label('رقم الطلب')
+                    ->label(__('admin.production.order_number'))
                     ->searchable()
                     ->url(fn (OrderItem $record): string => OrderManagementResource::getUrl('view', ['record' => $record->order_id])),
                 TextColumn::make('order.customer.name')
-                    ->label('العميل')
+                    ->label(__('admin.production.customer'))
                     ->searchable(),
                 TextColumn::make('order.customer.phone')
-                    ->label('الموبايل')
+                    ->label(__('admin.production.phone'))
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('product_code')
-                    ->label('كود المنتج')
+                    ->label(__('admin.production.product_code'))
                     ->searchable(),
                 TextColumn::make('product_name')
-                    ->label('المنتج')
+                    ->label(__('admin.production.product'))
                     ->searchable(),
                 TextColumn::make('color')
-                    ->label('اللون')
+                    ->label(__('admin.production.color'))
                     ->placeholder('—'),
                 TextColumn::make('size')
-                    ->label('المقاس')
+                    ->label(__('admin.production.size'))
                     ->placeholder('—'),
                 TextColumn::make('quantity')
-                    ->label('الكمية المطلوبة')
+                    ->label(__('admin.production.ordered_quantity'))
                     ->numeric(),
                 TextColumn::make('delivered_quantity')
-                    ->label('تم تسليمه')
+                    ->label(__('admin.production.delivered_quantity'))
                     ->numeric(),
                 TextColumn::make('remaining_quantity')
-                    ->label('المتبقي')
+                    ->label(__('admin.production.remaining_quantity'))
                     ->numeric()
                     ->state(fn (OrderItem $record): int => $record->remaining_quantity),
                 TextColumn::make('order.status')
-                    ->label('الحالة')
+                    ->label(__('admin.production.status'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof OrderStatus ? $state->label() : $state)
                     ->color(fn ($state) => match ($state) {
@@ -108,7 +116,7 @@ class ProductionRequirements extends Page implements HasTable
                     }),
             ])
             ->defaultSort('order_items.created_at', 'desc')
-            ->emptyStateHeading('لا توجد كميات مطلوبة للتشغيل حالياً');
+            ->emptyStateHeading(__('admin.production.empty'));
     }
 
     public function content(Schema $schema): Schema
@@ -117,7 +125,7 @@ class ProductionRequirements extends Page implements HasTable
             ->components([
                 Section::make()
                     ->schema([
-                        Text::make(fn (): string => 'إجمالي الكمية المطلوبة للتشغيل: '.$this->outstandingTotal())
+                        Text::make(fn (): string => __('admin.production.total_heading', ['count' => number_format($this->outstandingTotal())]))
                             ->weight(FontWeight::Bold),
                         Text::make(fn (): string => $this->selectedProductLabel())
                             ->visible(fn (): bool => filled($this->product)),
@@ -131,11 +139,11 @@ class ProductionRequirements extends Page implements HasTable
         return [
             $this->excelExportAction(
                 'exportExcel',
-                'تصدير النتائج Excel',
+                __('admin.production.export'),
                 fn (Builder $items) => new OrderItemsExport($items, 'production-requirements'),
             ),
             Action::make('clearProductFilter')
-                ->label('عرض كل المنتجات')
+                ->label(__('admin.production.show_all'))
                 ->color('gray')
                 ->url(static::getUrl())
                 ->visible(fn (): bool => filled($this->product)),
@@ -156,6 +164,6 @@ class ProductionRequirements extends Page implements HasTable
     {
         $name = Product::query()->whereKey($this->product)->value('name') ?? "#{$this->product}";
 
-        return "المنتج المحدد: {$name}";
+        return __('admin.production.selected_product', ['product' => $name]);
     }
 }

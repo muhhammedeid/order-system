@@ -29,7 +29,10 @@ class ProductionRequirementsWidget extends Widget
 
         $products = Product::query()
             ->whereIn('id', $totals->pluck('product_id'))
-            ->with(['images' => fn ($query) => $query->select('id', 'product_id', 'image_path', 'sort_order')])
+            ->with([
+                'images' => fn ($query) => $query->select('id', 'product_id', 'image_path', 'sort_order'),
+                'variants' => fn ($query) => $query->select('id', 'product_id', 'color')->orderBy('id'),
+            ])
             ->get()
             ->keyBy('id');
 
@@ -41,13 +44,31 @@ class ProductionRequirementsWidget extends Widget
                     return null;
                 }
 
+                $isPerColor = ! $product->color_enabled;
+                $displayQuantity = $isPerColor
+                    ? (int) $row->requested_quantity
+                    : (int) $row->required_quantity;
+
                 return [
                     'id' => $product->getKey(),
                     'name' => $product->name,
                     'code' => $product->product_code,
                     'active' => (bool) $product->active,
                     'image' => $product->images->first()?->url(),
-                    'required_quantity' => (int) $row->required_quantity,
+                    'required_quantity' => $displayQuantity,
+                    'quantity_mode' => $isPerColor ? 'per_color' : 'total',
+                    'color_breakdown' => $isPerColor
+                        ? $product->variants
+                            ->pluck('color')
+                            ->filter()
+                            ->unique()
+                            ->values()
+                            ->map(fn (string $color): array => [
+                                'color' => $color,
+                                'quantity' => $displayQuantity,
+                            ])
+                            ->all()
+                        : [],
                     'orders_count' => (int) $row->orders_count,
                 ];
             })

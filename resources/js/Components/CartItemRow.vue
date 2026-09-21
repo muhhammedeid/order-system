@@ -3,7 +3,10 @@ import { computed } from 'vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import IconButton from '@/Components/Ui/IconButton.vue';
 import QuantityStepper from '@/Components/Ui/QuantityStepper.vue';
-import { CURRENCY_LABEL, formatNumber } from '@/Utils/format';
+import { formatNumber } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     item: {
@@ -23,7 +26,7 @@ const props = defineProps({
 const emit = defineEmits(['update-quantity', 'remove']);
 
 const unitPriceLabel = computed(() =>
-    props.item.unit_price ? `${formatNumber(props.item.unit_price)} ${CURRENCY_LABEL}` : null,
+    props.item.unit_price ? `${formatNumber(props.item.unit_price)} ${t('common.currency')}` : null,
 );
 </script>
 
@@ -66,7 +69,7 @@ const unitPriceLabel = computed(() =>
 
                     <IconButton
                         icon="trash"
-                        label="حذف المنتج من الطلب"
+                        :label="t('cart.remove_item')"
                         variant="danger"
                         size="sm"
                         :disabled="busy"
@@ -96,14 +99,14 @@ const unitPriceLabel = computed(() =>
                         v-if="unitPriceLabel"
                         class="ms-2"
                     >
-                        ({{ unitPriceLabel }} للقطعة)
+                        {{ t('cart.per_piece', { price: unitPriceLabel }) }}
                     </span>
                 </p>
 
                 <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
                     <QuantityStepper
                         :model-value="item.quantity"
-                        label="الكمية لكل لون"
+                        :label="t('common.quantity_per_color')"
                         :min="item.quantity_step"
                         :step="item.quantity_step"
                         :busy="busy"
@@ -112,26 +115,26 @@ const unitPriceLabel = computed(() =>
                     />
 
                     <p class="text-sm text-ink-muted">
-                        إجمالي القطع:
+                        {{ t('product.total_pieces') }}
                         <strong class="tabular-nums text-ink">{{ item.pieces_quantity }}</strong>
-                        ({{ item.quantity }} × {{ item.color_count }} لون)
+                        ({{ t('cart.pieces_formula', { quantity: item.quantity, count: item.color_count }) }})
                     </p>
 
                     <div
                         v-if="item.line_total"
                         class="text-end"
                     >
-                        <p class="text-xs text-ink-muted">الإجمالي</p>
+                        <p class="text-xs text-ink-muted">{{ t('common.total') }}</p>
                         <p class="font-display text-lg font-bold tabular-nums text-ink">
                             {{ formatNumber(item.line_total) }}
-                            <span class="font-sans text-xs font-semibold text-ink-muted">{{ CURRENCY_LABEL }}</span>
+                            <span class="font-sans text-xs font-semibold text-ink-muted">{{ t('common.currency') }}</span>
                         </p>
                     </div>
                     <p
                         v-else
                         class="rounded-full border border-powder/40 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent"
                     >
-                        السعر عند الطلب
+                        {{ t('common.request_price') }}
                     </p>
                 </div>
             </div>

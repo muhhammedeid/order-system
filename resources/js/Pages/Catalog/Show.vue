@@ -12,6 +12,10 @@ import AppIcon from '@/Components/Ui/AppIcon.vue';
 import Breadcrumbs from '@/Components/Ui/Breadcrumbs.vue';
 import PriceTag from '@/Components/Ui/PriceTag.vue';
 import QuantityPicker from '@/Components/Ui/QuantityPicker.vue';
+import { useTranslations } from '@/composables/useTranslations';
+import { formatNumber } from '@/Utils/format';
+
+const { locale, t } = useTranslations();
 
 const props = defineProps({
     product: {
@@ -129,8 +133,8 @@ const selectedVariantIds = computed(() => {
 });
 
 const breadcrumbs = computed(() => [
-    { label: 'الرئيسية', href: '/' },
-    { label: 'المتجر', href: '/catalog' },
+    { label: t('nav.home'), href: '/' },
+    { label: t('nav.catalog'), href: '/catalog' },
     ...(props.product.category
         ? [{ label: props.product.category.name, href: `/catalog?category=${props.product.category.id}` }]
         : []),
@@ -147,23 +151,23 @@ watch([selectedColors, selectedSize], () => {
 function addToOrder() {
     if (! selectedVariantIds.value.length) {
         if (colorEnabled.value && ! selectedColors.value.length) {
-            colorError.value = 'اختر لونًا واحدًا على الأقل';
+            colorError.value = t('product.choose_color');
         } else {
-            sizeError.value = 'اختر مقاسًا متاحًا لكل الألوان المحددة';
+            sizeError.value = t('product.choose_size');
         }
 
         return;
     }
 
     if (! Number.isInteger(form.quantity) || form.quantity < 1) {
-        quantityError.value = 'أدخل كمية صحيحة أكبر من صفر';
+        quantityError.value = t('product.invalid_quantity');
 
         return;
     }
 
     if (! sizeEnabled.value) {
         if (selectedSizeCounts.value.some((count) => count === 0)) {
-            quantityError.value = 'لا يمكن الطلب قبل تعيين المقاسات الافتراضية لكل لون';
+            quantityError.value = t('product.missing_default_sizes');
 
             return;
         }
@@ -171,7 +175,7 @@ function addToOrder() {
         const invalidCount = selectedSizeCounts.value.find((count) => form.quantity % count !== 0);
 
         if (invalidCount) {
-            quantityError.value = `يجب أن تقبل الكمية القسمة على عدد المقاسات المتاحة (${invalidCount})`;
+            quantityError.value = t('product.quantity_divisible', { count: invalidCount });
 
             return;
         }
@@ -267,7 +271,7 @@ const pickerError = computed(
                                 <span
                                     v-if="colorEnabled && selectedColors.length"
                                     class="font-semibold"
-                                >{{ selectedColors.join('، ') }}</span>
+                                >{{ selectedColors.join(locale === 'ar' ? '، ' : ', ') }}</span>
                                 <template v-if="sizeEnabled && selectedSize">
                                     <span
                                         v-if="colorEnabled && selectedColors.length"
@@ -279,7 +283,7 @@ const pickerError = computed(
 
                             <QuantityPicker
                                 v-model="form.quantity"
-                                label="الكمية لكل لون"
+                                :label="t('common.quantity_per_color')"
                                 :min="quantityStep"
                                 :step="quantityStep"
                                 :busy="form.processing"
@@ -288,22 +292,22 @@ const pickerError = computed(
 
                             <div class="rounded-control border border-line bg-surface-soft px-3 py-2 text-sm text-ink-muted">
                                 <p>
-                                    إجمالي القطع:
+                                    {{ t('product.total_pieces') }}
                                     <strong class="tabular-nums text-ink">{{ piecesQuantity }}</strong>
-                                    ({{ form.quantity }} × {{ selectedColorCount }} لون)
+                                    {{ t('product.color_formula', { quantity: form.quantity, count: selectedColorCount }) }}
                                 </p>
                                 <p
                                     v-if="lineTotalPreview !== null"
                                     class="mt-1"
                                 >
-                                    إجمالي المبلغ:
-                                    <strong class="tabular-nums text-ink">{{ lineTotalPreview.toLocaleString('ar-EG') }} ج.م</strong>
+                                    {{ t('product.total_amount') }}
+                                    <strong class="tabular-nums text-ink">{{ formatNumber(lineTotalPreview) }} {{ t('common.currency') }}</strong>
                                 </p>
                                 <p
                                     v-if="! sizeEnabled"
                                     class="mt-1 text-xs"
                                 >
-                                    يجب أن تقبل الكمية القسمة على {{ quantityStep }} لتوزيعها بالتساوي على المقاسات.
+                                    {{ t('product.distribution_note', { step: quantityStep }) }}
                                 </p>
                             </div>
                         </div>
@@ -324,7 +328,7 @@ const pickerError = computed(
                             :loading="form.processing"
                             @click="addToOrder"
                         >
-                            أضف إلى الطلب
+                            {{ t('product.add_to_cart') }}
                         </AppButton>
 
                         <p class="flex items-start gap-2 text-xs text-ink-muted">
@@ -333,7 +337,7 @@ const pickerError = computed(
                                 :size="16"
                                 class="mt-0.5"
                             />
-                            إرسال الطلب لا يعني إتمام البيع أو الدفع — سيتم تأكيد الطلب والتواصل معك من فريق المبيعات.
+                            {{ t('product.order_disclaimer') }}
                         </p>
                     </div>
 
@@ -341,7 +345,7 @@ const pickerError = computed(
                         v-else
                         class="rounded-card border-2 border-dashed border-line px-4 py-6 text-center text-sm text-ink-muted"
                     >
-                        لا توجد ألوان مسجلة لهذا المنتج حاليًا — تواصل معنا عبر واتساب لمعرفة المتاح.
+                        {{ t('product.no_variants') }}
                     </p>
 
                     <div
@@ -349,7 +353,7 @@ const pickerError = computed(
                         class="rounded-card border-2 border-line bg-surface-soft p-4"
                     >
                         <h2 class="mb-1.5 font-display text-lg font-bold text-ink">
-                            تفاصيل المنتج
+                            {{ t('product.details') }}
                         </h2>
                         <p class="whitespace-pre-line text-sm leading-relaxed text-ink-muted">
                             {{ product.description }}
@@ -363,7 +367,7 @@ const pickerError = computed(
                 class="flex flex-col gap-4 pt-4"
             >
                 <h2 class="font-display text-2xl font-bold text-ink">
-                    منتجات مشابهة
+                    {{ t('product.related') }}
                 </h2>
 
                 <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">

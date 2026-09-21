@@ -30,15 +30,29 @@ class OrderManagementResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
 
-    protected static ?string $navigationLabel = 'إدارة الطلبات';
-
-    protected static ?string $modelLabel = 'طلب';
-
-    protected static ?string $pluralModelLabel = 'إدارة الطلبات';
-
     protected static ?int $navigationSort = -11;
 
     protected static ?string $recordTitleAttribute = 'order_number';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.navigation.order_management');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.operations');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.models.order');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.navigation.order_management');
+    }
 
     public static function infolist(Schema $schema): Schema
     {

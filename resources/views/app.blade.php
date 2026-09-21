@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         @php
             $meta = $page['props']['meta'] ?? [];
             $brandName = config('app.name', 'MAI SHOES');
-            $defaultDescription = 'منصة طلبات الجملة من MAI SHOES — تصفح المنتجات، اختر الألوان والمقاسات والكميات، وأرسل طلبك في دقائق بدون دفع إلكتروني.';
+            $defaultDescription = __('storefront.meta.description');
         @endphp
         <title>{{ $meta['title'] ?? $brandName }}</title>
         <meta name="description" content="{{ $meta['description'] ?? $defaultDescription }}">
-        <meta name="theme-color" content="#C91424">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#1D4ED8">
         <meta name="color-scheme" content="light dark">
 
         <meta property="og:type" content="{{ $meta['type'] ?? 'website' }}">

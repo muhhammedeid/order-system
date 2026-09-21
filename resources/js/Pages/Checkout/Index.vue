@@ -8,6 +8,7 @@ import AppCard from '@/Components/Ui/AppCard.vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import AppInput from '@/Components/Ui/AppInput.vue';
 import AppTextarea from '@/Components/Ui/AppTextarea.vue';
+import { useTranslations } from '@/composables/useTranslations';
 
 const props = defineProps({
     items: {
@@ -25,15 +26,16 @@ const props = defineProps({
 });
 
 const page = usePage();
+const { t } = useTranslations();
 const whatsapp = computed(() => page.props.whatsapp ?? null);
 
-const GOVERNORATES = [
-    'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'الشرقية', 'القليوبية',
-    'المنوفية', 'الغربية', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية',
-    'السويس', 'البحيرة', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج',
-    'قنا', 'الأقصر', 'أسوان', 'البحر الأحمر', 'مطروح', 'شمال سيناء',
-    'جنوب سيناء', 'الوادي الجديد',
+const GOVERNORATE_KEYS = [
+    'cairo', 'giza', 'alexandria', 'dakahlia', 'sharqia', 'qalyubia', 'monufia', 'gharbia',
+    'kafr_el_sheikh', 'damietta', 'port_said', 'ismailia', 'suez', 'beheira', 'fayoum',
+    'beni_suef', 'minya', 'assiut', 'sohag', 'qena', 'luxor', 'aswan', 'red_sea', 'matrouh',
+    'north_sinai', 'south_sinai', 'new_valley',
 ];
+const governorates = computed(() => GOVERNORATE_KEYS.map((key) => t(`checkout.governorates.${key}`)));
 
 const form = useForm({
     name: '',
@@ -64,24 +66,24 @@ function submit() {
 
 <template>
     <StorefrontLayout>
-        <Head title="إتمام الطلب" />
+        <Head :title="t('checkout.title')" />
 
         <div class="flex flex-col gap-6">
             <h1 class="font-display text-3xl font-bold text-ink sm:text-4xl">
-                إتمام الطلب
+                {{ t('checkout.title') }}
             </h1>
 
             <div
                 v-if="! items.length"
                 class="flex flex-col items-center gap-4 rounded-card border-2 border-dashed border-line px-6 py-16 text-center"
             >
-                <p class="text-lg text-ink-muted">لا يمكن إتمام طلب فارغ</p>
+                <p class="text-lg text-ink-muted">{{ t('checkout.empty') }}</p>
                 <AppButton
                     href="/catalog"
                     variant="primary"
                     icon="search"
                 >
-                    تسوق الآن
+                    {{ t('checkout.shop_now') }}
                 </AppButton>
             </div>
 
@@ -108,7 +110,7 @@ function submit() {
                                     name="alert"
                                     :size="20"
                                 />
-                                يرجى تصحيح الحقول التالية
+                                {{ t('checkout.fix_errors') }}
                             </p>
                             <ul class="mt-2 list-inside list-disc text-sm font-semibold text-danger">
                                 <li
@@ -125,16 +127,16 @@ function submit() {
                             shadow
                         >
                             <h2 class="mb-1 font-display text-xl font-bold text-ink">
-                                بيانات التواصل
+                                {{ t('checkout.contact_details') }}
                             </h2>
                             <p class="mb-4 text-sm text-ink-muted">
-                                سنستخدم هذه البيانات لتأكيد الطلب والتواصل معك. لا حاجة لإنشاء حساب.
+                                {{ t('checkout.contact_intro') }}
                             </p>
 
                             <div class="grid gap-4 sm:grid-cols-2">
                                 <AppInput
                                     v-model="form.name"
-                                    label="الاسم"
+                                    :label="t('checkout.name')"
                                     name="name"
                                     autocomplete="name"
                                     required
@@ -143,21 +145,21 @@ function submit() {
 
                                 <AppInput
                                     v-model="form.phone"
-                                    label="رقم الموبايل"
+                                    :label="t('checkout.phone')"
                                     name="phone"
                                     type="tel"
                                     inputmode="tel"
                                     dir="ltr"
                                     autocomplete="tel"
                                     placeholder="01xxxxxxxxx"
-                                    hint="سيتم استخدامه لمطابقة بياناتك الحالية إن وجدت."
+                                    :hint="t('checkout.phone_hint')"
                                     required
                                     :error="form.errors.phone"
                                 />
 
                                 <AppInput
                                     v-model="form.company_name"
-                                    label="اسم الشركة / المحل"
+                                    :label="t('checkout.company')"
                                     name="company_name"
                                     autocomplete="organization"
                                     :error="form.errors.company_name"
@@ -165,7 +167,7 @@ function submit() {
 
                                 <AppInput
                                     v-model="form.whatsapp"
-                                    label="رقم واتساب (إن اختلف)"
+                                    :label="t('checkout.whatsapp')"
                                     name="whatsapp"
                                     type="tel"
                                     inputmode="tel"
@@ -177,7 +179,7 @@ function submit() {
                                 <div class="flex flex-col gap-1.5">
                                     <AppInput
                                         v-model="form.governorate"
-                                        label="المحافظة"
+                                        :label="t('checkout.governorate')"
                                         name="governorate"
                                         list="governorates-list"
                                         autocomplete="address-level1"
@@ -185,7 +187,7 @@ function submit() {
                                     />
                                     <datalist id="governorates-list">
                                         <option
-                                            v-for="governorate in GOVERNORATES"
+                                            v-for="governorate in governorates"
                                             :key="governorate"
                                             :value="governorate"
                                         />
@@ -194,7 +196,7 @@ function submit() {
 
                                 <AppInput
                                     v-model="form.city"
-                                    label="المدينة / المنطقة"
+                                    :label="t('checkout.city')"
                                     name="city"
                                     autocomplete="address-level2"
                                     :error="form.errors.city"
@@ -202,7 +204,7 @@ function submit() {
 
                                 <AppInput
                                     v-model="form.address"
-                                    label="العنوان"
+                                    :label="t('checkout.address')"
                                     name="address"
                                     autocomplete="street-address"
                                     class="sm:col-span-2"
@@ -211,10 +213,10 @@ function submit() {
 
                                 <AppTextarea
                                     v-model="form.customer_notes"
-                                    label="ملاحظات على الطلب"
+                                    :label="t('checkout.notes')"
                                     name="customer_notes"
                                     :rows="3"
-                                    hint="مثال: تفضيل ميعاد التسليم أو أي تفاصيل إضافية."
+                                    :hint="t('checkout.notes_hint')"
                                     class="sm:col-span-2"
                                     :error="form.errors.customer_notes"
                                 />
@@ -233,11 +235,10 @@ function submit() {
                                 />
                                 <div class="flex flex-col gap-1">
                                     <h2 class="font-display text-lg font-bold text-ink">
-                                        قبل الإرسال
+                                        {{ t('checkout.before_submit') }}
                                     </h2>
                                     <p class="text-sm text-ink-muted">
-                                        إرسال الطلب لا يعني إتمام البيع أو الدفع. سيقوم فريق المبيعات بمراجعة الطلب
-                                        وتأكيد الكميات والأسعار ثم التواصل معك.
+                                        {{ t('checkout.disclaimer') }}
                                     </p>
                                 </div>
                             </div>
@@ -252,7 +253,7 @@ function submit() {
                                 :loading="form.processing"
                                 :disabled="form.processing"
                             >
-                                إرسال الطلب
+                                {{ t('checkout.submit') }}
                             </AppButton>
 
                             <AppButton
@@ -260,7 +261,7 @@ function submit() {
                                 variant="secondary"
                                 size="lg"
                             >
-                                رجوع للطلب
+                                {{ t('checkout.back') }}
                             </AppButton>
                         </div>
 
@@ -268,14 +269,14 @@ function submit() {
                             v-if="whatsapp"
                             class="text-sm text-ink-muted"
                         >
-                            تحتاج مساعدة؟
+                            {{ t('checkout.need_help') }}
                             <a
                                 :href="`https://wa.me/${whatsapp}`"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="font-semibold text-whatsapp underline underline-offset-2"
                             >
-                                تواصل معنا على واتساب
+                                {{ t('checkout.contact_whatsapp') }}
                             </a>
                         </p>
                     </form>
@@ -285,7 +286,7 @@ function submit() {
                         shadow
                     >
                         <h2 class="mb-4 font-display text-xl font-bold text-ink">
-                            ملخص الطلب
+                            {{ t('checkout.summary') }}
                         </h2>
 
                         <CartSummary
@@ -302,7 +303,7 @@ function submit() {
                                 name="chevron-right"
                                 :size="16"
                             />
-                            تعديل الكميات
+                            {{ t('checkout.edit_quantities') }}
                         </Link>
                     </AppCard>
                 </div>

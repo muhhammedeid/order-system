@@ -6,6 +6,7 @@ import AppButton from '@/Components/Ui/AppButton.vue';
 import AppCard from '@/Components/Ui/AppCard.vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import { useToast } from '@/composables/useToast';
+import { useTranslations } from '@/composables/useTranslations';
 
 const props = defineProps({
     order_number: {
@@ -16,6 +17,7 @@ const props = defineProps({
 
 const page = usePage();
 const { push } = useToast();
+const { t } = useTranslations();
 
 const whatsapp = computed(() => page.props.whatsapp ?? null);
 
@@ -24,30 +26,30 @@ const whatsappHref = computed(() => {
         return null;
     }
 
-    const message = `مرحبًا، بخصوص الطلب رقم ${props.order_number} من MAI SHOES`;
+    const message = t('success.whatsapp_message', { number: props.order_number });
 
     return `https://wa.me/${whatsapp.value}?text=${encodeURIComponent(message)}`;
 });
 
-const STEPS = [
-    { icon: 'check-circle', title: 'تم استلام الطلب', text: 'طلبك مسجل الآن في نظامنا.' },
-    { icon: 'phone', title: 'مراجعة وتأكيد', text: 'يراجع فريق المبيعات الكميات والأسعار ويتواصل معك.' },
-    { icon: 'truck', title: 'تجهيز الطلب', text: 'يتم الاتفاق على التفاصيل وميعاد التسليم.' },
-];
+const STEPS = computed(() => [
+    { icon: 'check-circle', title: t('success.steps.received.title'), text: t('success.steps.received.text') },
+    { icon: 'phone', title: t('success.steps.review.title'), text: t('success.steps.review.text') },
+    { icon: 'truck', title: t('success.steps.prepare.title'), text: t('success.steps.prepare.text') },
+]);
 
 async function copyOrderNumber() {
     try {
         await navigator.clipboard.writeText(props.order_number);
-        push('تم نسخ رقم الطلب', 'success');
+        push(t('success.copied'), 'success');
     } catch (error) {
-        push('تعذّر النسخ، يمكنك تحديد الرقم يدويًا', 'danger');
+        push(t('success.copy_failed'), 'danger');
     }
 }
 </script>
 
 <template>
     <StorefrontLayout>
-        <Head title="تم استلام الطلب" />
+        <Head :title="t('success.title')" />
 
         <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 py-8 text-center sm:py-12">
             <span class="flex h-20 w-20 items-center justify-center rounded-full border-2 border-line-strong bg-success-soft text-success shadow-retro">
@@ -59,11 +61,10 @@ async function copyOrderNumber() {
 
             <div class="flex flex-col gap-2">
                 <h1 class="font-display text-3xl font-bold text-ink sm:text-4xl">
-                    تم استلام طلبك بنجاح
+                    {{ t('success.heading') }}
                 </h1>
                 <p class="max-w-lg text-ink-muted">
-                    سجلنا طلبك وسيتواصل معك فريق المبيعات لتأكيد الكميات والأسعار.
-                    إرسال الطلب لا يعني إتمام البيع أو الدفع.
+                    {{ t('success.intro') }}
                 </p>
             </div>
 
@@ -72,7 +73,7 @@ async function copyOrderNumber() {
                 class="w-full"
             >
                 <p class="text-sm font-semibold text-ink-muted">
-                    رقم الطلب
+                    {{ t('success.order_number') }}
                 </p>
                 <div class="mt-2 flex flex-wrap items-center justify-center gap-3">
                     <span class="font-mono text-2xl font-bold tabular-nums text-ink sm:text-3xl">
@@ -87,12 +88,12 @@ async function copyOrderNumber() {
                             name="copy"
                             :size="18"
                         />
-                        نسخ الرقم
+                        {{ t('success.copy') }}
                     </button>
                 </div>
 
                 <p class="mt-3 text-xs text-ink-muted">
-                    احتفظ بالرقم للرجوع إليه عند التواصل معنا.
+                    {{ t('success.keep_number') }}
                 </p>
             </AppCard>
 
@@ -121,7 +122,7 @@ async function copyOrderNumber() {
                     size="lg"
                     icon="search"
                 >
-                    مواصلة التسوق
+                    {{ t('success.continue_shopping') }}
                 </AppButton>
 
                 <a
@@ -135,7 +136,7 @@ async function copyOrderNumber() {
                         name="whatsapp"
                         :size="22"
                     />
-                    إرسال رقم الطلب على واتساب
+                    {{ t('success.send_whatsapp') }}
                 </a>
             </div>
         </div>

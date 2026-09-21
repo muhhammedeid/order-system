@@ -1,6 +1,9 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { formatQuantity } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     modelValue: {
@@ -25,7 +28,7 @@ const props = defineProps({
     },
     label: {
         type: String,
-        default: 'الكمية',
+        default: null,
     },
     error: {
         type: String,
@@ -98,7 +101,7 @@ function normalizeCustom() {
 <template>
     <fieldset class="min-w-0">
         <legend class="mb-2 text-sm font-semibold text-ink">
-            {{ label }}
+            {{ label ?? t('common.quantity') }}
         </legend>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -123,7 +126,7 @@ function normalizeCustom() {
                 :disabled="busy"
                 @click="selectCustom"
             >
-                كمية أخرى
+                {{ t('common.other_quantity') }}
             </button>
         </div>
 
@@ -138,7 +141,7 @@ function normalizeCustom() {
                 :min="min"
                 :max="max"
                 :step="step"
-                :aria-label="`${label} مخصصة`"
+                :aria-label="t('common.custom_quantity', { label: label ?? t('common.quantity') })"
                 :aria-invalid="error ? 'true' : undefined"
                 :disabled="busy"
                 class="h-12 w-36 rounded-control border-2 border-line-strong bg-surface-soft text-center text-base font-bold tabular-nums text-ink"

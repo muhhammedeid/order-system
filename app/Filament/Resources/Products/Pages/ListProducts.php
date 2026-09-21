@@ -23,16 +23,16 @@ class ListProducts extends ListRecords
     {
         return [
             CreateAction::make()
-                ->label('إضافة منتج')
+                ->label(__('filament.products.add'))
                 ->icon(Heroicon::OutlinedPlus),
             $this->importAction(
                 'importProducts',
-                'استيراد المنتجات',
+                __('filament.products.import'),
                 fn (string $path) => ImportRunner::products($path),
             ),
             $this->excelExportAction(
                 'exportExcel',
-                'تصدير Excel',
+                __('filament.common.export_excel'),
                 fn (Builder $query) => new ProductsExport($query),
             ),
         ];

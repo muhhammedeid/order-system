@@ -23,17 +23,21 @@ class CategoriesTable
         return $table
             ->columns([
                 ImageColumn::make('image_path')
-                    ->label('الصورة')
+                    ->label(__('filament.categories.image'))
                     ->disk(config('filesystems.product_images_disk'))
                     ->square(),
                 TextColumn::make('name')
+                    ->label(__('filament.fields.name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('slug')
+                    ->label(__('filament.fields.slug'))
                     ->searchable(),
                 IconColumn::make('active')
+                    ->label(__('filament.fields.active'))
                     ->boolean(),
                 TextColumn::make('created_at')
+                    ->label(__('filament.fields.created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -45,7 +49,7 @@ class CategoriesTable
                 BulkActionGroup::make([
                     self::excelExportSelectedAction(
                         'exportSelected',
-                        'تصدير المحدد Excel',
+                        __('filament.common.export_selected_excel'),
                         fn (EloquentCollection $records) => new CategoriesExport(Category::query()->whereKey($records->modelKeys())),
                     ),
                     DeleteBulkAction::make(),

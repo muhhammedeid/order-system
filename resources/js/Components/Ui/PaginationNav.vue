@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     currentPage: {
@@ -43,20 +46,20 @@ const pages = computed(() => {
 <template>
     <nav
         class="flex flex-wrap items-center justify-center gap-1.5"
-        aria-label="التنقل بين الصفحات"
+        :aria-label="t('pagination.label')"
     >
         <button
             type="button"
             class="inline-flex h-11 items-center gap-1 rounded-control border-2 border-line bg-surface-soft px-3.5 font-semibold text-ink transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
             :disabled="currentPage <= 1"
-            aria-label="الصفحة السابقة"
+            :aria-label="t('pagination.previous_page')"
             @click="emit('change', currentPage - 1)"
         >
             <AppIcon
                 name="chevron-right"
                 :size="18"
             />
-            السابق
+            {{ t('pagination.previous') }}
         </button>
 
         <template
@@ -76,7 +79,7 @@ const pages = computed(() => {
                     ? 'border-line-strong bg-primary text-on-primary shadow-retro-sm'
                     : 'border-line bg-surface-soft text-ink hover:border-line-strong'"
                 :aria-current="page === currentPage ? 'page' : undefined"
-                :aria-label="`الصفحة ${page}`"
+                :aria-label="t('pagination.page', { number: page })"
                 @click="emit('change', page)"
             >
                 {{ page }}
@@ -87,10 +90,10 @@ const pages = computed(() => {
             type="button"
             class="inline-flex h-11 items-center gap-1 rounded-control border-2 border-line bg-surface-soft px-3.5 font-semibold text-ink transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
             :disabled="currentPage >= lastPage"
-            aria-label="الصفحة التالية"
+            :aria-label="t('pagination.next_page')"
             @click="emit('change', currentPage + 1)"
         >
-            التالي
+            {{ t('pagination.next') }}
             <AppIcon
                 name="chevron-left"
                 :size="18"

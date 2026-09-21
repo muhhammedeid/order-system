@@ -18,9 +18,31 @@ class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingBag;
+
+    protected static ?int $navigationSort = 40;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.navigation.products');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.catalog');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.models.product');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.navigation.products');
+    }
 
     public static function form(Schema $schema): Schema
     {

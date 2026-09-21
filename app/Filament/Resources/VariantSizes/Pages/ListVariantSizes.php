@@ -21,7 +21,7 @@ class ListVariantSizes extends ListRecords
             CreateAction::make(),
             $this->excelExportAction(
                 'exportExcel',
-                'تصدير Excel',
+                __('filament.common.export_excel'),
                 fn (Builder $query) => new VariantSizesExport($query),
             ),
         ];

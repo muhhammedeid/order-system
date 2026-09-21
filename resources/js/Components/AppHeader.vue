@@ -3,18 +3,21 @@ import { computed, ref, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import BrandLockup from '@/Components/Brand/BrandLockup.vue';
+import LocaleSwitcher from '@/Components/LocaleSwitcher.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import { useTranslations } from '@/composables/useTranslations';
 
 const page = usePage();
+const { t } = useTranslations();
 
 const cartCount = computed(() => Number(page.props.cartCount ?? 0));
 const currentUrl = computed(() => page.url ?? '/');
 
-const NAV = [
-    { label: 'الرئيسية', href: '/', matches: ['/'] },
-    { label: 'المتجر', href: '/catalog', matches: ['/catalog', '/product'] },
-    { label: 'الطلب', href: '/cart', matches: ['/cart', '/checkout'] },
-];
+const NAV = computed(() => [
+    { label: t('nav.home'), href: '/', matches: ['/'] },
+    { label: t('nav.catalog'), href: '/catalog', matches: ['/catalog', '/product'] },
+    { label: t('nav.cart'), href: '/cart', matches: ['/cart', '/checkout'] },
+]);
 
 const menuOpen = ref(false);
 const cartPulse = ref(false);
@@ -47,7 +50,7 @@ watch(currentUrl, () => {
 
             <nav
                 class="ms-auto hidden items-center gap-1 sm:flex"
-                aria-label="التنقل الرئيسي"
+                :aria-label="t('nav.main')"
             >
                 <Link
                     v-for="item in NAV"
@@ -63,17 +66,18 @@ watch(currentUrl, () => {
 
             <div class="ms-auto flex items-center gap-2 sm:ms-3">
                 <ThemeToggle />
+                <LocaleSwitcher />
 
                 <Link
                     href="/cart"
                     class="relative inline-flex h-12 items-center gap-2 rounded-control border-2 border-cream/25 px-3.5 font-semibold transition-colors duration-150 hover:bg-cream/15"
-                    :aria-label="`الطلب — ${cartCount} قطعة`"
+                    :aria-label="`${t('nav.cart')} — ${cartCount}`"
                 >
                     <AppIcon
                         name="cart"
                         :size="22"
                     />
-                    <span class="hidden text-base sm:inline">الطلب</span>
+                    <span class="hidden text-base sm:inline">{{ t('nav.cart') }}</span>
 
                     <span
                         v-if="cartCount > 0"
@@ -90,7 +94,7 @@ watch(currentUrl, () => {
                     class="inline-flex h-12 w-12 items-center justify-center rounded-control border-2 border-cream/25 transition-colors duration-150 hover:bg-cream/15 sm:hidden"
                     :aria-expanded="menuOpen"
                     aria-controls="mobile-nav"
-                    aria-label="القائمة"
+                    :aria-label="t('nav.menu')"
                     @click="menuOpen = ! menuOpen"
                 >
                     <AppIcon
@@ -108,7 +112,7 @@ watch(currentUrl, () => {
         >
             <nav
                 class="mx-auto flex w-full max-w-7xl flex-col gap-1 px-4 py-3 sm:px-6"
-                aria-label="التنقل الرئيسي للجوال"
+                :aria-label="t('nav.main')"
             >
                 <Link
                     v-for="item in NAV"

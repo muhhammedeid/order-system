@@ -1,6 +1,9 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 defineProps({
     items: {
@@ -11,7 +14,7 @@ defineProps({
 </script>
 
 <template>
-    <nav aria-label="مسار التنقل">
+    <nav :aria-label="t('accessibility.breadcrumbs')">
         <ol class="flex flex-wrap items-center gap-1.5 text-sm text-ink-muted">
             <li
                 v-for="(item, index) in items"

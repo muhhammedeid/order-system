@@ -18,7 +18,7 @@ class EditProduct extends EditRecord
     {
         return [
             Action::make('save')
-                ->label('حفظ التغييرات')
+                ->label(__('filament.products.save_changes'))
                 ->icon(Heroicon::OutlinedCheckCircle)
                 ->color('success')
                 ->action('save'),
@@ -29,8 +29,8 @@ class EditProduct extends EditRecord
                     }
 
                     Notification::make()
-                        ->title('تعذّر حذف المنتج')
-                        ->body('لا يمكن حذف المنتج لأن بعض مقاساته مرتبطة بطلبات نشطة — يمكن تعطيل المنتج بدلًا من حذفه.')
+                        ->title(__('filament.products.delete_blocked_title'))
+                        ->body(__('filament.products.delete_blocked_body'))
                         ->danger()
                         ->send();
 

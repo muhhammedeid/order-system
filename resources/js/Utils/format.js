@@ -1,4 +1,6 @@
-const LOCALE = 'ar-EG-u-nu-latn';
+const LOCALE = typeof document !== 'undefined' && document.documentElement.lang === 'en'
+    ? 'en-EG'
+    : 'ar-EG-u-nu-latn';
 
 const decimalFormatter = new Intl.NumberFormat(LOCALE, {
     maximumFractionDigits: 2,
@@ -27,5 +29,3 @@ export function formatQuantity(value) {
 
     return integerFormatter.format(numeric);
 }
-
-export const CURRENCY_LABEL = 'ج.م';

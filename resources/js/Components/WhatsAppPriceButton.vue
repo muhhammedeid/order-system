@@ -1,5 +1,8 @@
 <script setup>
 import AppIcon from '@/Components/Ui/AppIcon.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 defineProps({
     href: {
@@ -20,6 +23,6 @@ defineProps({
             name="whatsapp"
             :size="22"
         />
-        معرفة السعر عبر WhatsApp
+        {{ t('product.whatsapp_price') }}
     </a>
 </template>

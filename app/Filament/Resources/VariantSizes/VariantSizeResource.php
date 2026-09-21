@@ -13,21 +13,31 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use UnitEnum;
 
 class VariantSizeResource extends Resource
 {
     protected static ?string $model = VariantSize::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
-    protected static string|UnitEnum|null $navigationGroup = 'الإعدادات';
-
-    protected static ?string $navigationLabel = 'مقاسات الأصناف';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsUpDown;
 
     protected static ?int $navigationSort = 92;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.navigation.sizes');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.settings');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.models.size');
+    }
 
     public static function form(Schema $schema): Schema
     {

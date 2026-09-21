@@ -43,31 +43,31 @@ class OrderInfolist
 
     public static function orderSection(): Section
     {
-        return Section::make('بيانات الطلب')
+        return Section::make(__('filament.orders.sections.order'))
             ->schema([
                 Grid::make(3)
                     ->schema([
                         TextEntry::make('order_number')
-                            ->label('رقم الطلب')
+                            ->label(__('filament.fields.order_number'))
                             ->weight('bold')
                             ->copyable(),
                         TextEntry::make('status')
-                            ->label('الحالة')
+                            ->label(__('filament.fields.status'))
                             ->badge()
                             ->formatStateUsing(fn ($state) => $state instanceof OrderStatus ? $state->label() : $state),
                         TextEntry::make('created_at')
-                            ->label('تاريخ الطلب')
+                            ->label(__('filament.fields.order_date'))
                             ->dateTime('Y-m-d H:i'),
                         TextEntry::make('total_quantity')
-                            ->label('إجمالي القطع')
+                            ->label(__('filament.fields.total_pieces'))
                             ->numeric(),
                         TextEntry::make('customer_notes')
-                            ->label('ملاحظات العميل')
-                            ->placeholder('—')
+                            ->label(__('filament.fields.customer_notes'))
+                            ->placeholder(__('filament.common.none'))
                             ->columnSpan(2),
                         TextEntry::make('admin_notes')
-                            ->label('ملاحظات الإدارة')
-                            ->placeholder('—')
+                            ->label(__('filament.fields.admin_notes'))
+                            ->placeholder(__('filament.common.none'))
                             ->columnSpanFull(),
                     ]),
             ]);
@@ -75,48 +75,50 @@ class OrderInfolist
 
     public static function itemsSection(): Section
     {
-        return Section::make('بنود الطلب')
+        return Section::make(__('filament.orders.sections.items'))
             ->schema([
                 RepeatableEntry::make('items')
                     ->schema([
                         Grid::make(4)
                             ->schema([
                                 TextEntry::make('product_code')
-                                    ->label('كود المنتج'),
+                                    ->label(__('filament.fields.product_code')),
                                 TextEntry::make('product_name')
-                                    ->label('اسم المنتج'),
+                                    ->label(__('filament.fields.product')),
                                 TextEntry::make('color')
-                                    ->label('اللون')
-                                    ->placeholder('—'),
+                                    ->label(__('filament.fields.color'))
+                                    ->placeholder(__('filament.common.none')),
                                 TextEntry::make('size')
-                                    ->label('المقاس')
-                                    ->placeholder('—'),
+                                    ->label(__('filament.fields.size'))
+                                    ->placeholder(__('filament.common.none')),
                                 TextEntry::make('requested_quantity')
-                                    ->label('الكمية لكل لون')
+                                    ->label(__('filament.fields.quantity_per_color'))
                                     ->numeric(),
                                 TextEntry::make('color_count')
-                                    ->label('عدد الألوان')
+                                    ->label(__('filament.fields.color_count'))
                                     ->numeric(),
                                 TextEntry::make('quantity')
-                                    ->label('إجمالي القطع')
+                                    ->label(__('filament.fields.total_pieces'))
                                     ->numeric(),
                                 TextEntry::make('delivered_quantity')
-                                    ->label('تم تسليمه')
+                                    ->label(__('filament.fields.delivered_quantity'))
                                     ->numeric(),
                                 TextEntry::make('remaining_quantity')
-                                    ->label('المتبقي')
+                                    ->label(__('filament.fields.remaining_quantity'))
                                     ->numeric(),
                                 TextEntry::make('price_visibility')
-                                    ->label('نوع السعر')
-                                    ->formatStateUsing(fn ($state) => $state === 'public' ? 'سعر معلن' : 'السعر عند الطلب'),
+                                    ->label(__('filament.fields.price_type'))
+                                    ->formatStateUsing(fn ($state) => $state === 'public'
+                                        ? __('filament.orders.public_price')
+                                        : __('filament.orders.request_price')),
                                 TextEntry::make('unit_price')
-                                    ->label('سعر الوحدة')
+                                    ->label(__('filament.fields.unit_price'))
                                     ->numeric()
-                                    ->formatStateUsing(fn ($state) => $state === null ? 'السعر عند الطلب' : (string) $state),
+                                    ->formatStateUsing(fn ($state) => $state === null ? __('filament.orders.request_price') : (string) $state),
                                 TextEntry::make('line_total')
-                                    ->label('إجمالي البند')
+                                    ->label(__('filament.fields.line_total'))
                                     ->state(fn (OrderItem $record): string => $record->unit_price === null
-                                        ? 'السعر عند الطلب'
+                                        ? __('filament.orders.request_price')
                                         : bcmul((string) $record->unit_price, (string) $record->quantity, 2)),
                             ])
                             ->columns(4),
@@ -126,29 +128,29 @@ class OrderInfolist
 
     public static function customerSection(): Section
     {
-        return Section::make('بيانات العميل')
+        return Section::make(__('filament.orders.sections.customer'))
             ->schema([
                 Grid::make(2)
                     ->schema([
                         TextEntry::make('customer.name')
-                            ->label('اسم العميل'),
+                            ->label(__('filament.fields.customer_name')),
                         TextEntry::make('customer.phone')
-                            ->label('رقم الموبايل'),
+                            ->label(__('filament.fields.mobile_number')),
                         TextEntry::make('customer.whatsapp')
-                            ->label('واتساب')
-                            ->placeholder('—'),
+                            ->label(__('filament.fields.whatsapp'))
+                            ->placeholder(__('filament.common.none')),
                         TextEntry::make('customer.company_name')
-                            ->label('الشركة / المحل')
-                            ->placeholder('—'),
+                            ->label(__('filament.fields.company_store'))
+                            ->placeholder(__('filament.common.none')),
                         TextEntry::make('customer.governorate')
-                            ->label('المحافظة')
-                            ->placeholder('—'),
+                            ->label(__('filament.fields.governorate'))
+                            ->placeholder(__('filament.common.none')),
                         TextEntry::make('customer.city')
-                            ->label('المدينة')
-                            ->placeholder('—'),
+                            ->label(__('filament.fields.city'))
+                            ->placeholder(__('filament.common.none')),
                         TextEntry::make('customer.address')
-                            ->label('العنوان')
-                            ->placeholder('—'),
+                            ->label(__('filament.fields.address'))
+                            ->placeholder(__('filament.common.none')),
                     ]),
             ]);
     }

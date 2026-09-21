@@ -22,7 +22,7 @@ class ListOrders extends ListRecords
         return [
             $this->excelExportAction(
                 'exportExcel',
-                'تصدير النتائج Excel',
+                __('filament.common.export_results_excel'),
                 fn (Builder $orders) => OrderItemsExport::forOrders($orders),
             ),
         ];

@@ -3,17 +3,19 @@ import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import BrandMark from '@/Components/Brand/BrandMark.vue';
+import { useTranslations } from '@/composables/useTranslations';
 
 const page = usePage();
+const { t } = useTranslations();
 
 const whatsapp = computed(() => page.props.whatsapp ?? null);
 
 const year = new Date().getFullYear();
 
-const LINKS = [
-    { label: 'المتجر', href: '/catalog' },
-    { label: 'الطلب', href: '/cart' },
-];
+const LINKS = computed(() => [
+    { label: t('nav.catalog'), href: '/catalog' },
+    { label: t('nav.cart'), href: '/cart' },
+]);
 </script>
 
 <template>
@@ -35,16 +37,16 @@ const LINKS = [
                 </div>
 
                 <p class="max-w-xs text-sm text-cream/80">
-                    منصة طلبات الجملة لأحذية MAI SHOES — تصفح المنتجات، اعرف الكميات المتاحة، وأرسل طلبك في دقائق.
+                    {{ t('footer.summary') }}
                 </p>
             </div>
 
             <nav
                 class="flex flex-col gap-2"
-                aria-label="روابط سريعة"
+                :aria-label="t('footer.quick_links')"
             >
                 <h2 class="font-display text-base font-bold text-cream">
-                    روابط سريعة
+                    {{ t('footer.quick_links') }}
                 </h2>
                 <Link
                     v-for="link in LINKS"
@@ -58,7 +60,7 @@ const LINKS = [
 
             <div class="flex flex-col gap-2">
                 <h2 class="font-display text-base font-bold text-cream">
-                    تواصل معنا
+                    {{ t('footer.contact') }}
                 </h2>
 
                 <a
@@ -72,7 +74,7 @@ const LINKS = [
                         name="whatsapp"
                         :size="18"
                     />
-                    واتساب
+                    {{ t('footer.whatsapp') }}
                     <span
                         class="tabular-nums"
                         dir="ltr"
@@ -80,15 +82,15 @@ const LINKS = [
                 </a>
 
                 <p class="text-xs text-cream/70">
-                    الأسعار غير المتاحة للعرض يمكن طلبها مباشرة عبر واتساب من صفحة المنتج.
+                    {{ t('footer.price_note') }}
                 </p>
             </div>
         </div>
 
         <div class="border-t border-cream/15">
             <div class="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-cream/70 sm:px-6 lg:px-8">
-                <p>MAI SHOES © {{ year }} — جميع الحقوق محفوظة</p>
-                <p>إرسال الطلب لا يُعد تأكيدًا للبيع أو الدفع.</p>
+                <p>{{ t('footer.rights', { year }) }}</p>
+                <p>{{ t('footer.disclaimer') }}</p>
             </div>
         </div>
     </footer>

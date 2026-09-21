@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
-import { CURRENCY_LABEL, formatNumber, formatQuantity } from '@/Utils/format';
+import { formatNumber, formatQuantity } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     items: {
@@ -35,9 +38,11 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                         <template v-if="item.color">{{ item.color }}</template>
                         <template v-if="item.size"><template v-if="item.color"> / </template><span class="tabular-nums">{{ item.size }}</span></template>
                         <span class="ms-1">
-                            · {{ formatQuantity(item.quantity) }} لكل لون
-                            × {{ formatQuantity(item.color_count) }} لون
-                            = {{ formatQuantity(item.pieces_quantity) }} قطعة
+                            {{ t('cart.line_summary', {
+                                quantity: formatQuantity(item.quantity),
+                                colors: formatQuantity(item.color_count),
+                                pieces: formatQuantity(item.pieces_quantity),
+                            }) }}
                         </span>
                     </span>
                 </span>
@@ -52,14 +57,14 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                     v-else
                     class="text-xs font-semibold text-accent"
                 >
-                    عند الطلب
+                    {{ t('common.on_request') }}
                 </span>
             </li>
         </ul>
 
         <dl class="flex flex-col gap-2 border-t-2 border-line pt-3">
             <div class="flex items-center justify-between text-sm">
-                <dt class="text-ink-muted">إجمالي القطع</dt>
+                <dt class="text-ink-muted">{{ t('common.total_pieces') }}</dt>
                 <dd class="font-bold tabular-nums text-ink">
                     {{ formatQuantity(totalQuantity) }}
                 </dd>
@@ -69,10 +74,10 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                 v-if="totalPrice"
                 class="flex items-center justify-between"
             >
-                <dt class="font-semibold text-ink">الإجمالي</dt>
+                <dt class="font-semibold text-ink">{{ t('common.total') }}</dt>
                 <dd class="font-display text-xl font-bold tabular-nums text-ink">
                     {{ formatNumber(totalPrice) }}
-                    <span class="font-sans text-sm font-semibold text-ink-muted">{{ CURRENCY_LABEL }}</span>
+                    <span class="font-sans text-sm font-semibold text-ink-muted">{{ t('common.currency') }}</span>
                 </dd>
             </div>
         </dl>
@@ -86,7 +91,7 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                 :size="16"
                 class="mt-0.5"
             />
-            بعض الأصناف بأسعار عند الطلب — سيتم تحديد سعرها والتواصل معك لتأكيد الطلب.
+            {{ t('cart.request_price_note') }}
         </p>
     </div>
 </template>

@@ -1,6 +1,9 @@
 <script setup>
 import { ref, watch } from 'vue';
 import AppButton from '@/Components/Ui/AppButton.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     open: {
@@ -17,11 +20,11 @@ const props = defineProps({
     },
     confirmLabel: {
         type: String,
-        default: 'تأكيد',
+        default: null,
     },
     cancelLabel: {
         type: String,
-        default: 'إلغاء',
+        default: null,
     },
     tone: {
         type: String,
@@ -79,14 +82,14 @@ watch(
                 size="sm"
                 @click="emit('cancel')"
             >
-                {{ cancelLabel }}
+                {{ cancelLabel ?? t('common.cancel') }}
             </AppButton>
             <AppButton
                 :variant="tone"
                 size="sm"
                 @click="emit('confirm')"
             >
-                {{ confirmLabel }}
+                {{ confirmLabel ?? t('common.confirm') }}
             </AppButton>
         </div>
     </dialog>

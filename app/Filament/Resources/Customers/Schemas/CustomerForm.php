@@ -17,29 +17,37 @@ class CustomerForm
                 Grid::make(2)
                     ->schema([
                         TextInput::make('customer_code')
-                            ->label('Customer Code')
+                            ->label(__('filament.fields.customer_code'))
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
                             ->hintIcon(Heroicon::InformationCircle)
-                            ->hintIconTooltip('Reference from the accounting system'),
+                            ->hintIconTooltip(__('filament.customers.accounting_reference')),
                         TextInput::make('name')
+                            ->label(__('filament.fields.name'))
                             ->required()
                             ->maxLength(255),
                         TextInput::make('company_name')
+                            ->label(__('filament.fields.company'))
                             ->maxLength(255),
                         TextInput::make('phone')
+                            ->label(__('filament.fields.phone'))
                             ->required()
                             ->maxLength(255),
                         TextInput::make('whatsapp')
+                            ->label(__('filament.fields.whatsapp'))
                             ->maxLength(255),
                         TextInput::make('governorate')
+                            ->label(__('filament.fields.governorate'))
                             ->maxLength(255),
                         TextInput::make('city')
+                            ->label(__('filament.fields.city'))
                             ->maxLength(255),
                         TextInput::make('address')
+                            ->label(__('filament.fields.address'))
                             ->maxLength(255),
                     ]),
                 Textarea::make('notes')
+                    ->label(__('filament.fields.notes'))
                     ->columnSpanFull(),
             ]);
     }

@@ -28,12 +28,12 @@ class ConfirmOrder extends ViewRecord
         /** @var Order $order */
         $order = $this->getRecord();
 
-        return "مراجعة وتأكيد الطلب {$order->order_number}";
+        return __('filament.orders.review_title', ['order' => $order->order_number]);
     }
 
     public function getBreadcrumb(): string
     {
-        return 'مراجعة وتأكيد';
+        return __('filament.orders.review_breadcrumb');
     }
 
     protected function getHeaderActions(): array
@@ -65,17 +65,17 @@ class ConfirmOrder extends ViewRecord
         $order = $this->getRecord();
 
         $callout = Callout::make(match ($order->status) {
-            OrderStatus::New => 'الطلب في انتظار المراجعة',
-            OrderStatus::Confirmed => 'تم تأكيد الطلب',
-            OrderStatus::PartiallyDelivered => 'تم تسليم جزء من الطلب',
-            OrderStatus::Delivered => 'تم تسليم الطلب',
-            OrderStatus::Cancelled => 'الطلب ملغي',
+            OrderStatus::New => __('filament.orders.callout.new_title'),
+            OrderStatus::Confirmed => __('filament.orders.callout.confirmed_title'),
+            OrderStatus::PartiallyDelivered => __('filament.orders.callout.partial_title'),
+            OrderStatus::Delivered => __('filament.orders.callout.delivered_title'),
+            OrderStatus::Cancelled => __('filament.orders.callout.cancelled_title'),
         })->description(match ($order->status) {
-            OrderStatus::New => 'راجع البنود والكميات وبيانات العميل، ثم اضغط «تأكيد الطلب» أعلى الصفحة. لا يؤثر التأكيد على كمية المخزون، ويمكنك تدوين ملاحظات الإدارة معه.',
-            OrderStatus::Confirmed => 'الطلب مؤكد ودخل مرحلة التنفيذ. لا يمكن إلغاؤه، وتُتابَع كميات التسليم من شاشات إدارة الطلبات.',
-            OrderStatus::PartiallyDelivered => 'تم تسجيل تسليم جزء من الكميات، وتُتابَع بقية الكميات من شاشات إدارة الطلبات.',
-            OrderStatus::Delivered => 'حالة نهائية: تم تسليم كامل كميات الطلب.',
-            OrderStatus::Cancelled => 'حالة نهائية: تم إلغاء الطلب.',
+            OrderStatus::New => __('filament.orders.callout.new_description'),
+            OrderStatus::Confirmed => __('filament.orders.callout.confirmed_description'),
+            OrderStatus::PartiallyDelivered => __('filament.orders.callout.partial_description'),
+            OrderStatus::Delivered => __('filament.orders.callout.delivered_description'),
+            OrderStatus::Cancelled => __('filament.orders.callout.cancelled_description'),
         });
 
         return match ($order->status) {

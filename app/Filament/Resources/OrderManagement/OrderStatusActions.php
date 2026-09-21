@@ -25,17 +25,17 @@ class OrderStatusActions
     public static function confirm(): Action
     {
         return Action::make('confirm')
-            ->label('تأكيد الطلب')
+            ->label(__('filament.orders.actions.confirm'))
             ->icon('heroicon-o-check-circle')
             ->color('success')
             ->visible(fn (Order $record): bool => $record->status === OrderStatus::New)
-            ->modalHeading(fn (Order $record): string => "تأكيد الطلب {$record->order_number}")
-            ->modalDescription('سيتم حفظ حالة الطلب كـ «مؤكد» بعد المراجعة. لا يؤثر التأكيد على كمية المخزون، والطلب المؤكد يدخل مرحلة التنفيذ ولا يمكن إلغاؤه.')
-            ->modalSubmitActionLabel('تأكيد الطلب')
+            ->modalHeading(fn (Order $record): string => __('filament.orders.actions.confirm_heading', ['order' => $record->order_number]))
+            ->modalDescription(__('filament.orders.actions.confirm_description'))
+            ->modalSubmitActionLabel(__('filament.orders.actions.confirm'))
             ->form([
                 Textarea::make('admin_notes')
-                    ->label('ملاحظات الإدارة')
-                    ->helperText('تُحفظ مع الطلب ويمكن تعديلها لاحقًا.')
+                    ->label(__('filament.fields.admin_notes'))
+                    ->helperText(__('filament.orders.actions.admin_notes_help'))
                     ->rows(3)
                     ->maxLength(65535)
                     ->default(fn (Order $record): ?string => $record->admin_notes),
@@ -48,7 +48,7 @@ class OrderStatusActions
                 self::persistNotes($record, $data);
 
                 Notification::make()
-                    ->title("تم تأكيد الطلب {$record->order_number}")
+                    ->title(__('filament.orders.actions.confirmed', ['order' => $record->order_number]))
                     ->success()
                     ->send();
             });
@@ -57,20 +57,20 @@ class OrderStatusActions
     public static function cancel(): Action
     {
         return Action::make('cancel')
-            ->label('إلغاء الطلب')
+            ->label(__('filament.orders.actions.cancel'))
             ->icon('heroicon-o-x-circle')
             ->color('danger')
             ->visible(fn (Order $record): bool => $record->status === OrderStatus::New)
-            ->modalHeading(fn (Order $record): string => "إلغاء الطلب {$record->order_number}")
-            ->modalDescription('يُستخدم الإلغاء عندما يتعذر تأكيد الطلب مع العميل. لا يمكن التراجع عن الإلغاء، والطلبات المؤكدة لا يمكن إلغاؤها.')
-            ->modalSubmitActionLabel('تأكيد الإلغاء')
+            ->modalHeading(fn (Order $record): string => __('filament.orders.actions.cancel_heading', ['order' => $record->order_number]))
+            ->modalDescription(__('filament.orders.actions.cancel_description'))
+            ->modalSubmitActionLabel(__('filament.orders.actions.cancel_submit'))
             ->action(function (Order $record): void {
                 if (! self::run($record, fn () => $record->cancel())) {
                     return;
                 }
 
                 Notification::make()
-                    ->title("تم إلغاء الطلب {$record->order_number}")
+                    ->title(__('filament.orders.actions.cancelled', ['order' => $record->order_number]))
                     ->success()
                     ->send();
             });
@@ -79,7 +79,7 @@ class OrderStatusActions
     public static function review(): Action
     {
         return Action::make('review')
-            ->label('مراجعة وتأكيد')
+            ->label(__('filament.orders.actions.review'))
             ->icon('heroicon-o-clipboard-document-check')
             ->visible(fn (Order $record): bool => $record->status === OrderStatus::New)
             ->url(fn (Order $record): string => OrderManagementResource::getUrl('confirm', ['record' => $record]));
@@ -88,20 +88,20 @@ class OrderStatusActions
     public static function edit(): Action
     {
         return EditAction::make()
-            ->label('تعديل البنود')
+            ->label(__('filament.orders.actions.edit_items'))
             ->visible(fn (Order $record): bool => $record->isEditable());
     }
 
     public static function recordDelivery(): Action
     {
         return Action::make('recordDelivery')
-            ->label('تسليم جزئي')
+            ->label(__('filament.orders.actions.partial_delivery'))
             ->icon('heroicon-o-truck')
             ->color('info')
             ->visible(fn (Order $record): bool => in_array($record->status, [OrderStatus::Confirmed, OrderStatus::PartiallyDelivered], true))
-            ->modalHeading(fn (Order $record): string => "تسليم جزئي للطلب {$record->order_number}")
-            ->modalDescription('أدخل الكميات التي تم تسليمها الآن لكل بند. لا يمكن أن تتجاوز الكمية المتبقية، ويجب تسجيل وحدة واحدة على الأقل.')
-            ->modalSubmitActionLabel('حفظ التسليم')
+            ->modalHeading(fn (Order $record): string => __('filament.orders.actions.partial_heading', ['order' => $record->order_number]))
+            ->modalDescription(__('filament.orders.actions.partial_description'))
+            ->modalSubmitActionLabel(__('filament.orders.actions.save_delivery'))
             ->form(fn (Order $record): array => self::deliveryForm($record))
             ->action(function (Order $record, array $data): void {
                 $deliveries = self::normalizeDeliveries($data);
@@ -111,8 +111,8 @@ class OrderStatusActions
                 }
 
                 $title = $record->status === OrderStatus::Delivered
-                    ? "تم تسليم الطلب {$record->order_number} بالكامل"
-                    : "تم تسجيل تسليم جزئي للطلب {$record->order_number}";
+                    ? __('filament.orders.actions.delivered_full', ['order' => $record->order_number])
+                    : __('filament.orders.actions.delivered_partial', ['order' => $record->order_number]);
 
                 Notification::make()
                     ->title($title)
@@ -124,21 +124,21 @@ class OrderStatusActions
     public static function deliverAll(): Action
     {
         return Action::make('deliverAll')
-            ->label('تأكيد التسليم')
+            ->label(__('filament.orders.actions.deliver_all'))
             ->icon('heroicon-o-check-badge')
             ->color('success')
             ->visible(fn (Order $record): bool => in_array($record->status, [OrderStatus::Confirmed, OrderStatus::PartiallyDelivered], true))
             ->requiresConfirmation()
-            ->modalHeading(fn (Order $record): string => "تأكيد التسليم للطلب {$record->order_number}")
-            ->modalDescription('سيتم تسجيل تسليم كل الكميات المتبقية وتحويل حالة الطلب إلى «تم التسليم».')
-            ->modalSubmitActionLabel('تأكيد التسليم')
+            ->modalHeading(fn (Order $record): string => __('filament.orders.actions.deliver_all_heading', ['order' => $record->order_number]))
+            ->modalDescription(__('filament.orders.actions.deliver_all_description'))
+            ->modalSubmitActionLabel(__('filament.orders.actions.deliver_all'))
             ->action(function (Order $record): void {
                 if (! self::run($record, fn () => $record->deliverAllRemaining())) {
                     return;
                 }
 
                 Notification::make()
-                    ->title("تم تسليم الطلب {$record->order_number} بالكامل")
+                    ->title(__('filament.orders.actions.delivered_full', ['order' => $record->order_number]))
                     ->success()
                     ->send();
             });
@@ -164,14 +164,20 @@ class OrderStatusActions
 
             $components[] = TextInput::make("deliveries.{$item->id}")
                 ->label($label)
-                ->helperText("المطلوب: {$item->quantity} — تم تسليم: {$item->delivered_quantity} — المتبقي: {$item->remaining_quantity}")
+                ->helperText(__('filament.orders.actions.delivery_summary', [
+                    'ordered' => $item->quantity,
+                    'delivered' => $item->delivered_quantity,
+                    'remaining' => $item->remaining_quantity,
+                ]))
                 ->numeric()
                 ->integer()
                 ->minValue(0)
                 ->maxValue((int) $item->remaining_quantity)
                 ->default(0)
                 ->live(onBlur: true)
-                ->hint(fn (Get $get): string => 'المتبقي بعد هذا التسليم: '.max(0, (int) $item->remaining_quantity - (int) $get("deliveries.{$item->id}")));
+                ->hint(fn (Get $get): string => __('filament.orders.actions.remaining_after', [
+                    'remaining' => max(0, (int) $item->remaining_quantity - (int) $get("deliveries.{$item->id}")),
+                ]));
 
             $components[] = Hidden::make("expected.{$item->id}")
                 ->default((int) $item->delivered_quantity);
@@ -225,7 +231,7 @@ class OrderStatusActions
             $record->refresh();
         } catch (RuntimeException $exception) {
             Notification::make()
-                ->title('تعذّر تنفيذ الإجراء')
+                ->title(__('filament.orders.actions.failed'))
                 ->body($exception->getMessage())
                 ->danger()
                 ->persistent()

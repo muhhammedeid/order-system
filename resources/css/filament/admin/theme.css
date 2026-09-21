@@ -1,0 +1,73 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../resources/views/filament/**/*.blade.php';
+
+:root {
+    --mai-admin-radius: 0.9rem;
+}
+
+.fi-body {
+    background:
+        radial-gradient(circle at 8% 0%, rgb(37 99 235 / 0.06), transparent 24rem),
+        var(--gray-50);
+}
+
+.dark .fi-body {
+    background:
+        radial-gradient(circle at 8% 0%, rgb(59 130 246 / 0.1), transparent 24rem),
+        var(--gray-950);
+}
+
+.fi-sidebar {
+    border-inline-end: 1px solid rgb(148 163 184 / 0.18);
+}
+
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat {
+    border-radius: var(--mai-admin-radius);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px rgb(15 23 42 / 0.035);
+}
+
+.production-card {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    gap: 0.875rem;
+    border: 1px solid rgb(148 163 184 / 0.28);
+    border-radius: var(--mai-admin-radius);
+    padding: 0.875rem;
+    background: rgb(255 255 255 / 0.72);
+}
+
+.dark .production-card {
+    background: rgb(15 23 42 / 0.55);
+}
+
+.production-quantity {
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 800;
+    color: rgb(29 78 216);
+}
+
+.dark .production-quantity {
+    color: rgb(96 165 250);
+}
+
+.production-breakdown {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+    gap: 0.5rem;
+}
+
+.production-breakdown-item {
+    border-radius: 0.7rem;
+    padding: 0.6rem 0.7rem;
+    background: rgb(241 245 249);
+}
+
+.dark .production-breakdown-item {
+    background: rgb(30 41 59);
+}

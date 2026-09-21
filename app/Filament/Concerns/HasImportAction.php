@@ -16,7 +16,7 @@ trait HasImportAction
             ->label($label)
             ->form([
                 FileUpload::make('file')
-                    ->label('ملف Excel')
+                    ->label(__('filament.common.excel_file'))
                     ->acceptedFileTypes([
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         'application/vnd.ms-excel',
@@ -29,7 +29,7 @@ trait HasImportAction
                     $result = $import($data['file']);
                 } catch (HeaderContractException $exception) {
                     Notification::make()
-                        ->title('فشل الاستيراد')
+                        ->title(__('filament.common.import_failed'))
                         ->body($exception->getMessage())
                         ->danger()
                         ->persistent()

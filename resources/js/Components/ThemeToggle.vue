@@ -1,16 +1,18 @@
 <script setup>
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import { useTheme } from '@/composables/useTheme';
+import { useTranslations } from '@/composables/useTranslations';
 
 const { isDark, toggle } = useTheme();
+const { t } = useTranslations();
 </script>
 
 <template>
     <button
         type="button"
         class="inline-flex h-12 w-12 items-center justify-center rounded-control border-2 border-cream/25 transition-colors duration-150 hover:bg-cream/15"
-        :aria-label="isDark ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الليلي'"
-        :title="isDark ? 'الوضع الفاتح' : 'الوضع الليلي'"
+        :aria-label="isDark ? t('theme.enable_light') : t('theme.enable_dark')"
+        :title="isDark ? t('theme.light') : t('theme.dark')"
         :aria-pressed="isDark"
         @click="toggle"
     >

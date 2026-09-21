@@ -21,16 +21,17 @@ class ProductForm
         return $schema
             ->components([
                 TextInput::make('product_code')
-                    ->label('Product Code')
+                    ->label(__('filament.fields.product_code'))
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 Select::make('category_id')
-                    ->label('Category')
+                    ->label(__('filament.fields.category'))
                     ->relationship('category', 'name')
                     ->searchable()
                     ->preload(),
                 TextInput::make('name')
+                    ->label(__('filament.fields.name'))
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
@@ -40,36 +41,40 @@ class ProductForm
                         }
                     }),
                 TextInput::make('slug')
+                    ->label(__('filament.fields.slug'))
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 Textarea::make('description')
+                    ->label(__('filament.fields.description'))
                     ->maxLength(65535)
                     ->columnSpanFull(),
                 Select::make('price_visibility')
-                    ->label('Price Visibility')
+                    ->label(__('filament.fields.price_visibility'))
                     ->options(collect(PriceVisibility::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()]))
                     ->default(PriceVisibility::PublicPrice->value)
                     ->required()
                     ->live(),
                 TextInput::make('price')
+                    ->label(__('filament.fields.price'))
                     ->numeric()
                     ->minValue(0)
                     ->rules(Product::priceRules())
                     ->nullable()
                     ->visible(fn ($get) => $get('price_visibility') !== PriceVisibility::RequestPrice->value),
                 Toggle::make('active')
+                    ->label(__('filament.fields.active'))
                     ->default(true)
                     ->required(),
                 Toggle::make('color_enabled')
-                    ->label('تفعيل اختيار اللون')
-                    ->helperText('عند تعطيله تظهر كل الألوان المتاحة للعميل دون السماح باختيارها، ويطلب العميل الكمية الشاملة لكل التشكيلة.')
+                    ->label(__('filament.products.color_enabled'))
+                    ->helperText(__('filament.products.color_enabled_help'))
                     ->default(true)
                     ->live()
                     ->afterStateUpdated(fn ($state, $set) => ! $state ? $set('size_enabled', false) : null),
                 Toggle::make('size_enabled')
-                    ->label('تفعيل اختيار المقاس')
-                    ->helperText('يتاح فقط عند تفعيل اختيار اللون. عند تعطيله تظهر المقاسات المتاحة تحت كل لون دون طلب اختيارها.')
+                    ->label(__('filament.products.size_enabled'))
+                    ->helperText(__('filament.products.size_enabled_help'))
                     ->disabled(fn ($get): bool => ! (bool) $get('color_enabled'))
                     ->dehydrated()
                     ->default(false),
@@ -77,10 +82,10 @@ class ProductForm
                     ->relationship('images')
                     ->reorderable()
                     ->orderable('sort_order')
-                    ->label('Images')
+                    ->label(__('filament.fields.images'))
                     ->schema([
                         FileUpload::make('image_path')
-                            ->label('Image')
+                            ->label(__('filament.fields.image'))
                             ->image()
                             ->acceptedFileTypes(['image/*'])
                             ->disk(config('filesystems.product_images_disk'))

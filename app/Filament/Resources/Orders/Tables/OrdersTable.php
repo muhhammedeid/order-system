@@ -19,31 +19,31 @@ class OrdersTable
         return $table
             ->columns([
                 TextColumn::make('order_number')
-                    ->label('رقم الطلب')
+                    ->label(__('filament.fields.order_number'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.name')
-                    ->label('العميل')
+                    ->label(__('filament.fields.customer'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.phone')
-                    ->label('الموبايل')
+                    ->label(__('filament.fields.phone'))
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('total_quantity')
-                    ->label('الكمية المطلوبة')
+                    ->label(__('filament.fields.ordered_quantity'))
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('items_sum_delivered_quantity')
-                    ->label('تم تسليمه')
+                    ->label(__('filament.fields.delivered_quantity'))
                     ->numeric()
                     ->default(0),
                 TextColumn::make('created_at')
-                    ->label('تاريخ الطلب')
+                    ->label(__('filament.fields.order_date'))
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),
                 TextColumn::make('updated_at')
-                    ->label('آخر تحديث')
+                    ->label(__('filament.fields.updated_at'))
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),
             ])
@@ -54,12 +54,12 @@ class OrdersTable
                 BulkActionGroup::make([
                     self::excelExportSelectedAction(
                         'exportSelected',
-                        'تصدير المحدد Excel',
+                        __('filament.common.export_selected_excel'),
                         fn (EloquentCollection $records) => OrderItemsExport::forOrderIds($records->modelKeys(), 'delivered-orders'),
                     ),
                 ]),
             ])
             ->defaultSort('updated_at', 'desc')
-            ->emptyStateHeading('لا توجد طلبات مُسلَّمة بعد');
+            ->emptyStateHeading(__('filament.orders.delivered_empty'));
     }
 }

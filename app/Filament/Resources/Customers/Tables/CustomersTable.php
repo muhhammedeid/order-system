@@ -22,18 +22,21 @@ class CustomersTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('filament.fields.name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('company_name')
-                    ->label('Company')
+                    ->label(__('filament.fields.company'))
                     ->searchable(),
                 TextColumn::make('phone')
+                    ->label(__('filament.fields.phone'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer_code')
-                    ->label('Customer Code')
+                    ->label(__('filament.fields.customer_code'))
                     ->searchable(),
                 TextColumn::make('created_at')
+                    ->label(__('filament.fields.created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -45,7 +48,7 @@ class CustomersTable
                 BulkActionGroup::make([
                     self::excelExportSelectedAction(
                         'exportSelected',
-                        'تصدير المحدد Excel',
+                        __('filament.common.export_selected_excel'),
                         fn (EloquentCollection $records) => new CustomersExport(Customer::query()->whereKey($records->modelKeys())),
                     ),
                     DeleteBulkAction::make()
@@ -55,8 +58,8 @@ class CustomersTable
                             }
 
                             Notification::make()
-                                ->title('تعذّر حذف العملاء المحددين')
-                                ->body('لا يمكن حذف بعض العملاء المحددين لأنهم مرتبطون بطلبات مسجلة في النظام. لم يتم حذف أي عميل؛ يمكنك الإبقاء على بياناتهم للحفاظ على سجل الطلبات.')
+                                ->title(__('filament.customers.bulk_delete_blocked_title'))
+                                ->body(__('filament.customers.bulk_delete_blocked_body'))
                                 ->danger()
                                 ->send();
 

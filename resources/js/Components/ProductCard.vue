@@ -4,6 +4,9 @@ import { Link } from '@inertiajs/vue3';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import PriceTag from '@/Components/Ui/PriceTag.vue';
 import { formatQuantity } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     product: {
@@ -19,7 +22,9 @@ const colorsLabel = computed(() => {
         return null;
     }
 
-    return colors === 1 ? 'لون واحد' : `${formatQuantity(colors)} ألوان`;
+    return colors === 1
+        ? t('catalog.one_color')
+        : t('catalog.colors', { count: formatQuantity(colors) });
 });
 </script>
 

@@ -22,8 +22,8 @@ class EditCustomer extends EditRecord
                     }
 
                     Notification::make()
-                        ->title('تعذّر حذف العميل')
-                        ->body('لا يمكن حذف هذا العميل لأنه مرتبط بطلبات مسجلة في النظام. يمكنك الإبقاء على بيانات العميل دون حذف للحفاظ على سجل الطلبات.')
+                        ->title(__('filament.customers.delete_blocked_title'))
+                        ->body(__('filament.customers.delete_blocked_body'))
                         ->danger()
                         ->send();
 

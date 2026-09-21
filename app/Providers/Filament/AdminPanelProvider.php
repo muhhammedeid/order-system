@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Widgets\OrderStatsWidget;
 use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Http\Controllers\OrderPrintController;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -12,6 +13,8 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Navigation\NavigationGroup;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -30,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('MAI SHOES')
+            ->brandName(fn (): string => __('admin.brand'))
             ->brandLogo('/favicon.svg')
             ->brandLogoHeight('2.25rem')
             ->favicon('/favicon.svg')
@@ -40,22 +43,37 @@ class AdminPanelProvider extends PanelProvider
             )
             ->colors([
                 'primary' => [
-                    50 => '#fdf3f3',
-                    100 => '#fbe1e2',
-                    200 => '#f8c1c4',
-                    300 => '#f2969c',
-                    400 => '#e75f68',
-                    500 => '#d4343f',
-                    600 => '#c91424',
-                    700 => '#a50f1d',
-                    800 => '#8f0808',
-                    900 => '#741013',
-                    950 => '#400508',
+                    50 => '#eff6ff',
+                    100 => '#dbeafe',
+                    200 => '#bfdbfe',
+                    300 => '#93c5fd',
+                    400 => '#60a5fa',
+                    500 => '#3b82f6',
+                    600 => '#2563eb',
+                    700 => '#1d4ed8',
+                    800 => '#1e40af',
+                    900 => '#1e3a8a',
+                    950 => '#172554',
                 ],
             ])
             ->spa()
-            ->topNavigation()
-            ->bootUsing(fn () => app()->setLocale('ar'))
+            ->sidebarCollapsibleOnDesktop()
+            ->sidebarWidth('18rem')
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->navigationGroups([
+                NavigationGroup::make()->label(fn (): string => __('admin.navigation.operations')),
+                NavigationGroup::make()->label(fn (): string => __('admin.navigation.catalog')),
+                NavigationGroup::make()->label(fn (): string => __('admin.navigation.customers')),
+                NavigationGroup::make()->label(fn (): string => __('admin.navigation.settings')),
+            ])
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): string => view('filament.components.locale-switcher')->render(),
+            )
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                fn (): string => '<div class="mt-4 flex justify-center">'.view('filament.components.locale-switcher')->render().'</div>',
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -74,6 +92,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,

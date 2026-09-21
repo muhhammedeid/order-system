@@ -22,15 +22,15 @@ class ListCustomers extends ListRecords
     {
         return [
             CreateAction::make()
-                ->label('إضافة عميل'),
+                ->label(__('filament.customers.add')),
             $this->importAction(
                 'importCustomers',
-                'استيراد العملاء',
+                __('filament.customers.import'),
                 fn (string $path) => ImportRunner::customers($path),
             ),
             $this->excelExportAction(
                 'exportExcel',
-                'تصدير Excel',
+                __('filament.common.export_excel'),
                 fn (Builder $query) => new CustomersExport($query),
             ),
         ];

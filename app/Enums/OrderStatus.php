@@ -12,13 +12,7 @@ enum OrderStatus: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::New => 'جديد',
-            self::Confirmed => 'مؤكد',
-            self::PartiallyDelivered => 'تم التسليم جزئيًا',
-            self::Delivered => 'تم التسليم',
-            self::Cancelled => 'ملغي',
-        };
+        return __("domain.order_status.{$this->value}");
     }
 
     /**

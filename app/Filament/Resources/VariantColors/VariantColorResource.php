@@ -13,21 +13,31 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use UnitEnum;
 
 class VariantColorResource extends Resource
 {
     protected static ?string $model = VariantColor::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
-    protected static string|UnitEnum|null $navigationGroup = 'الإعدادات';
-
-    protected static ?string $navigationLabel = 'ألوان الأصناف';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSwatch;
 
     protected static ?int $navigationSort = 91;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.navigation.colors');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.navigation.settings');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.models.color');
+    }
 
     public static function form(Schema $schema): Schema
     {

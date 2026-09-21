@@ -274,6 +274,34 @@ class OperationsDashboardTest extends TestCase
         $this->assertFalse($requirements->first()['active']);
     }
 
+    public function test_non_selectable_color_card_uses_order_quantity_and_breaks_it_down_per_color(): void
+    {
+        $product = $this->newProduct([
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+        $black = $this->newVariant($product, 'Black', '37');
+        $this->newVariant($product, 'White', '37');
+
+        $order = $this->newOrder(OrderStatus::Confirmed);
+        $order->items()->create(OrderItem::snapshotFromVariant($black) + [
+            'requested_quantity' => 5,
+            'color_count' => 2,
+            'quantity' => 10,
+        ]);
+        $order->recalculateTotalQuantity();
+
+        $widget = new ProductionRequirementsWidget;
+        $requirement = (fn () => $this->getViewData()['requirements']->first())->call($widget);
+
+        $this->assertSame('per_color', $requirement['quantity_mode']);
+        $this->assertSame(5, $requirement['required_quantity']);
+        $this->assertSame([
+            ['color' => 'Black', 'quantity' => 5],
+            ['color' => 'White', 'quantity' => 5],
+        ], $requirement['color_breakdown']);
+    }
+
     public function test_active_products_kpi_filter_matches_the_products_source_view(): void
     {
         $active = $this->newProduct(['active' => true]);
@@ -317,7 +345,8 @@ class OperationsDashboardTest extends TestCase
         Livewire::actingAs(User::factory()->create())
             ->test(ProductionRequirementsWidget::class)
             ->assertSee('المطلوب للتشغيل حالياً')
-            ->assertSee('الكمية المطلوبة: 5')
+            ->assertSee('إجمالي المطلوب')
+            ->assertSee('5')
             ->assertSee('عرض الطلبات المساهمة');
     }
 

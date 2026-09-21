@@ -24,40 +24,40 @@ class OrderEditForm
     {
         return $schema
             ->components([
-                Section::make('بيانات الطلب')
+                Section::make(__('filament.orders.sections.order'))
                     ->schema([
                         Textarea::make('admin_notes')
-                            ->label('ملاحظات الإدارة')
+                            ->label(__('filament.fields.admin_notes'))
                             ->rows(3)
                             ->maxLength(65535),
                         Placeholder::make('customer_notes_display')
-                            ->label('ملاحظات العميل (للقراءة فقط)')
-                            ->content(fn (?Order $record): string => $record?->customer_notes ?: '—'),
+                            ->label(__('filament.fields.customer_notes_readonly'))
+                            ->content(fn (?Order $record): string => $record?->customer_notes ?: __('filament.common.none')),
                     ])
                     ->columns(2),
-                Section::make('بنود الطلب')
+                Section::make(__('filament.orders.sections.items'))
                     ->schema([
                         Repeater::make('items')
                             ->hiddenLabel()
                             ->minItems(1)
-                            ->addActionLabel('إضافة صنف')
+                            ->addActionLabel(__('filament.orders.add_item'))
                             ->reorderable(false)
                             ->columnSpanFull()
                             ->table([
-                                TableColumn::make('المنتج')
+                                TableColumn::make(__('filament.fields.product'))
                                     ->width('32%')
                                     ->markAsRequired(),
-                                TableColumn::make('اللون / المقاس')
+                                TableColumn::make(__('filament.fields.color_size'))
                                     ->width('48%')
                                     ->markAsRequired(),
-                                TableColumn::make('الكمية لكل لون')
+                                TableColumn::make(__('filament.fields.quantity_per_color'))
                                     ->width('15%')
                                     ->markAsRequired(),
                             ])
                             ->schema([
                                 Hidden::make('id'),
                                 Select::make('product_id')
-                                    ->label('المنتج')
+                                    ->label(__('filament.fields.product'))
                                     ->options(function (?Order $record): array {
                                         $currentProductIds = $record?->items->pluck('product_id')->filter()->unique()->all() ?? [];
 
@@ -72,7 +72,7 @@ class OrderEditForm
                                     ->live()
                                     ->afterStateUpdated(fn (Set $set) => $set('product_variant_id', null)),
                                 Select::make('product_variant_id')
-                                    ->label('اللون / المقاس')
+                                    ->label(__('filament.fields.color_size'))
                                     ->options(function (Get $get): array {
                                         $productId = $get('product_id');
 
@@ -92,7 +92,7 @@ class OrderEditForm
 
                                                 return [
                                                     $variant->id => ($dimensions === '' ? '' : $dimensions.' — ')
-                                                        .'المتاح: '.$variant->available_quantity,
+                                                        .__('filament.orders.available', ['count' => $variant->available_quantity]),
                                                 ];
                                             })
                                             ->all();
@@ -100,7 +100,7 @@ class OrderEditForm
                                     ->searchable()
                                     ->required(),
                                 TextInput::make('requested_quantity')
-                                    ->label('الكمية لكل لون')
+                                    ->label(__('filament.fields.quantity_per_color'))
                                     ->numeric()
                                     ->integer()
                                     ->minValue(1)

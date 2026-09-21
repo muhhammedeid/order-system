@@ -25,6 +25,7 @@ use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Model;
 
 class VariantsRelationManager extends RelationManager
 {
@@ -32,7 +33,10 @@ class VariantsRelationManager extends RelationManager
 
     protected static string $relationship = 'variants';
 
-    protected static ?string $title = 'Variants';
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('filament.variants.title');
+    }
 
     public static function colorOptions(?ProductVariant $record): array
     {
@@ -63,26 +67,26 @@ class VariantsRelationManager extends RelationManager
     protected function generateVariantsAction(): Action
     {
         return Action::make('generateVariants')
-            ->label('إضافة لون بالمقاسات الافتراضية')
+            ->label(__('filament.variants.generate'))
             ->icon(Heroicon::OutlinedSparkles)
-            ->modalHeading('إضافة الألوان بالمقاسات الخمسة')
-            ->modalDescription('كل لون سيُضاف تلقائيًا بجميع المقاسات الخمسة النشطة. الأصناف الموجودة لا تتغير.')
-            ->modalSubmitActionLabel('إضافة')
+            ->modalHeading(__('filament.variants.generate_heading'))
+            ->modalDescription(__('filament.variants.generate_description'))
+            ->modalSubmitActionLabel(__('filament.variants.generate_submit'))
             ->form([
                 Repeater::make('colors')
-                    ->label('الألوان والكميات')
-                    ->addActionLabel('إضافة لون')
+                    ->label(__('filament.variants.colors_quantities'))
+                    ->addActionLabel(__('filament.variants.add_color'))
                     ->defaultItems(1)
                     ->minItems(1)
                     ->columns(2)
                     ->schema([
                         Select::make('color')
-                            ->label('اللون')
+                            ->label(__('filament.fields.color'))
                             ->searchable()
                             ->required()
                             ->options(fn (): array => self::colorOptions(null)),
                         TextInput::make('quantity')
-                            ->label('الكمية الافتراضية')
+                            ->label(__('filament.variants.default_quantity'))
                             ->numeric()
                             ->integer()
                             ->minValue(0)
@@ -95,8 +99,8 @@ class VariantsRelationManager extends RelationManager
 
                 if (count($sizes) !== ProductVariant::DEFAULT_SIZE_COUNT) {
                     Notification::make()
-                        ->title('تعذرت إضافة الألوان')
-                        ->body('يجب أن يكون هناك 5 مقاسات نشطة بالضبط في إعدادات المقاسات.')
+                        ->title(__('filament.variants.invalid_sizes_title'))
+                        ->body(__('filament.variants.invalid_sizes_body'))
                         ->danger()
                         ->send();
 
@@ -109,8 +113,8 @@ class VariantsRelationManager extends RelationManager
                 );
 
                 Notification::make()
-                    ->title('تمت إضافة الألوان')
-                    ->body("تم إنشاء {$result['created']} صنفًا، وتجاهل {$result['skipped']} صنفًا موجودًا.")
+                    ->title(__('filament.variants.generated_title'))
+                    ->body(__('filament.variants.generated_body', $result))
                     ->success()
                     ->send();
             });
@@ -142,7 +146,7 @@ class VariantsRelationManager extends RelationManager
 
     protected function duplicateCombinationMessage(): string
     {
-        return 'هذا اللون والمقاس مضافان بالفعل لهذا المنتج.';
+        return __('filament.variants.duplicate');
     }
 
     public function form(Schema $schema): Schema
@@ -150,6 +154,7 @@ class VariantsRelationManager extends RelationManager
         return $schema
             ->components([
                 Select::make('color')
+                    ->label(__('filament.fields.color'))
                     ->required()
                     ->searchable()
                     ->options(fn (?ProductVariant $record) => self::colorOptions($record))
@@ -160,12 +165,13 @@ class VariantsRelationManager extends RelationManager
                         true,
                     ),
                 Select::make('size')
+                    ->label(__('filament.fields.size'))
                     ->nullable()
                     ->searchable()
                     ->options(fn (?ProductVariant $record) => self::sizeOptions($record))
                     ->rule(fn (Get $get, ?ProductVariant $record): \Closure => $this->duplicateCombinationRule($get, $record)),
                 TextInput::make('available_quantity')
-                    ->label('Available Quantity')
+                    ->label(__('filament.fields.available_quantity'))
                     ->required()
                     ->integer()
                     ->minValue(0)
@@ -179,15 +185,17 @@ class VariantsRelationManager extends RelationManager
             ->recordTitleAttribute('color')
             ->columns([
                 TextColumn::make('color')
-                    ->placeholder('—')
+                    ->label(__('filament.fields.color'))
+                    ->placeholder(__('filament.common.none'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('size')
-                    ->placeholder('—')
+                    ->label(__('filament.fields.size'))
+                    ->placeholder(__('filament.common.none'))
                     ->searchable()
                     ->sortable(),
                 TextInputColumn::make('available_quantity')
-                    ->label('Quantity')
+                    ->label(__('filament.fields.quantity'))
                     ->type('number')
                     ->rules(['required', 'integer', 'min:0', 'max:'.ProductVariant::MAX_QUANTITY])
                     ->sortable(),
@@ -196,7 +204,7 @@ class VariantsRelationManager extends RelationManager
                 $this->generateVariantsAction(),
                 $this->excelExportAction(
                     'exportExcel',
-                    'تصدير Excel',
+                    __('filament.common.export_excel'),
                     fn (Builder $query) => new ProductVariantsExport($query),
                 ),
             ])
@@ -209,8 +217,8 @@ class VariantsRelationManager extends RelationManager
                         }
 
                         Notification::make()
-                            ->title('تعذّر حذف المقاس')
-                            ->body('لا يمكن حذف هذا المقاس لأنه مرتبط بطلب نشط. يمكنك إبقاء المقاس كما هو أو تعديل الكمية المتاحة بدلًا من حذفه.')
+                            ->title(__('filament.variants.delete_blocked_title'))
+                            ->body(__('filament.variants.delete_blocked_body'))
                             ->danger()
                             ->send();
 
@@ -226,8 +234,8 @@ class VariantsRelationManager extends RelationManager
                             }
 
                             Notification::make()
-                                ->title('تعذّر حذف الأصناف المحددة')
-                                ->body('لا يمكن حذف بعض الأصناف المحددة لأنها مرتبطة بطلبات نشطة. لم يتم حذف أي صنف؛ يمكنك تعديل الكميات المتاحة بدلًا من الحذف.')
+                                ->title(__('filament.variants.bulk_delete_blocked_title'))
+                                ->body(__('filament.variants.bulk_delete_blocked_body'))
                                 ->danger()
                                 ->send();
 

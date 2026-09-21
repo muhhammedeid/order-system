@@ -6,6 +6,7 @@ import ProductCard from '@/Components/ProductCard.vue';
 import AppButton from '@/Components/Ui/AppButton.vue';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
 import { formatQuantity } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
 
 const props = defineProps({
     products: {
@@ -27,29 +28,30 @@ const props = defineProps({
 });
 
 const page = usePage();
+const { t } = useTranslations();
 const whatsapp = computed(() => page.props.whatsapp ?? null);
 
 const whatsappHref = computed(() =>
-    whatsapp.value ? `https://wa.me/${whatsapp.value}?text=${encodeURIComponent('مرحبًا، أريد الاستفسار عن أسعار الجملة من MAI SHOES')}` : null,
+    whatsapp.value ? `https://wa.me/${whatsapp.value}?text=${encodeURIComponent(t('home.whatsapp_message'))}` : null,
 );
 
-const STEPS = [
-    { icon: 'search', title: 'تصفح المتجر', text: 'اختر الفئة أو ابحث بكود المنتج.' },
-    { icon: 'swatch', title: 'حدد الكمية', text: 'شاهد الالوان المتاحة للمنتج قبل الطلب.' },
-    { icon: 'cart', title: 'أضف إلى الطلب', text: 'عدّل الكميات وراجع ملخص الطلب.' },
-    { icon: 'check-circle', title: 'أرسل الطلب', text: 'يؤكد فريق المبيعات الطلب ويتواصل معك.' },
-];
+const STEPS = computed(() => [
+    { icon: 'search', title: t('home.steps.browse.title'), text: t('home.steps.browse.text') },
+    { icon: 'swatch', title: t('home.steps.quantity.title'), text: t('home.steps.quantity.text') },
+    { icon: 'cart', title: t('home.steps.cart.title'), text: t('home.steps.cart.text') },
+    { icon: 'check-circle', title: t('home.steps.send.title'), text: t('home.steps.send.text') },
+]);
 
-const FEATURES = [
-    { icon: 'shield', title: 'جملة فقط', text: 'الأسعار والكميات مخصصة لتجار التجزئة.' },
-    { icon: 'truck', title: 'بدون دفع إلكتروني', text: 'الطلب يُسجل ويتم الاتفاق على التفاصيل مع فريق المبيعات.' },
-    { icon: 'sparkles', title: 'أسعار خاصة', text: 'بعض المنتجات بأسعار عند الطلب تُعرف مباشرة عبر واتساب.' },
-];
+const FEATURES = computed(() => [
+    { icon: 'shield', title: t('home.features.wholesale.title'), text: t('home.features.wholesale.text') },
+    { icon: 'truck', title: t('home.features.payment.title'), text: t('home.features.payment.text') },
+    { icon: 'sparkles', title: t('home.features.special_prices.title'), text: t('home.features.special_prices.text') },
+]);
 </script>
 
 <template>
     <StorefrontLayout full>
-        <Head :title="meta.title ?? 'الرئيسية'" />
+        <Head :title="meta.title ?? t('home.title')" />
 
         <section class="relative overflow-hidden border-b-4 border-line-strong bg-crimson text-cream">
             <AppIcon
@@ -65,17 +67,16 @@ const FEATURES = [
                             name="sparkles"
                             :size="16"
                         />
-                        أسعار جملة — انتاج مصنعنا
+                        {{ t('home.badge') }}
                     </span>
 
                     <h1 class="font-retro text-5xl leading-[1.15] text-cream sm:text-6xl lg:text-7xl">
-                         تصفح المنتجات وأطلب<br>
-                        <span class="text-powder">في دقائق</span>
+                        {{ t('home.heading') }}<br>
+                        <span class="text-powder">{{ t('home.heading_accent') }}</span>
                     </h1>
 
                     <p class="max-w-xl text-lg leading-relaxed text-cream/90">
-                        تصفح تشكيلة MAI SHOES، اعرف الألوان والمقاسات والكميات المتاحة لكل منتج،
-                        وأرسل طلبك في خطوات بسيطة — وفريقنا يؤكد الطلب ويتواصل معك.
+                        {{ t('home.intro') }}
                     </p>
 
                     <div class="flex flex-wrap items-center gap-3">
@@ -85,7 +86,7 @@ const FEATURES = [
                             size="lg"
                             icon="search"
                         >
-                            تصفح المتجر
+                            {{ t('home.browse') }}
                         </AppButton>
                         <a
                             v-if="whatsappHref"
@@ -98,13 +99,13 @@ const FEATURES = [
                                 name="whatsapp"
                                 :size="22"
                             />
-                            تواصل واتساب
+                            {{ t('home.whatsapp') }}
                         </a>
                     </div>
 
                     <dl class="flex flex-wrap gap-3 pt-1">
                         <div class="rounded-control border-2 border-cream/30 px-3.5 py-2">
-                            <dt class="text-xs text-cream/75">منتجات متاحة</dt>
+                            <dt class="text-xs text-cream/75">{{ t('home.available_products') }}</dt>
                             <dd class="font-display text-xl font-bold tabular-nums">
                                 {{ formatQuantity(stats.products ?? 0) }}
                             </dd>
@@ -113,7 +114,7 @@ const FEATURES = [
                             v-if="stats.categories"
                             class="rounded-control border-2 border-cream/30 px-3.5 py-2"
                         >
-                            <dt class="text-xs text-cream/75">فئات</dt>
+                            <dt class="text-xs text-cream/75">{{ t('home.categories') }}</dt>
                             <dd class="font-display text-xl font-bold tabular-nums">
                                 {{ formatQuantity(stats.categories) }}
                             </dd>
@@ -137,7 +138,7 @@ const FEATURES = [
         <section class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <h2 class="font-display text-3xl font-bold text-ink sm:text-4xl">
-                    تسوق حسب الفئة
+                    {{ t('home.shop_by_category') }}
                 </h2>
                 <AppButton
                     href="/catalog"
@@ -145,7 +146,7 @@ const FEATURES = [
                     size="sm"
                     icon="chevron-left"
                 >
-                    كل المنتجات
+                    {{ t('home.all_products') }}
                 </AppButton>
             </div>
 
@@ -164,7 +165,7 @@ const FEATURES = [
                             {{ category.name }}
                         </span>
                         <span class="text-xs text-ink-muted tabular-nums">
-                            {{ formatQuantity(category.products_count ?? 0) }} منتج
+                            {{ t('home.product_count', { count: formatQuantity(category.products_count ?? 0) }) }}
                         </span>
                     </span>
                     <AppIcon
@@ -178,7 +179,7 @@ const FEATURES = [
                 v-else
                 class="rounded-card border-2 border-dashed border-line px-4 py-10 text-center text-sm text-ink-muted"
             >
-                لا توجد فئات متاحة حاليًا.
+                {{ t('home.no_categories') }}
             </p>
         </section>
 
@@ -189,7 +190,7 @@ const FEATURES = [
             <div class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
                     <h2 class="font-display text-3xl font-bold text-ink sm:text-4xl">
-                        أحدث المنتجات
+                        {{ t('home.latest_products') }}
                     </h2>
                     <AppButton
                         href="/catalog"
@@ -197,7 +198,7 @@ const FEATURES = [
                         size="sm"
                         icon="chevron-left"
                     >
-                        عرض الكل
+                        {{ t('home.view_all') }}
                     </AppButton>
                 </div>
 
@@ -213,7 +214,7 @@ const FEATURES = [
 
         <section class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <h2 class="mb-6 font-display text-3xl font-bold text-ink sm:text-4xl">
-                كيف يعمل الطلب؟
+                {{ t('home.how_it_works') }}
             </h2>
 
             <ol class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

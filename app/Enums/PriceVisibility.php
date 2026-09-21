@@ -9,9 +9,6 @@ enum PriceVisibility: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::PublicPrice => 'Public',
-            self::RequestPrice => 'Request Price',
-        };
+        return __("domain.price_visibility.{$this->value}");
     }
 }

@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue';
 import AppBadge from '@/Components/Ui/AppBadge.vue';
-import { CURRENCY_LABEL, formatNumber } from '@/Utils/format';
+import { formatNumber } from '@/Utils/format';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     value: {
@@ -34,7 +37,7 @@ const isPublic = computed(() => props.visibility === 'public' && props.value !==
         :class="SIZES[size] ?? SIZES.md"
     >
         <span class="tabular-nums">{{ formatNumber(value) }}</span>
-        <span class="font-sans text-sm font-semibold text-ink-muted">{{ CURRENCY_LABEL }}</span>
+        <span class="font-sans text-sm font-semibold text-ink-muted">{{ t('common.currency') }}</span>
     </p>
 
     <AppBadge
@@ -42,6 +45,6 @@ const isPublic = computed(() => props.visibility === 'public' && props.value !==
         tone="powder-soft"
         size="md"
     >
-        السعر عند الطلب
+        {{ t('common.request_price') }}
     </AppBadge>
 </template>

@@ -41,6 +41,18 @@ class FilamentAdminAccessTest extends TestCase
             ->assertSee('dir="rtl"', false);
     }
 
+    public function test_admin_panel_follows_the_selected_english_locale(): void
+    {
+        $admin = User::factory()->create();
+
+        $this->withSession(['locale' => 'en'])
+            ->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('dir="ltr"', false)
+            ->assertSee('Order Management');
+    }
+
     public function test_admin_resource_pages_render(): void
     {
         $admin = User::factory()->create();

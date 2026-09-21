@@ -1,5 +1,8 @@
 <script setup>
 import { computed, useId } from 'vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 const props = defineProps({
     modelValue: {
@@ -108,7 +111,7 @@ function onInput(event) {
             <span
                 v-if="required"
                 class="sr-only"
-            >(مطلوب)</span>
+            >{{ t('common.required') }}</span>
         </label>
 
         <input

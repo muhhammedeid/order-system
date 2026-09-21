@@ -13,15 +13,18 @@ class VariantColorForm
         return $schema
             ->components([
                 TextInput::make('name')
+                    ->label(__('filament.fields.name'))
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 TextInput::make('sort_order')
+                    ->label(__('filament.fields.sort_order'))
                     ->required()
                     ->integer()
                     ->default(0)
                     ->minValue(0),
                 Toggle::make('active')
+                    ->label(__('filament.fields.active'))
                     ->default(true)
                     ->required(),
             ]);

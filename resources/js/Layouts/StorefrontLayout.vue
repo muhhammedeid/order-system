@@ -2,6 +2,9 @@
 import AppHeader from '@/Components/AppHeader.vue';
 import AppFooter from '@/Components/AppFooter.vue';
 import ToastHost from '@/Components/Ui/ToastHost.vue';
+import { useTranslations } from '@/composables/useTranslations';
+
+const { t } = useTranslations();
 
 defineProps({
     title: {
@@ -21,7 +24,7 @@ defineProps({
             href="#main"
             class="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-control focus:border-2 focus:border-line-strong focus:bg-surface-soft focus:px-4 focus:py-3 focus:font-semibold"
         >
-            تخطَّ إلى المحتوى
+            {{ t('nav.skip') }}
         </a>
 
         <AppHeader />

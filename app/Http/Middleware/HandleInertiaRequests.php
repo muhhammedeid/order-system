@@ -34,6 +34,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'cartCount' => \App\Support\Cart::count(),
             'appName' => config('app.name'),
+            'locale' => app()->getLocale(),
+            'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
+            'translations' => trans('storefront'),
+            'csrfToken' => csrf_token(),
             'whatsapp' => fn () => Setting::whatsappNumber(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

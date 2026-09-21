@@ -25,30 +25,33 @@ class ProductsTable
         return $table
             ->columns([
                 TextColumn::make('product_code')
-                    ->label('Product Code')
+                    ->label(__('filament.fields.product_code'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('name')
+                    ->label(__('filament.fields.name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('category.name')
-                    ->label('Category')
+                    ->label(__('filament.fields.category'))
                     ->sortable(),
                 TextColumn::make('price_visibility')
-                    ->label('Price Visibility')
+                    ->label(__('filament.fields.price_visibility'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof PriceVisibility ? $state->label() : $state),
                 TextColumn::make('price')
+                    ->label(__('filament.fields.price'))
                     ->numeric(),
                 IconColumn::make('active')
+                    ->label(__('filament.fields.active'))
                     ->boolean(),
             ])
             ->filters([
                 TernaryFilter::make('active')
-                    ->label('الحالة')
-                    ->placeholder('الكل')
-                    ->trueLabel('نشط')
-                    ->falseLabel('غير نشط'),
+                    ->label(__('filament.fields.status'))
+                    ->placeholder(__('filament.common.all'))
+                    ->trueLabel(__('filament.common.active'))
+                    ->falseLabel(__('filament.common.inactive')),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -57,7 +60,7 @@ class ProductsTable
                 BulkActionGroup::make([
                     self::excelExportSelectedAction(
                         'exportSelected',
-                        'تصدير المحدد Excel',
+                        __('filament.common.export_selected_excel'),
                         fn (EloquentCollection $records) => new ProductsExport(Product::query()->whereKey($records->modelKeys())),
                     ),
                     DeleteBulkAction::make()
@@ -67,8 +70,8 @@ class ProductsTable
                             }
 
                             Notification::make()
-                                ->title('تعذّر حذف المنتجات المحددة')
-                                ->body('لا يمكن حذف بعض المنتجات المحددة لأن مقاساتها مرتبطة بطلبات نشطة. لم يتم حذف أي منتج؛ يمكنك تعطيل المنتجات بدلًا من حذفها.')
+                                ->title(__('filament.products.bulk_delete_blocked_title'))
+                                ->body(__('filament.products.bulk_delete_blocked_body'))
                                 ->danger()
                                 ->send();
 
