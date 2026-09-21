@@ -5,7 +5,9 @@ FROM composer:2 AS php_dependencies
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts --optimize-autoloader
+RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts --optimize-autoloader \
+    --ignore-platform-req=ext-intl \
+    --ignore-platform-req=ext-gd
 
 
 FROM node:24-alpine AS frontend
