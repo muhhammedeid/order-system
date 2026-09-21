@@ -35,7 +35,7 @@ const whatsappHref = computed(() =>
 
 const STEPS = [
     { icon: 'search', title: 'تصفح المتجر', text: 'اختر الفئة أو ابحث بكود المنتج.' },
-    { icon: 'swatch', title: 'حدد اللون والمقاس', text: 'شاهد الكميات المتاحة لكل مقاس قبل الطلب.' },
+    { icon: 'swatch', title: 'حدد الكمية', text: 'شاهد الالوان المتاحة للمنتج قبل الطلب.' },
     { icon: 'cart', title: 'أضف إلى الطلب', text: 'عدّل الكميات وراجع ملخص الطلب.' },
     { icon: 'check-circle', title: 'أرسل الطلب', text: 'يؤكد فريق المبيعات الطلب ويتواصل معك.' },
 ];
@@ -65,11 +65,11 @@ const FEATURES = [
                             name="sparkles"
                             :size="16"
                         />
-                        أسعار الجملة — بدون دفع إلكتروني
+                        أسعار جملة — انتاج مصنعنا
                     </span>
 
                     <h1 class="font-retro text-5xl leading-[1.15] text-cream sm:text-6xl lg:text-7xl">
-                        اطلب أحذية الجملة<br>
+                         تصفح المنتجات وأطلب<br>
                         <span class="text-powder">في دقائق</span>
                     </h1>
 
