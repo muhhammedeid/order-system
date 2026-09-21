@@ -1,13 +1,19 @@
 # syntax=docker/dockerfile:1
 
-FROM composer:2 AS php_dependencies
+FROM php:8.2-cli-bookworm AS php_dependencies
+
+RUN apt-get update && apt-get install -y --no-install-recommends unzip git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
 COPY composer.json composer.lock ./
+# This stage only supplies PHP source files for Vite. Runtime dependencies are
+# installed and validated again in the PHP 8.2 application stage below.
 RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts --optimize-autoloader \
-    --ignore-platform-req=ext-intl \
-    --ignore-platform-req=ext-gd
+    --ignore-platform-reqs
 
 
 FROM node:24-alpine AS frontend
