@@ -1,5 +1,13 @@
 # syntax=docker/dockerfile:1
 
+FROM composer:2 AS php_dependencies
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts --optimize-autoloader
+
+
 FROM node:24-alpine AS frontend
 
 WORKDIR /app
@@ -7,6 +15,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+# Filament's Tailwind theme imports CSS from the Composer vendor directory.
+COPY --from=php_dependencies /app/vendor ./vendor
 COPY vite.config.js ./
 COPY resources ./resources
 RUN npm run build
