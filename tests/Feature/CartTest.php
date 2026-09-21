@@ -102,7 +102,7 @@ class CartTest extends TestCase
             ->create();
 
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 1])
-            ->assertSessionHasErrors('variant_id');
+            ->assertSessionHasErrors('variant_ids');
 
         $this->assertSame([], Cart::items());
     }

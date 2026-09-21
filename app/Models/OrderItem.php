@@ -63,7 +63,7 @@ class OrderItem extends Model
 
             $item->requested_quantity = $requestedQuantity;
             $item->color_count = $colorCount;
-            $item->quantity = $requestedQuantity * $colorCount;
+            $item->quantity = self::physicalQuantity($requestedQuantity, $colorCount);
 
             $delivered = (int) ($item->delivered_quantity ?? 0);
 
@@ -94,6 +94,94 @@ class OrderItem extends Model
     protected function remainingQuantity(): Attribute
     {
         return Attribute::get(fn () => (int) $this->quantity - (int) $this->delivered_quantity);
+    }
+
+    /**
+     * Number of colors this line covers. Always at least one, so the
+     * per-color unit stays well defined for historical rows.
+     */
+    public function effectiveColorCount(): int
+    {
+        return max(1, (int) $this->color_count);
+    }
+
+    /**
+     * Individual color names included in this line. The snapshot stores a
+     * human-readable list (Arabic or Latin commas), never rewritten later.
+     *
+     * @return array<int, string>
+     */
+    public function colors(): array
+    {
+        $colors = preg_split('/[،,]+/u', (string) $this->color, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return array_values(array_unique(array_filter(array_map('trim', $colors))));
+    }
+
+    /**
+     * Delivered pieces expressed in the production-requirements unit
+     * (quantity per color). Deliveries are stored as the physical piece
+     * total, so the conversion lives here only.
+     */
+    protected function deliveredQuantityPerColor(): Attribute
+    {
+        return Attribute::get(
+            fn (): int => self::perColorQuantityFromPhysical((int) $this->delivered_quantity, $this->effectiveColorCount()),
+        );
+    }
+
+    /**
+     * Remaining pieces per color: requested quantity minus the delivered
+     * per-color quantity. Never fractional.
+     */
+    protected function remainingQuantityPerColor(): Attribute
+    {
+        return Attribute::get(
+            fn (): int => max(0, (int) $this->requested_quantity - $this->delivered_quantity_per_color),
+        );
+    }
+
+    /**
+     * Whole per-color quantities still available for partial delivery: only
+     * whole sets can be expressed in the per-color input without exceeding
+     * the stored physical remainder. Historical rows whose delivered
+     * quantity is not a multiple of the color count keep their odd
+     * remainder for the deliver-all action.
+     */
+    protected function deliverableQuantityPerColor(): Attribute
+    {
+        return Attribute::get(
+            fn (): int => self::perColorQuantityFromPhysical(max(0, (int) $this->remaining_quantity), $this->effectiveColorCount()),
+        );
+    }
+
+    /**
+     * Converts a per-color quantity into the stored physical piece total.
+     * The single conversion point for delivery input, order editing, and
+     * the derived quantity invariant.
+     */
+    public static function physicalQuantity(int $quantityPerColor, int $colorCount): int
+    {
+        return $quantityPerColor * max(1, $colorCount);
+    }
+
+    /**
+     * Converts a stored physical piece total back into the per-color unit,
+     * always flooring so legacy rows never report more delivered pieces
+     * than were actually recorded.
+     */
+    public static function perColorQuantityFromPhysical(int $physicalQuantity, int $colorCount): int
+    {
+        return intdiv(max(0, $physicalQuantity), max(1, $colorCount));
+    }
+
+    /**
+     * Converts a per-color quantity into the stored physical piece total.
+     * The single conversion point for delivery input.
+     */
+    public function physicalQuantityForPerColor(int $quantityPerColor): int
+    {
+        return self::physicalQuantity($quantityPerColor, $this->effectiveColorCount());
     }
 
     /**
@@ -144,8 +232,10 @@ class OrderItem extends Model
     }
 
     /**
-     * Restricts the query to items with a positive remaining quantity
-     * (quantity - delivered_quantity).
+     * Restricts the query to items with a positive remaining physical
+     * quantity (quantity - delivered_quantity). This is equivalent to a
+     * positive remaining quantity per color, because the stored total is
+     * always the per-color quantity multiplied by the color count.
      */
     public function scopeWithOutstandingQuantity(Builder $query): Builder
     {
@@ -153,40 +243,86 @@ class OrderItem extends Model
     }
 
     /**
-     * Total remaining quantity for production, optionally for one product.
-     * Rows in excluded statuses or with zero remaining contribute nothing.
+     * Total remaining production requirement in the approved per-color
+     * unit, optionally for one product: the requested quantity of every
+     * outstanding line of confirmed / partially delivered orders minus the
+     * quantity already delivered per color. Rows in excluded statuses or
+     * with zero remaining quantity contribute nothing. The physical piece
+     * total (requested quantity × colors, or quantity − delivered_quantity)
+     * is never used.
+     *
+     * The division is aligned to a whole multiple of the color count before
+     * dividing, so every engine returns the same floored per-color value
+     * without relying on engine-specific rounding.
      */
-    public static function outstandingQuantityTotal(?int $productId = null): int
+    public static function productionRemainingQuantityTotal(?int $productId = null): int
     {
+        $colorCount = 'CASE WHEN order_items.color_count > 0 THEN order_items.color_count ELSE 1 END';
+        $perColorDelivered = "((order_items.delivered_quantity - (order_items.delivered_quantity % {$colorCount})) / {$colorCount})";
+
         return (int) static::query()
             ->inProduction()
             ->withOutstandingQuantity()
             ->when($productId !== null, fn (Builder $query) => $query->where('order_items.product_id', $productId))
-            ->sum(DB::raw('order_items.quantity - order_items.delivered_quantity'));
+            ->sum(DB::raw("order_items.requested_quantity - {$perColorDelivered}"));
     }
 
     /**
-     * Outstanding quantity grouped by product, used by the dashboard
-     * production-requirements catalog. Products with no positive
-     * outstanding quantity are excluded.
+     * Per-color production requirement totals grouped by product, used by
+     * the production-requirements cards. Each outstanding line contributes
+     * its requested quantity (the gross quantity required for each of its
+     * colors) once to the product total and once to every color captured in
+     * its snapshot, so the main quantity is never multiplied by the number
+     * of colors and never equals the sum of the color breakdown. Lines with
+     * a positive remaining quantity are included regardless of how much of
+     * them was already delivered; products with no such line are excluded.
      *
-     * @return Collection<int, object{product_id: int, required_quantity: int, requested_quantity: int, orders_count: int}>
+     * @return Collection<int, object{product_id: int, required_quantity: int, orders_count: int, color_quantities: array<string, int>}>
      */
-    public static function productProductionTotals(): Collection
+    public static function productProductionTotals(?int $productId = null): Collection
     {
-        return static::query()
+        $items = static::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->whereIn('orders.status', self::productionStatuses())
             ->whereColumn('order_items.delivered_quantity', '<', 'order_items.quantity')
             ->whereNotNull('order_items.product_id')
-            ->groupBy('order_items.product_id')
-            ->selectRaw('order_items.product_id as product_id')
-            ->selectRaw('SUM(order_items.quantity - order_items.delivered_quantity) as required_quantity')
-            ->selectRaw('SUM(CASE WHEN order_items.requested_quantity IS NULL OR order_items.requested_quantity < 1 THEN order_items.quantity ELSE order_items.requested_quantity END) as requested_quantity')
-            ->selectRaw('COUNT(DISTINCT order_items.order_id) as orders_count')
-            ->havingRaw('SUM(order_items.quantity - order_items.delivered_quantity) > 0')
-            ->orderByDesc('required_quantity')
-            ->get();
+            ->when($productId !== null, fn (Builder $query) => $query->where('order_items.product_id', $productId))
+            ->orderBy('order_items.product_id')
+            ->orderBy('order_items.id')
+            ->get([
+                'order_items.product_id',
+                'order_items.order_id',
+                'order_items.color',
+                'order_items.requested_quantity',
+            ]);
+
+        return $items
+            ->groupBy('product_id')
+            ->map(function (Collection $rows, int|string $groupedProductId): object {
+                $colorQuantities = [];
+                $orderIds = [];
+                $requiredQuantity = 0;
+
+                foreach ($rows as $row) {
+                    /** @var self $row */
+                    $required = max(0, (int) $row->requested_quantity);
+                    $requiredQuantity += $required;
+                    $orderIds[(int) $row->order_id] = true;
+
+                    foreach ($row->colors() as $color) {
+                        $colorQuantities[$color] = ($colorQuantities[$color] ?? 0) + $required;
+                    }
+                }
+
+                return (object) [
+                    'product_id' => (int) $groupedProductId,
+                    'required_quantity' => $requiredQuantity,
+                    'orders_count' => count($orderIds),
+                    'color_quantities' => $colorQuantities,
+                ];
+            })
+            ->sortByDesc('required_quantity')
+            ->values();
     }
 
     /**

@@ -13,7 +13,6 @@ use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use UnitEnum;
 
 class Settings extends Page
 {
@@ -86,6 +85,11 @@ class Settings extends Page
     }
 
     public static function getNavigationLabel(): string
+    {
+        return __('admin.navigation.general_settings');
+    }
+
+    public function getTitle(): string
     {
         return __('admin.navigation.general_settings');
     }

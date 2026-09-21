@@ -235,7 +235,6 @@ class Order extends Model
                     if ((int) $requestedQuantity > intdiv(OrderItem::MAX_QUANTITY, $colorCount)) {
                         throw new OrderItemException('إجمالي عدد القطع يتجاوز الحد المسموح');
                     }
-
                     if (! $variant->product->size_enabled
                         && (int) $requestedQuantity % ProductVariant::DEFAULT_SIZE_COUNT !== 0) {
                         throw new OrderItemException('الكمية لكل لون يجب أن تقبل القسمة على عدد المقاسات الافتراضية (5)');
@@ -243,7 +242,7 @@ class Order extends Model
 
                     $attributes = [
                         'requested_quantity' => (int) $requestedQuantity,
-                        'quantity' => (int) $requestedQuantity * $colorCount,
+                        'quantity' => OrderItem::physicalQuantity((int) $requestedQuantity, $colorCount),
                     ];
                 } else {
                     if (! $variant->product->size_enabled
@@ -285,7 +284,10 @@ class Order extends Model
     }
 
     /**
-     * Records partial deliveries for the given items.
+     * Records partial deliveries for the given items. Submitted quantities
+     * are expressed in the production-requirements unit — the quantity per
+     * color — and converted to the stored physical piece total here, in one
+     * place, through the item model.
      *
      * @param  array<int, array{quantity: mixed, expected_delivered: mixed}>  $deliveries  keyed by order_item id
      */
@@ -341,6 +343,9 @@ class Order extends Model
      * then derives the resulting order status. Throws and rolls back the
      * surrounding transaction on any invalid entry.
      *
+     * Partial deliveries are submitted per color; `$deliverAll` entries are
+     * already exact physical remainders computed from the locked rows.
+     *
      * @param  array<int, array{quantity: mixed, expected_delivered: mixed}>  $deliveries
      */
     private function applyDeliveries(self $order, array $deliveries, bool $deliverAll = false): void
@@ -384,7 +389,7 @@ class Order extends Model
             $expected = $row['expected_delivered'] ?? null;
 
             if (! is_numeric($quantity) || (int) $quantity != $quantity || (int) $quantity < 0) {
-                throw new OrderDeliveryException('كمية التسليم يجب أن تكون عددًا صحيحًا غير سالب');
+                throw new OrderDeliveryException('كمية التسليم لكل لون يجب أن تكون عددًا صحيحًا غير سالب');
             }
 
             if (! is_numeric($expected) || (int) $expected != $expected || (int) $expected < 0) {
@@ -395,12 +400,18 @@ class Order extends Model
                 throw new OrderDeliveryException('تم تحديث كميات التسليم من جلسة أخرى — يرجى إعادة فتح النافذة والمحاولة مرة أخرى');
             }
 
-            if ((int) $quantity > (int) $item->remaining_quantity) {
-                throw new OrderDeliveryException("كمية التسليم تتجاوز المتبقي للبند {$item->product_name} ({$item->product_code}) — المتبقي {$item->remaining_quantity}");
+            $physicalQuantity = $deliverAll
+                ? (int) $quantity
+                : $item->physicalQuantityForPerColor((int) $quantity);
+
+            if ($physicalQuantity > (int) $item->remaining_quantity) {
+                throw new OrderDeliveryException(
+                    "كمية التسليم تتجاوز المتبقي للبند {$item->product_name} ({$item->product_code}) — المتاح للتسليم {$item->deliverable_quantity_per_color} لكل لون"
+                );
             }
 
-            $total += (int) $quantity;
-            $prepared[] = ['item' => $item, 'quantity' => (int) $quantity];
+            $total += $physicalQuantity;
+            $prepared[] = ['item' => $item, 'quantity' => $physicalQuantity];
         }
 
         if ($total < 1) {

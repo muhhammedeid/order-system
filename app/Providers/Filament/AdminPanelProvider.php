@@ -10,10 +10,10 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Navigation\NavigationGroup;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -35,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName(fn (): string => __('admin.brand'))
             ->brandLogo('/favicon.svg')
-            ->brandLogoHeight('2.25rem')
+            ->brandLogoHeight('1.9rem')
             ->favicon('/favicon.svg')
             ->font(
                 'IBM Plex Sans Arabic',
@@ -58,7 +58,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->spa()
             ->sidebarCollapsibleOnDesktop()
-            ->sidebarWidth('18rem')
+            ->sidebarWidth('16rem')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->navigationGroups([
                 NavigationGroup::make()->label(fn (): string => __('admin.navigation.operations')),

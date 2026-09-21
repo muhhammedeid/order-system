@@ -5,13 +5,15 @@ namespace App\Filament\Pages;
 use App\Enums\OrderStatus;
 use App\Filament\Concerns\HasExcelExport;
 use App\Filament\Resources\OrderManagement\OrderManagementResource;
+use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Support\Exports\OrderItemsExport;
+use App\Support\Exports\ProductionRequirementsExport;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\EmbeddedTable;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
@@ -25,10 +27,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 
 /**
- * Transparent source view for the outstanding production quantity KPI:
- * one row per ordered variant of confirmed / partially delivered orders
- * with a positive remaining quantity. Optionally filtered by product for
- * the dashboard catalog drill-down.
+ * Transparent source view for the production requirement KPI: one row per
+ * ordered line of confirmed / partially delivered orders with a positive
+ * remaining quantity. Every quantity is expressed in the approved
+ * per-color unit (the requested quantity is the quantity required for each
+ * color). Optionally filtered by product for the card drill-down.
+ *
+ * The unified requirement cards appear first, directly under the page title
+ * and actions, and follow the same product filter.
  */
 class ProductionRequirements extends Page implements HasTable
 {
@@ -91,20 +97,21 @@ class ProductionRequirements extends Page implements HasTable
                     ->searchable(),
                 TextColumn::make('color')
                     ->label(__('admin.production.color'))
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->wrap(),
                 TextColumn::make('size')
                     ->label(__('admin.production.size'))
-                    ->placeholder('—'),
-                TextColumn::make('quantity')
-                    ->label(__('admin.production.ordered_quantity'))
+                    ->placeholder('—')
+                    ->wrap(),
+                TextColumn::make('requested_quantity')
+                    ->label(__('admin.production.required_per_color'))
                     ->numeric(),
-                TextColumn::make('delivered_quantity')
-                    ->label(__('admin.production.delivered_quantity'))
+                TextColumn::make('delivered_quantity_per_color')
+                    ->label(__('admin.production.delivered_per_color'))
                     ->numeric(),
-                TextColumn::make('remaining_quantity')
-                    ->label(__('admin.production.remaining_quantity'))
-                    ->numeric()
-                    ->state(fn (OrderItem $record): int => $record->remaining_quantity),
+                TextColumn::make('remaining_quantity_per_color')
+                    ->label(__('admin.production.remaining_per_color'))
+                    ->numeric(),
                 TextColumn::make('order.status')
                     ->label(__('admin.production.status'))
                     ->badge()
@@ -123,9 +130,12 @@ class ProductionRequirements extends Page implements HasTable
     {
         return $schema
             ->components([
+                Livewire::make(ProductionRequirementsWidget::class, [
+                    'product' => $this->product,
+                ])->key('production-requirements-'.($this->product ?? 'all')),
                 Section::make()
                     ->schema([
-                        Text::make(fn (): string => __('admin.production.total_heading', ['count' => number_format($this->outstandingTotal())]))
+                        Text::make(fn (): string => __('admin.production.total_heading', ['count' => number_format($this->remainingTotal())]))
                             ->weight(FontWeight::Bold),
                         Text::make(fn (): string => $this->selectedProductLabel())
                             ->visible(fn (): bool => filled($this->product)),
@@ -140,7 +150,7 @@ class ProductionRequirements extends Page implements HasTable
             $this->excelExportAction(
                 'exportExcel',
                 __('admin.production.export'),
-                fn (Builder $items) => new OrderItemsExport($items, 'production-requirements'),
+                fn (Builder $items) => new ProductionRequirementsExport($items),
             ),
             Action::make('clearProductFilter')
                 ->label(__('admin.production.show_all'))
@@ -151,13 +161,13 @@ class ProductionRequirements extends Page implements HasTable
     }
 
     /**
-     * Same aggregate criterion as the Outstanding Quantity KPI, restricted
-     * to the optional product filter so the header always reconciles with
-     * the displayed rows.
+     * Same aggregate criterion as the Production Requirements KPI and the
+     * table's remaining column, restricted to the optional product filter,
+     * so the header always reconciles with the displayed rows.
      */
-    public function outstandingTotal(): int
+    public function remainingTotal(): int
     {
-        return OrderItem::outstandingQuantityTotal($this->product);
+        return OrderItem::productionRemainingQuantityTotal($this->product);
     }
 
     private function selectedProductLabel(): string

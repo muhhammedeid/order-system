@@ -39,6 +39,11 @@ class VariantSizeResource extends Resource
         return __('admin.models.size');
     }
 
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.models.sizes');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return VariantSizeForm::configure($schema);

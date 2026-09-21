@@ -223,13 +223,13 @@ class OrderManagementPageTest extends TestCase
                         'id' => $item->id,
                         'product_id' => $variant->product_id,
                         'product_variant_id' => $variant->id,
-                        'quantity' => 9,
+                        'requested_quantity' => 9,
                     ],
                     [
                         'id' => null,
                         'product_id' => $newVariant->product_id,
                         'product_variant_id' => $newVariant->id,
-                        'quantity' => 2,
+                        'requested_quantity' => 2,
                     ],
                 ],
             ])
@@ -274,12 +274,12 @@ class OrderManagementPageTest extends TestCase
                         'id' => $item->id,
                         'product_id' => $variant->product_id,
                         'product_variant_id' => $variant->id,
-                        'quantity' => 0,
+                        'requested_quantity' => 0,
                     ],
                 ],
             ])
             ->call('save')
-            ->assertHasFormErrors(['items.0.quantity']);
+            ->assertHasFormErrors(['items.0.requested_quantity']);
 
         $this->assertSame(5, $item->refresh()->quantity);
     }
@@ -320,6 +320,56 @@ class OrderManagementPageTest extends TestCase
         $this->assertSame(OrderStatus::PartiallyDelivered, $order->status);
         $this->assertSame(2, $item->refresh()->delivered_quantity);
         $this->assertSame(3, $item->remaining_quantity);
+    }
+
+    public function test_record_delivery_action_submits_the_quantity_per_color(): void
+    {
+        $admin = User::factory()->create();
+
+        $product = Product::factory()->create([
+            'color_enabled' => false,
+            'size_enabled' => false,
+            'price_visibility' => 'public',
+            'price' => 100,
+        ]);
+
+        $variants = collect(['Black', 'White', 'Beige'])->map(fn (string $color): ProductVariant => ProductVariant::factory()
+            ->for($product)
+            ->create(['color' => $color, 'size' => '37', 'available_quantity' => 0]));
+
+        $order = Order::create([
+            'order_number' => Order::nextOrderNumber(),
+            'customer_id' => Customer::factory()->create()->id,
+            'total_quantity' => 0,
+        ]);
+
+        $snapshot = OrderItem::snapshotFromVariant($variants->first());
+        $snapshot['color'] = 'Black، White، Beige';
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => 5,
+            'color_count' => 3,
+            'quantity' => 15,
+        ]);
+
+        $order->recalculateTotalQuantity();
+        $order->confirm();
+        $order->refresh();
+
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->callAction('recordDelivery', data: [
+                'deliveries' => [$item->id => 3],
+                'expected' => [$item->id => 0],
+            ])
+            ->assertNotified();
+
+        $item->refresh();
+
+        $this->assertSame(9, $item->delivered_quantity);
+        $this->assertSame(3, $item->delivered_quantity_per_color);
+        $this->assertSame(2, $item->remaining_quantity_per_color);
+        $this->assertSame(OrderStatus::PartiallyDelivered, $order->refresh()->status);
     }
 
     public function test_deliver_all_action_completes_the_order_from_the_view_page(): void

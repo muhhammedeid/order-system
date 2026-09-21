@@ -164,19 +164,20 @@ class OrderStatusActions
 
             $components[] = TextInput::make("deliveries.{$item->id}")
                 ->label($label)
-                ->helperText(__('filament.orders.actions.delivery_summary', [
-                    'ordered' => $item->quantity,
-                    'delivered' => $item->delivered_quantity,
-                    'remaining' => $item->remaining_quantity,
+                ->helperText(__('filament.orders.actions.delivery_per_color_summary', [
+                    'required' => $item->requested_quantity,
+                    'colors' => $item->effectiveColorCount(),
+                    'delivered' => $item->delivered_quantity_per_color,
+                    'deliverable' => $item->deliverable_quantity_per_color,
                 ]))
                 ->numeric()
                 ->integer()
                 ->minValue(0)
-                ->maxValue((int) $item->remaining_quantity)
+                ->maxValue($item->deliverable_quantity_per_color)
                 ->default(0)
                 ->live(onBlur: true)
                 ->hint(fn (Get $get): string => __('filament.orders.actions.remaining_after', [
-                    'remaining' => max(0, (int) $item->remaining_quantity - (int) $get("deliveries.{$item->id}")),
+                    'remaining' => max(0, $item->deliverable_quantity_per_color - (int) $get("deliveries.{$item->id}")),
                 ]));
 
             $components[] = Hidden::make("expected.{$item->id}")

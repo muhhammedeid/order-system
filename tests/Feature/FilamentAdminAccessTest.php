@@ -93,10 +93,43 @@ class FilamentAdminAccessTest extends TestCase
     public function test_variant_lookups_and_settings_share_the_settings_navigation_group(): void
     {
         $this->assertSame('الإعدادات', VariantColorResource::getNavigationGroup());
-        $this->assertSame('ألوان الأصناف', VariantColorResource::getNavigationLabel());
+        $this->assertSame('ألوان المنتجات', VariantColorResource::getNavigationLabel());
+        $this->assertSame('ألوان المنتجات', VariantColorResource::getPluralModelLabel());
         $this->assertSame('الإعدادات', VariantSizeResource::getNavigationGroup());
-        $this->assertSame('مقاسات الأصناف', VariantSizeResource::getNavigationLabel());
+        $this->assertSame('مقاسات المنتجات', VariantSizeResource::getNavigationLabel());
+        $this->assertSame('مقاسات المنتجات', VariantSizeResource::getPluralModelLabel());
         $this->assertSame('الإعدادات', Settings::getNavigationGroup());
         $this->assertSame('الإعدادات العامة', Settings::getNavigationLabel());
+    }
+
+    public function test_settings_pages_have_no_english_titles_or_headings(): void
+    {
+        $admin = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/settings')
+            ->assertOk()
+            ->assertSee('الإعدادات العامة')
+            ->assertDontSee('General Settings');
+
+        $this->actingAs($admin)
+            ->get('/admin/variant-colors')
+            ->assertOk()
+            ->assertSee('ألوان المنتجات')
+            ->assertSee('الاسم')
+            ->assertSee('ترتيب العرض')
+            ->assertSee('نشط')
+            ->assertDontSee('Variant Colors');
+
+        $this->actingAs($admin)
+            ->get('/admin/variant-colors/create')
+            ->assertOk()
+            ->assertSee('ألوان المنتجات');
+
+        $this->actingAs($admin)
+            ->get('/admin/variant-sizes')
+            ->assertOk()
+            ->assertSee('مقاسات المنتجات')
+            ->assertDontSee('Variant Sizes');
     }
 }

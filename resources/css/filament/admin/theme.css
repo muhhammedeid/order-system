@@ -3,11 +3,41 @@
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../resources/views/filament/**/*.blade.php';
 
+/*
+ * Admin density.
+ *
+ * The approved density is the previous interface rendered at 80% browser
+ * zoom. It is reproduced here by scaling the actual design tokens (Tailwind
+ * spacing and typography scales) instead of CSS `zoom` or `transform:
+ * scale()`, so layout breakpoints, RTL behaviour, focus rings and
+ * responsive stacking keep working. Every token below is 80% of the
+ * Tailwind v4 default. This stylesheet is only loaded inside the Admin
+ * panel.
+ */
 :root {
-    --mai-admin-radius: 0.9rem;
+    --mai-admin-radius: 0.7rem;
+
+    --spacing: 0.2rem;
+
+    --text-xs: 0.6rem;
+    --text-xs--line-height: 0.8rem;
+    --text-sm: 0.7rem;
+    --text-sm--line-height: 1rem;
+    --text-base: 0.8rem;
+    --text-base--line-height: 1.2rem;
+    --text-lg: 0.9rem;
+    --text-lg--line-height: 1.4rem;
+    --text-xl: 1rem;
+    --text-xl--line-height: 1.4rem;
+    --text-2xl: 1.2rem;
+    --text-2xl--line-height: 1.6rem;
+    --text-3xl: 1.5rem;
+    --text-3xl--line-height: 1.8rem;
 }
 
 .fi-body {
+    --topbar-height: 3.25rem;
+
     background:
         radial-gradient(circle at 8% 0%, rgb(37 99 235 / 0.06), transparent 24rem),
         var(--gray-50);
@@ -30,14 +60,25 @@
     box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px rgb(15 23 42 / 0.035);
 }
 
+/*
+ * Current production requirement cards: one unified structure for every
+ * product — image, identity, required quantity per color, required color
+ * breakdown, then the contributing orders and the drill-down action.
+ */
+.production-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
+    gap: 0.75rem;
+}
+
 .production-card {
     display: flex;
     min-height: 100%;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: 0.6rem;
     border: 1px solid rgb(148 163 184 / 0.28);
     border-radius: var(--mai-admin-radius);
-    padding: 0.875rem;
+    padding: 0.6rem;
     background: rgb(255 255 255 / 0.72);
 }
 
@@ -45,29 +86,160 @@
     background: rgb(15 23 42 / 0.55);
 }
 
+.production-card-image {
+    width: 100%;
+    height: 7rem;
+    border-radius: 0.5rem;
+    object-fit: cover;
+}
+
+.production-card-image-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--gray-100);
+    color: var(--gray-400);
+}
+
+.dark .production-card-image-empty {
+    background-color: var(--gray-800);
+}
+
+.production-card-image-empty > svg {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+.production-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.production-card-name {
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.production-card-code {
+    margin-top: 0.1rem;
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    direction: ltr;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+.dark .production-card-code {
+    color: var(--gray-400);
+}
+
+.production-section-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-500);
+}
+
+.dark .production-section-label {
+    color: var(--gray-400);
+}
+
+.production-quantity-section {
+    border: 1px solid var(--primary-100);
+    border-radius: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--primary-50);
+}
+
+.dark .production-quantity-section {
+    border-color: var(--primary-900);
+    background: rgb(23 37 84 / 0.4);
+}
+
+@supports (color: color-mix(in oklab, red, white)) {
+    .dark .production-quantity-section {
+        background: color-mix(in oklab, var(--primary-950) 40%, transparent);
+    }
+}
+
+.production-quantity-section .production-section-label {
+    color: var(--gray-600);
+}
+
+.dark .production-quantity-section .production-section-label {
+    color: var(--gray-300);
+}
+
 .production-quantity {
-    font-size: 2rem;
-    line-height: 1;
+    margin-top: 0.15rem;
+    font-size: 1.5rem;
+    line-height: 1.1;
     font-weight: 800;
-    color: rgb(29 78 216);
+    color: var(--primary-700);
 }
 
 .dark .production-quantity {
-    color: rgb(96 165 250);
+    color: var(--primary-400);
+}
+
+.production-breakdown-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .production-breakdown {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+    gap: 0.4rem;
 }
 
 .production-breakdown-item {
-    border-radius: 0.7rem;
-    padding: 0.6rem 0.7rem;
-    background: rgb(241 245 249);
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    background: var(--gray-100);
 }
 
 .dark .production-breakdown-item {
-    background: rgb(30 41 59);
+    background: var(--gray-800);
+}
+
+.production-breakdown-color {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    overflow-wrap: anywhere;
+}
+
+.dark .production-breakdown-color {
+    color: var(--gray-400);
+}
+
+.production-breakdown-quantity {
+    margin-top: 0.15rem;
+    font-weight: 700;
+    color: var(--gray-950);
+}
+
+.dark .production-breakdown-quantity {
+    color: var(--color-white);
+}
+
+.production-breakdown-empty {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
+
+.dark .production-breakdown-empty {
+    color: var(--gray-400);
+}
+
+.production-card-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.15rem;
 }

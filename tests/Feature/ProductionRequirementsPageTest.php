@@ -174,12 +174,12 @@ class ProductionRequirementsPageTest extends TestCase
         $page->assertCanSeeTableRecords([$orderA1, $orderA2])
             ->assertCanNotSeeTableRecords([$orderB]);
 
-        $this->assertSame(10, $page->instance()->outstandingTotal());
-        $this->assertSame(4, OrderItem::outstandingQuantityTotal($productB->id));
-        $this->assertSame(14, OrderItem::outstandingQuantityTotal());
+        $this->assertSame(10, $page->instance()->remainingTotal());
+        $this->assertSame(4, OrderItem::productionRemainingQuantityTotal($productB->id));
+        $this->assertSame(14, OrderItem::productionRemainingQuantityTotal());
     }
 
-    public function test_drill_down_total_reconciles_with_widget_card_and_outstanding_kpi(): void
+    public function test_drill_down_total_reconciles_with_card_and_outstanding_kpi(): void
     {
         $productA = $this->newProduct(['name' => 'Shoe A', 'product_code' => 'SH-A']);
         $productB = $this->newProduct(['name' => 'Shoe B', 'product_code' => 'SH-B']);
@@ -190,22 +190,167 @@ class ProductionRequirementsPageTest extends TestCase
 
         $totals = OrderItem::productProductionTotals();
 
+        // Card main quantity: the sum of the requested quantities per color.
         $cardA = (int) $totals->firstWhere('product_id', $productA->id)->required_quantity;
         $cardB = (int) $totals->firstWhere('product_id', $productB->id)->required_quantity;
 
-        $this->assertSame(10, $cardA);
+        $this->assertSame(13, $cardA);
         $this->assertSame(4, $cardB);
 
         $pageA = Livewire::actingAs(User::factory()->create())
             ->test(ProductionRequirements::class, ['product' => $productA->id]);
 
-        $this->assertSame($cardA, $pageA->instance()->outstandingTotal());
+        // Header and KPI: the remaining quantity per color of the same rows.
+        $this->assertSame(10, $pageA->instance()->remainingTotal());
+        $this->assertSame(10, OrderItem::productionRemainingQuantityTotal($productA->id));
 
         $unfiltered = Livewire::actingAs(User::factory()->create())
             ->test(ProductionRequirements::class);
 
-        $this->assertSame($cardA + $cardB, $unfiltered->instance()->outstandingTotal());
-        $this->assertSame(OrderItem::outstandingQuantityTotal(), $unfiltered->instance()->outstandingTotal());
+        $this->assertSame(14, $unfiltered->instance()->remainingTotal());
+        $this->assertSame(OrderItem::productionRemainingQuantityTotal(), $unfiltered->instance()->remainingTotal());
+    }
+
+    public function test_table_shows_per_color_required_delivered_and_remaining_values(): void
+    {
+        $product = $this->newProduct([
+            'name' => 'Heel',
+            'product_code' => 'MAI-001',
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+        $variant = $this->newVariant($product, 'Black', '37');
+        $this->newVariant($product, 'White', '37');
+        $this->newVariant($product, 'Beige', '37');
+
+        $order = $this->newOrder(OrderStatus::Confirmed);
+        $snapshot = OrderItem::snapshotFromVariant($variant);
+        $snapshot['color'] = 'Black، White، Beige';
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => 5,
+            'color_count' => 3,
+            'quantity' => 15,
+        ]);
+
+        $order->recalculateTotalQuantity();
+
+        // 6 physical pieces = 2 per color.
+        $order->recordDeliveries([$item->id => ['quantity' => 2, 'expected_delivered' => 0]]);
+
+        $page = Livewire::actingAs(User::factory()->create())->test(ProductionRequirements::class);
+
+        $page->assertCanSeeTableRecords([$order->refresh()])
+            ->assertTableColumnStateSet('requested_quantity', 5, $item)
+            ->assertTableColumnStateSet('delivered_quantity_per_color', 2, $item)
+            ->assertTableColumnStateSet('remaining_quantity_per_color', 3, $item)
+            ->assertSee('الكمية المطلوبة لكل لون')
+            ->assertSee('تم تسليمه لكل لون')
+            ->assertSee('المتبقي لكل لون');
+
+        $this->assertSame(6, $item->refresh()->delivered_quantity);
+        $this->assertSame(3, $item->remaining_quantity_per_color);
+        $this->assertSame(3, $page->instance()->remainingTotal());
+    }
+
+    public function test_historical_single_color_items_keep_their_totals_as_per_color_values(): void
+    {
+        [, $item] = $this->orderWithItem(OrderStatus::PartiallyDelivered, 8, 3);
+
+        $this->assertSame(8, $item->requested_quantity);
+        $this->assertSame(1, $item->effectiveColorCount());
+        $this->assertSame(8, $item->quantity);
+        $this->assertSame(3, $item->delivered_quantity_per_color);
+        $this->assertSame(5, $item->remaining_quantity_per_color);
+        $this->assertSame(5, $item->remaining_quantity);
+    }
+
+    public function test_legacy_odd_delivered_remainders_reconcile_between_header_and_rows(): void
+    {
+        $product = $this->newProduct([
+            'name' => 'Legacy Colors',
+            'product_code' => 'LEG-1',
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+
+        $variant = $this->newVariant($product, 'Black', '37');
+        $this->newVariant($product, 'White', '37');
+        $this->newVariant($product, 'Beige', '37');
+
+        $order = $this->newOrder(OrderStatus::Confirmed);
+
+        $snapshot = OrderItem::snapshotFromVariant($variant);
+        $snapshot['color'] = 'Black، White، Beige';
+
+        $threeColorItem = $order->items()->create($snapshot + [
+            'requested_quantity' => 5,
+            'color_count' => 3,
+            'quantity' => 15,
+        ]);
+
+        $twoColorItem = $order->items()->create($snapshot + [
+            'color' => 'Black، White',
+            'requested_quantity' => 4,
+            'color_count' => 2,
+            'quantity' => 8,
+        ]);
+
+        $order->recalculateTotalQuantity();
+
+        // Historical deliveries that are not multiples of the color count.
+        $threeColorItem->setDeliveredQuantity(5);
+        $twoColorItem->setDeliveredQuantity(1);
+
+        $page = Livewire::actingAs(User::factory()->create())->test(ProductionRequirements::class);
+
+        $threeColorItem->refresh();
+        $twoColorItem->refresh();
+
+        $this->assertSame(1, $threeColorItem->delivered_quantity_per_color);
+        $this->assertSame(4, $threeColorItem->remaining_quantity_per_color);
+        $this->assertSame(0, $twoColorItem->delivered_quantity_per_color);
+        $this->assertSame(4, $twoColorItem->remaining_quantity_per_color);
+
+        $expectedTotal = $threeColorItem->remaining_quantity_per_color + $twoColorItem->remaining_quantity_per_color;
+
+        $this->assertSame($expectedTotal, $page->instance()->remainingTotal());
+        $this->assertSame($expectedTotal, OrderItem::productionRemainingQuantityTotal());
+    }
+
+    public function test_cards_section_appears_above_the_requirements_table(): void
+    {
+        $this->orderWithItem(OrderStatus::Confirmed, 5);
+
+        $html = $this->actingAs(User::factory()->create())
+            ->get('/admin/production-requirements')
+            ->assertOk()
+            ->assertSee('توزيع الألوان المطلوبة')
+            ->getContent();
+
+        $cardsPosition = strpos($html, 'class="production-grid"');
+        $tablePosition = strpos($html, 'fi-ta-ctn');
+
+        $this->assertNotFalse($cardsPosition, 'Expected the requirement cards to be rendered.');
+        $this->assertNotFalse($tablePosition, 'Expected the requirements table to be rendered.');
+        $this->assertLessThan($tablePosition, $cardsPosition, 'The cards must appear before the table.');
+    }
+
+    public function test_page_cards_follow_the_product_filter(): void
+    {
+        $productA = $this->newProduct(['name' => 'Shoe A', 'product_code' => 'SH-A']);
+        $productB = $this->newProduct(['name' => 'Shoe B', 'product_code' => 'SH-B']);
+
+        $this->orderWithItem(OrderStatus::Confirmed, 5, 0, $productA, $this->newVariant($productA, 'Black', '41'));
+        $this->orderWithItem(OrderStatus::Confirmed, 4, 0, $productB, $this->newVariant($productB, 'Red', '40'));
+
+        $this->actingAs(User::factory()->create())
+            ->get("/admin/production-requirements?product={$productA->id}")
+            ->assertOk()
+            ->assertSee('SH-A')
+            ->assertSee('Black')
+            ->assertDontSee('SH-B')
+            ->assertDontSee('Red');
     }
 
     public function test_order_number_links_to_the_order_view_page(): void
@@ -242,7 +387,7 @@ class ProductionRequirementsPageTest extends TestCase
             ->test(ProductionRequirements::class)
             ->assertSee('لا توجد كميات مطلوبة للتشغيل حالياً');
 
-        $this->assertSame(0, OrderItem::outstandingQuantityTotal());
+        $this->assertSame(0, OrderItem::productionRemainingQuantityTotal());
     }
 
     public function test_page_renders_with_the_updated_terminology_and_western_digits(): void
@@ -274,4 +419,3 @@ class ProductionRequirementsPageTest extends TestCase
         $this->actingAs($admin)->get("/admin/production-requirements?product={$product->id}")->assertOk();
     }
 }
-

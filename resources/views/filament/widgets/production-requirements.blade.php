@@ -10,7 +10,7 @@
                 icon="heroicon-o-check-circle"
             />
         @else
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="production-grid">
                 @foreach ($requirements as $requirement)
                     @php
                         $drilldownUrl = \App\Filament\Pages\ProductionRequirements::getUrl(['product' => $requirement['id']]);
@@ -22,20 +22,18 @@
                                 src="{{ $requirement['image'] }}"
                                 alt="{{ __('admin.production.image_alt', ['product' => $requirement['name']]) }}"
                                 loading="lazy"
-                                class="h-40 w-full rounded-xl object-cover"
+                                class="production-card-image"
                             >
                         @else
-                            <div class="flex h-40 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-gray-800">
-                                <x-filament::icon icon="heroicon-o-photo" class="h-9 w-9" />
+                            <div class="production-card-image production-card-image-empty">
+                                <x-filament::icon icon="heroicon-o-photo" />
                             </div>
                         @endif
 
-                        <header class="flex items-start justify-between gap-3">
+                        <header class="production-card-header">
                             <div class="min-w-0">
-                                <h3 class="truncate font-semibold text-gray-950 dark:text-white">
-                                    {{ $requirement['name'] }}
-                                </h3>
-                                <p class="mt-1 text-sm text-gray-500" dir="ltr">{{ $requirement['code'] }}</p>
+                                <h3 class="production-card-name">{{ $requirement['name'] }}</h3>
+                                <p class="production-card-code" dir="ltr">{{ $requirement['code'] }}</p>
                             </div>
 
                             @unless ($requirement['active'])
@@ -43,36 +41,43 @@
                             @endunless
                         </header>
 
-                        <section class="rounded-xl border border-primary-200 bg-primary-50 p-3 dark:border-primary-900 dark:bg-primary-950/40">
-                            <p class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                                {{ $requirement['quantity_mode'] === 'per_color'
-                                    ? __('admin.production.order_quantity_per_color')
-                                    : __('admin.production.total_required') }}
+                        <section
+                            class="production-quantity-section"
+                            aria-labelledby="production-required-{{ $requirement['id'] }}"
+                        >
+                            <p
+                                class="production-section-label"
+                                id="production-required-{{ $requirement['id'] }}"
+                            >
+                                {{ __('admin.production.required_per_color') }}
                             </p>
-                            <p class="production-quantity mt-2 tabular-nums">
+                            <p class="production-quantity tabular-nums">
                                 {{ number_format($requirement['required_quantity']) }}
                             </p>
                         </section>
 
-                        @if ($requirement['quantity_mode'] === 'per_color' && count($requirement['color_breakdown']))
-                            <section aria-label="{{ __('admin.production.colors_breakdown') }}">
-                                <p class="mb-2 text-xs font-semibold text-gray-500">
-                                    {{ __('admin.production.colors_breakdown') }}
-                                </p>
+                        <section class="production-breakdown-section" aria-label="{{ __('admin.production.color_breakdown') }}">
+                            <p class="production-section-label">
+                                {{ __('admin.production.color_breakdown') }}
+                            </p>
+
+                            @if (count($requirement['color_breakdown']))
                                 <div class="production-breakdown">
                                     @foreach ($requirement['color_breakdown'] as $color)
                                         <div class="production-breakdown-item">
-                                            <p class="truncate text-xs text-gray-500">{{ $color['color'] }}</p>
-                                            <p class="mt-1 font-bold tabular-nums text-gray-950 dark:text-white">
+                                            <p class="production-breakdown-color">{{ $color['color'] }}</p>
+                                            <p class="production-breakdown-quantity tabular-nums">
                                                 {{ trans_choice('admin.production.pieces', $color['quantity'], ['count' => number_format($color['quantity'])]) }}
                                             </p>
                                         </div>
                                     @endforeach
                                 </div>
-                            </section>
-                        @endif
+                            @else
+                                <p class="production-breakdown-empty">{{ __('admin.production.color_breakdown_empty') }}</p>
+                            @endif
+                        </section>
 
-                        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                        <div class="production-card-footer">
                             <x-filament::badge color="gray">
                                 {{ trans_choice('admin.production.orders_count', $requirement['orders_count'], ['count' => $requirement['orders_count']]) }}
                             </x-filament::badge>
@@ -81,7 +86,7 @@
                                 tag="a"
                                 :href="$drilldownUrl"
                                 size="sm"
-                                icon="heroicon-m-arrow-left"
+                                icon="heroicon-m-list-bullet"
                             >
                                 {{ __('admin.production.view_orders') }}
                             </x-filament::button>
@@ -92,4 +97,3 @@
         @endif
     </x-filament::section>
 </x-filament-widgets::widget>
-

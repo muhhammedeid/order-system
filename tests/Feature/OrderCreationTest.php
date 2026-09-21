@@ -66,7 +66,7 @@ class OrderCreationTest extends TestCase
         $this->assertSame('public', $item->price_visibility);
     }
 
-    public function test_unsized_order_item_snapshot_has_null_size(): void
+    public function test_size_less_variant_of_a_size_required_product_cannot_be_ordered(): void
     {
         $variant = ProductVariant::factory()
             ->for(Product::factory()->create([
@@ -77,14 +77,12 @@ class OrderCreationTest extends TestCase
             ]))
             ->create(['color' => 'Black', 'size' => null, 'available_quantity' => 10]);
 
-        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2]);
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2])
+            ->assertSessionHasErrors('variant_ids');
+
         $this->post('/checkout', ['name' => 'X', 'phone' => '01001234567']);
 
-        $item = OrderItem::query()->first();
-
-        $this->assertNull($item->size);
-        $this->assertSame('Black', $item->color);
-        $this->assertSame('450.00', $item->unit_price);
+        $this->assertSame(0, OrderItem::query()->count());
     }
 
     public function test_forced_color_order_item_snapshot_contains_all_available_colors(): void

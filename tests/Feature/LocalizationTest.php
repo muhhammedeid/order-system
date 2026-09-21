@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class LocalizationTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_storefront_defaults_to_arabic_and_rtl(): void
     {
         $this->get('/')

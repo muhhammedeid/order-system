@@ -282,6 +282,160 @@ class OrderDeliveryTest extends TestCase
         $this->assertSame(OrderStatus::Delivered, $deliveredOrder->status);
     }
 
+    /**
+     * Confirmed order with one multi-color line: requested quantity per
+     * color, stored physical total, and a snapshot color list.
+     *
+     * @param  array<int, string>  $colors
+     * @return array{0: Order, 1: OrderItem}
+     */
+    private function multiColorOrder(int $requestedPerColor = 5, array $colors = ['Black', 'White', 'Beige']): array
+    {
+        $product = Product::factory()->create([
+            'price_visibility' => 'public',
+            'price' => 100,
+            'size_enabled' => false,
+        ]);
+
+        $variants = collect($colors)->map(fn (string $color): ProductVariant => ProductVariant::factory()
+            ->for($product)
+            ->create([
+                'color' => $color,
+                'size' => '37',
+                'available_quantity' => 0,
+            ]));
+
+        $order = $this->newOrder();
+
+        $snapshot = OrderItem::snapshotFromVariant($variants->first());
+        $snapshot['color'] = implode('، ', $colors);
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => $requestedPerColor,
+            'color_count' => count($colors),
+            'quantity' => $requestedPerColor * count($colors),
+        ]);
+
+        $order->recalculateTotalQuantity();
+        $order->confirm();
+        $order->refresh();
+
+        return [$order, $item->refresh()];
+    }
+
+    public function test_partial_delivery_is_submitted_per_color_and_multiplied_for_storage(): void
+    {
+        [$order, $item] = $this->multiColorOrder();
+
+        $order->recordDeliveries([
+            $item->id => ['quantity' => 2, 'expected_delivered' => 0],
+        ]);
+
+        $item->refresh();
+
+        // 2 per color x 3 colors = 6 stored pieces.
+        $this->assertSame(6, $item->delivered_quantity);
+        $this->assertSame(2, $item->delivered_quantity_per_color);
+        $this->assertSame(3, $item->remaining_quantity_per_color);
+        $this->assertSame(9, $item->remaining_quantity);
+        $this->assertSame(OrderStatus::PartiallyDelivered, $order->status);
+    }
+
+    public function test_per_color_delivery_cannot_exceed_the_remaining_quantity_per_color(): void
+    {
+        [$order, $item] = $this->multiColorOrder();
+
+        try {
+            $order->recordDeliveries([
+                $item->id => ['quantity' => 6, 'expected_delivered' => 0],
+            ]);
+            $this->fail('Expected OrderDeliveryException for an over-delivery');
+        } catch (OrderDeliveryException) {
+        }
+
+        $this->assertSame(0, $item->refresh()->delivered_quantity);
+        $this->assertSame(OrderStatus::Confirmed, $order->status);
+    }
+
+    public function test_repeated_per_color_deliveries_complete_a_multi_color_item(): void
+    {
+        [$order, $item] = $this->multiColorOrder();
+
+        $order->recordDeliveries([
+            $item->id => ['quantity' => 2, 'expected_delivered' => 0],
+        ]);
+
+        $order->recordDeliveries([
+            $item->id => ['quantity' => 3, 'expected_delivered' => 6],
+        ]);
+
+        $item->refresh();
+
+        $this->assertSame(15, $item->delivered_quantity);
+        $this->assertSame(0, $item->remaining_quantity_per_color);
+        $this->assertSame(OrderStatus::Delivered, $order->refresh()->status);
+    }
+
+    public function test_legacy_odd_delivered_remainder_uses_the_floor_per_color_unit_and_delivers_all_safely(): void
+    {
+        [$order, $item] = $this->multiColorOrder();
+
+        // Legacy physical delivery recorded before the per-color unit existed.
+        $item->setDeliveredQuantity(4);
+        $item->refresh();
+
+        $this->assertSame(1, $item->delivered_quantity_per_color);
+        $this->assertSame(4, $item->remaining_quantity_per_color);
+        $this->assertSame(11, $item->remaining_quantity);
+
+        $order->deliverAllRemaining();
+
+        $this->assertSame(15, $item->refresh()->delivered_quantity);
+        $this->assertSame(0, $item->remaining_quantity_per_color);
+        $this->assertSame(OrderStatus::Delivered, $order->refresh()->status);
+    }
+
+    public function test_partial_delivery_is_capped_to_whole_per_color_sets_for_legacy_rows(): void
+    {
+        [$order, $item] = $this->multiColorOrder();
+
+        // Legacy physical delivery, not a multiple of the color count.
+        $item->setDeliveredQuantity(4);
+        $item->refresh();
+
+        $this->assertSame(1, $item->delivered_quantity_per_color);
+        $this->assertSame(4, $item->remaining_quantity_per_color);
+        $this->assertSame(3, $item->deliverable_quantity_per_color);
+
+        // 4 per color would mean 12 pieces against only 11 remaining.
+        try {
+            $order->recordDeliveries([
+                $item->id => ['quantity' => 4, 'expected_delivered' => 4],
+            ]);
+            $this->fail('Expected OrderDeliveryException for an over-delivery');
+        } catch (OrderDeliveryException) {
+        }
+
+        $order->recordDeliveries([
+            $item->id => ['quantity' => 3, 'expected_delivered' => 4],
+        ]);
+
+        $item->refresh();
+
+        $this->assertSame(13, $item->delivered_quantity);
+        $this->assertSame(0, $item->deliverable_quantity_per_color);
+        $this->assertSame(2, $item->remaining_quantity);
+        $this->assertSame(1, $item->remaining_quantity_per_color);
+        $this->assertSame(OrderStatus::PartiallyDelivered, $order->status);
+
+        // The odd remainder is completed by the deliver-all action.
+        $order->deliverAllRemaining();
+
+        $this->assertSame(15, $item->refresh()->delivered_quantity);
+        $this->assertSame(0, $item->remaining_quantity_per_color);
+        $this->assertSame(OrderStatus::Delivered, $order->refresh()->status);
+    }
+
     public function test_deliver_all_remaining_marks_everything_delivered(): void
     {
         [$order, $itemA, $itemB] = $this->confirmedOrder();

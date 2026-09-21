@@ -43,12 +43,13 @@ class OrderEditingFoundationTest extends TestCase
         $order = $this->submittedOrder(3);
         $item = $order->items()->firstOrFail();
 
-        $item->quantity = 7;
+        $item->requested_quantity = 7;
         $item->save();
 
         $order->recalculateTotalQuantity();
 
         $this->assertSame(7, $order->refresh()->total_quantity);
+        $this->assertSame(7, $item->refresh()->quantity);
     }
 
     public function test_total_quantity_recalculates_after_adding_and_removing_items(): void
@@ -95,7 +96,7 @@ class OrderEditingFoundationTest extends TestCase
             'size' => $item->size,
         ];
 
-        $item->quantity = 5;
+        $item->requested_quantity = 5;
         $item->save();
         $order->recalculateTotalQuantity();
 

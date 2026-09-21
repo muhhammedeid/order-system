@@ -417,6 +417,63 @@ class AdminExcelExportTest extends TestCase
         $this->assertNotContains('SH-B', $this->column($sheet, 'F'));
     }
 
+    public function test_production_requirements_export_uses_per_color_quantities(): void
+    {
+        $product = $this->makeProduct([
+            'product_code' => 'SH-M',
+            'name' => 'Multi Color',
+            'color_enabled' => false,
+            'size_enabled' => false,
+        ]);
+
+        $black = $this->makeVariant($product, 'Black', '37');
+        $this->makeVariant($product, 'White', '37');
+        $this->makeVariant($product, 'Beige', '37');
+
+        $order = Order::create([
+            'order_number' => Order::nextOrderNumber(),
+            'customer_id' => Customer::factory()->create()->id,
+            'total_quantity' => 0,
+        ]);
+
+        $snapshot = OrderItem::snapshotFromVariant($black);
+        $snapshot['color'] = 'Black، White، Beige';
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => 5,
+            'color_count' => 3,
+            'quantity' => 15,
+        ]);
+
+        $order->recalculateTotalQuantity();
+        $order->confirm();
+
+        $order->recordDeliveries([$item->id => ['quantity' => 2, 'expected_delivered' => 0]]);
+
+        $sheet = $this->sheetFromDownload(
+            Livewire::actingAs($this->admin())
+                ->test(ProductionRequirements::class)
+                ->callAction('exportExcel'),
+            $this->timestamped('production-requirements'),
+        );
+
+        $this->assertSame(2, $sheet->getHighestRow());
+
+        $this->assertSame([
+            'Order No', 'Order Date', 'Customer Code', 'Customer Name', 'Phone',
+            'Product Code', 'Product Name', 'Color', 'Size',
+            'Required Qty Per Color', 'Delivered Per Color', 'Remaining Per Color', 'Status',
+        ], $this->headers($sheet));
+
+        $this->assertSame('Black، White، Beige', $sheet->getCell('H2')->getValue());
+        $this->assertSame(5, (int) $sheet->getCell('J2')->getValue());
+        $this->assertSame(2, (int) $sheet->getCell('K2')->getValue());
+        $this->assertSame(3, (int) $sheet->getCell('L2')->getValue());
+
+        // 2 per color x 3 colors stored as the physical total.
+        $this->assertSame(6, $item->refresh()->delivered_quantity);
+    }
+
     public function test_selected_orders_bulk_export_contains_only_selected_orders(): void
     {
         $variant = $this->makeVariant($this->makeProduct());

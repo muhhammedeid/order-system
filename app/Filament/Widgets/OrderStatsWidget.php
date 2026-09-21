@@ -57,7 +57,7 @@ class OrderStatsWidget extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-archive-box')
                 ->color('gray')
                 ->url(OrderResource::getUrl('index')),
-            Stat::make(__('admin.stats.production_required'), OrderItem::outstandingQuantityTotal())
+            Stat::make(__('admin.stats.production_required'), OrderItem::productionRemainingQuantityTotal())
                 ->description(__('admin.stats.production_required_description'))
                 ->descriptionIcon('heroicon-m-cog-6-tooth')
                 ->color('danger')

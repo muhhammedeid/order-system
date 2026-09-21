@@ -369,13 +369,13 @@ class OrderItemEditingTest extends TestCase
         $order->recalculateTotalQuantity();
 
         $order->updateItems([
-            ['id' => $item->id, 'product_id' => $unsizedProduct->id, 'product_variant_id' => $unsizedVariant->id, 'quantity' => 6],
+            ['id' => $item->id, 'product_id' => $unsizedProduct->id, 'product_variant_id' => $unsizedVariant->id, 'quantity' => 10],
         ]);
 
         $item->refresh();
 
         $this->assertNull($item->size);
-        $this->assertSame(6, $item->quantity);
+        $this->assertSame(10, $item->quantity);
         $this->assertSame('Brown', $item->color);
     }
 
@@ -399,13 +399,13 @@ class OrderItemEditingTest extends TestCase
         $order->recalculateTotalQuantity();
 
         $order->updateItems([
-            ['id' => $item->id, 'product_id' => $uncoloredProduct->id, 'product_variant_id' => $uncoloredVariant->id, 'quantity' => 6],
+            ['id' => $item->id, 'product_id' => $uncoloredProduct->id, 'product_variant_id' => $uncoloredVariant->id, 'quantity' => 10],
         ]);
 
         $item->refresh();
 
         $this->assertSame('Black', $item->color);
         $this->assertSame('40', $item->size);
-        $this->assertSame(6, $item->quantity);
+        $this->assertSame(10, $item->quantity);
     }
 }

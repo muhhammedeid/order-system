@@ -39,6 +39,11 @@ class VariantColorResource extends Resource
         return __('admin.models.color');
     }
 
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.models.colors');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return VariantColorForm::configure($schema);
