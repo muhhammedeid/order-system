@@ -102,7 +102,8 @@ class OrderStatusActions
             ->label(__('filament.orders.actions.partial_delivery'))
             ->icon('heroicon-o-truck')
             ->color('info')
-            ->visible(fn (Order $record): bool => in_array($record->status, [OrderStatus::Confirmed, OrderStatus::PartiallyDelivered], true))
+            ->visible(fn (Order $record): bool => in_array($record->status, [OrderStatus::Confirmed, OrderStatus::PartiallyDelivered], true)
+                && $record->hasOutstandingColors())
             ->modalHeading(fn (Order $record): string => __('filament.orders.actions.partial_heading', ['order' => $record->order_number]))
             ->modalDescription(__('filament.orders.actions.partial_description'))
             ->modalSubmitActionLabel(__('filament.orders.actions.save_delivery'))
@@ -190,24 +191,25 @@ class OrderStatusActions
     }
 
     /**
-     * One delivery row per ordered color: requested, previously delivered,
-     * remaining and the quantity delivered now for that color only.
+     * One delivery row per ordered color that still requires delivery. The
+     * rows come exclusively from this order's persisted snapshot color rows
+     * (`order.items.colorQuantities`): fully delivered colors and fully
+     * delivered items never appear, and the product's current colors are
+     * never read.
      *
      * @return array<int, mixed>
      */
     private static function deliveryForm(Order $record): array
     {
-        $record->loadMissing('items.colorQuantities');
+        $record->loadMissing('items.outstandingColorQuantities');
 
         $components = [];
 
         foreach ($record->items as $item) {
             /** @var OrderItem $item */
-            $sizes = filled($item->size) ? ' / '.$item->size : '';
-
             if ($item->hasUnallocatedDeliveries()) {
                 $components[] = Placeholder::make("unallocated.{$item->id}")
-                    ->label($item->product_name.' — '.$item->product_code.$sizes)
+                    ->label(self::itemColorLabel($item))
                     ->content(__('filament.orders.actions.unallocated_warning', [
                         'count' => $item->unallocated_delivered_quantity,
                     ]));
@@ -215,18 +217,16 @@ class OrderStatusActions
                 continue;
             }
 
-            foreach ($item->colorQuantities as $colorRow) {
+            foreach ($item->outstandingColorQuantities as $colorRow) {
                 /** @var OrderItemColorQuantity $colorRow */
-                $label = $item->product_name.' — '.$item->product_code.$sizes.' / '.$colorRow->color;
-
                 $components[] = TextInput::make("deliveries.{$colorRow->id}")
-                    ->label($label)
+                    ->label(self::itemColorLabel($item, $colorRow->color))
                     ->helperText(__('filament.orders.actions.delivery_color_summary', [
-                        'color' => $colorRow->color,
                         'required' => $colorRow->requested_quantity,
                         'delivered' => $colorRow->delivered_quantity,
                         'remaining' => $colorRow->remaining_quantity,
                     ]))
+                    ->placeholder(__('filament.orders.actions.deliver_now'))
                     ->numeric()
                     ->integer()
                     ->minValue(0)
@@ -234,6 +234,7 @@ class OrderStatusActions
                     ->default(0)
                     ->live(onBlur: true)
                     ->hint(fn (Get $get): string => __('filament.orders.actions.remaining_after', [
+                        'color' => $colorRow->color,
                         'remaining' => max(0, $colorRow->remaining_quantity - (int) $get("deliveries.{$colorRow->id}")),
                     ]));
 
@@ -243,6 +244,20 @@ class OrderStatusActions
         }
 
         return $components;
+    }
+
+    /**
+     * Explicit product, code and color label shared by the delivery rows.
+     */
+    private static function itemColorLabel(OrderItem $item, ?string $color = null): string
+    {
+        $label = $item->product_name.' — '.$item->product_code;
+
+        if (filled($color)) {
+            $label .= ' — '.$color;
+        }
+
+        return $label;
     }
 
     /**

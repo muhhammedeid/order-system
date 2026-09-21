@@ -92,6 +92,30 @@ class OrderItem extends Model
         return $this->hasMany(OrderItemColorQuantity::class)->orderBy('id');
     }
 
+    /**
+     * Ordered colors that still require delivery.
+     */
+    public function outstandingColorQuantities(): HasMany
+    {
+        return $this->colorQuantities()->outstanding();
+    }
+
+    /**
+     * Ordered colors that were fully delivered.
+     */
+    public function completedColorQuantities(): HasMany
+    {
+        return $this->colorQuantities()->completed();
+    }
+
+    /**
+     * True when at least one ordered color still requires delivery.
+     */
+    public function hasOutstandingColors(): bool
+    {
+        return $this->colorQuantities()->outstanding()->exists();
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -215,13 +239,35 @@ class OrderItem extends Model
 
     /**
      * Keeps the physical delivered total aligned with the authoritative
-     * color rows (including any legacy unallocated remainder). Only the
-     * delivery and reconciliation domains may rely on this.
+     * color rows (including any legacy unallocated remainder) and verifies
+     * the requested invariants:
+     *
+     *   quantity            = Σ color requested quantities
+     *   delivered_quantity  = Σ color delivered quantities + unallocated
+     *
+     * Only the delivery and reconciliation domains may rely on this.
      */
     public function syncDeliveredAggregate(): void
     {
-        $delivered = (int) $this->colorQuantities()->sum('delivered_quantity')
-            + (int) $this->unallocated_delivered_quantity;
+        $totals = $this->colorQuantities()
+            ->reorder()
+            ->selectRaw('COUNT(*) as color_rows, COALESCE(SUM(requested_quantity), 0) as requested_total, COALESCE(SUM(delivered_quantity), 0) as delivered_total')
+            ->first();
+
+        $colorRows = (int) ($totals->color_rows ?? 0);
+        $requestedTotal = (int) ($totals->requested_total ?? 0);
+        $deliveredTotal = (int) ($totals->delivered_total ?? 0);
+
+        // The requested invariant is only meaningful once every expected
+        // color row exists; historical lines with a mismatched snapshot keep
+        // a single authoritative row and are exempt.
+        if ($colorRows === $this->effectiveColorCount() && $requestedTotal !== (int) $this->quantity) {
+            throw new \InvalidArgumentException(
+                'كميات الألوان المطلوبة لا تطابق إجمالي قطع البند — يلزم مراجعة بيانات البند'
+            );
+        }
+
+        $delivered = $deliveredTotal + (int) $this->unallocated_delivered_quantity;
 
         if ($delivered > (int) $this->quantity) {
             throw new \InvalidArgumentException('الكمية المُسلَّمة يجب أن تكون بين صفر والكمية المطلوبة');

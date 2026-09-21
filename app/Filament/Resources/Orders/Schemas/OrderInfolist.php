@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Enums\OrderStatus;
 use App\Models\OrderItem;
+use App\Models\OrderItemColorQuantity;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -100,12 +101,6 @@ class OrderInfolist
                                 TextEntry::make('quantity')
                                     ->label(__('filament.fields.total_pieces'))
                                     ->numeric(),
-                                TextEntry::make('delivered_quantity')
-                                    ->label(__('filament.fields.delivered_quantity'))
-                                    ->numeric(),
-                                TextEntry::make('remaining_quantity')
-                                    ->label(__('filament.fields.remaining_quantity'))
-                                    ->numeric(),
                                 TextEntry::make('unallocated_delivered_quantity')
                                     ->label(__('filament.orders.unallocated_delivered'))
                                     ->badge()
@@ -127,8 +122,52 @@ class OrderInfolist
                                         : bcmul((string) $record->unit_price, (string) $record->quantity, 2)),
                             ])
                             ->columns(4),
+                        self::remainingByColorEntry(),
+                        self::completedColorsEntry(),
+                        TextEntry::make('all_colors_delivered')
+                            ->hiddenLabel()
+                            ->badge()
+                            ->color('success')
+                            ->state(__('filament.orders.all_colors_delivered'))
+                            ->visible(fn (OrderItem $record): bool => $record->completedColorQuantities()->exists()
+                                && ! $record->hasOutstandingColors()),
                     ]),
             ]);
+    }
+
+    /**
+     * Outstanding remaining quantity grouped by ordered color. A single
+     * aggregate remaining value is never shown on its own.
+     */
+    private static function remainingByColorEntry(): RepeatableEntry
+    {
+        return RepeatableEntry::make('outstandingColorQuantities')
+            ->label(__('filament.orders.remaining_by_color'))
+            ->schema([
+                TextEntry::make('remaining_by_color')
+                    ->hiddenLabel()
+                    ->state(fn (OrderItemColorQuantity $record): string => $record->color.' — '
+                        .trans_choice('filament.units.pieces', $record->remaining_quantity, [
+                            'count' => number_format($record->remaining_quantity),
+                        ])),
+            ])
+            ->visible(fn (OrderItem $record): bool => $record->hasOutstandingColors());
+    }
+
+    /**
+     * Compact list of the colors that were fully delivered.
+     */
+    private static function completedColorsEntry(): RepeatableEntry
+    {
+        return RepeatableEntry::make('completedColorQuantities')
+            ->label(__('filament.orders.completed_colors'))
+            ->schema([
+                TextEntry::make('completed_color')
+                    ->hiddenLabel()
+                    ->state(fn (OrderItemColorQuantity $record): string => $record->color.' — '
+                        .__('filament.orders.color_fully_delivered')),
+            ])
+            ->visible(fn (OrderItem $record): bool => $record->completedColorQuantities()->exists());
     }
 
     public static function customerSection(): Section

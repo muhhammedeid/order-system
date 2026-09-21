@@ -95,6 +95,18 @@ class OrderItemColorQuantity extends Model
     }
 
     /**
+     * Colors that were fully delivered.
+     */
+    public function scopeCompleted(Builder $query): Builder
+    {
+        return $query->whereColumn(
+            'order_item_color_quantities.delivered_quantity',
+            '>=',
+            'order_item_color_quantities.requested_quantity',
+        );
+    }
+
+    /**
      * Color rows whose order is in production (confirmed or partially
      * delivered). These are the only colors that count as current
      * production requirements.
