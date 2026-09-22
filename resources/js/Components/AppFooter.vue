@@ -8,7 +8,26 @@ import { useTranslations } from '@/composables/useTranslations';
 const page = usePage();
 const { t } = useTranslations();
 
-const whatsapp = computed(() => page.props.whatsapp ?? null);
+/*
+ * The shared `whatsapp` prop is the configured number as a string, but a
+ * request-price product page replaces it with `{ number, message, href }`.
+ * The footer renders on every page, so normalise both shapes: the payload
+ * object must never be interpolated, and the contact link must stay a valid
+ * wa.me URL.
+ */
+const whatsappLink = computed(() => {
+    const value = page.props.whatsapp;
+
+    if (typeof value === 'string' && value !== '') {
+        return { href: `https://wa.me/${value}`, number: value };
+    }
+
+    if (typeof value?.number === 'string' && value.number !== '') {
+        return { href: `https://wa.me/${value.number}`, number: value.number };
+    }
+
+    return null;
+});
 
 const year = new Date().getFullYear();
 
@@ -64,8 +83,8 @@ const LINKS = computed(() => [
                 </h2>
 
                 <a
-                    v-if="whatsapp"
-                    :href="`https://wa.me/${whatsapp}`"
+                    v-if="whatsappLink"
+                    :href="whatsappLink.href"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="inline-flex min-h-11 w-fit items-center gap-2 rounded-control border border-line-strong bg-surface px-3.5 text-sm font-semibold text-ink transition-colors duration-200 ease-out hover:bg-surface-soft"
@@ -79,7 +98,7 @@ const LINKS = computed(() => [
                     <span
                         class="tabular-nums"
                         dir="ltr"
-                    >{{ whatsapp }}</span>
+                    >{{ whatsappLink.number }}</span>
                 </a>
 
                 <p class="text-xs text-ink-muted">
