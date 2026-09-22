@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class VerifyWhatsAppWebhookSignature
 {
-    private const ALLOWED_ALGORITHMS = ['sha512', 'sha256'];
+    private const ALLOWED_ALGORITHMS = ['sha512'];
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -46,10 +46,17 @@ class VerifyWhatsAppWebhookSignature
 
     private function timestampWithinTolerance(Request $request): bool
     {
-        $tolerance = (int) config('whatsapp.webhook.tolerance', 300);
         $header = $request->header('X-Webhook-Timestamp');
 
-        if ($tolerance <= 0 || ! is_numeric($header)) {
+        // WAHA always sends this header; fail closed when it is missing or
+        // malformed instead of silently accepting a potentially replayed body.
+        if (! is_numeric($header)) {
+            return false;
+        }
+
+        $tolerance = (int) config('whatsapp.webhook.tolerance', 300);
+
+        if ($tolerance <= 0) {
             return true;
         }
 

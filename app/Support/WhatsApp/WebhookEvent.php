@@ -46,9 +46,9 @@ class WebhookEvent
      * Stable key used for duplicate/replay protection.
      *
      * Preference order:
-     *   1. WAHA envelope id (event-level unique id).
-     *   2. X-Webhook-Request-Id (per-delivery unique id).
-     *   3. A content hash of the raw body.
+     *   1. WAHA envelope id (event-level unique id, signed with the body).
+     *   2. A content hash of the raw body (retries of the same event match).
+     *   3. X-Webhook-Request-Id as a last resort.
      */
     public function idempotencyKey(): string
     {
@@ -56,11 +56,11 @@ class WebhookEvent
             return 'id:'.$this->envelopeId;
         }
 
-        if (filled($this->requestId)) {
-            return 'req:'.$this->requestId;
+        if ($this->raw !== '') {
+            return 'body:'.hash('sha256', $this->raw);
         }
 
-        return 'body:'.hash('sha256', $this->raw);
+        return 'req:'.(string) $this->requestId;
     }
 
     public function messageId(): ?string

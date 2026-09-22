@@ -20,7 +20,7 @@
 
 services:
   waha:
-    image: devlikeapro/waha:${WAHA_IMAGE_TAG:-latest}
+    image: devlikeapro/waha:${WAHA_IMAGE_TAG:-2026.9.1}
     container_name: waha-local
     restart: unless-stopped
     ports:

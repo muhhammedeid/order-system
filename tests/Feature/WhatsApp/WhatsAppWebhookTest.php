@@ -68,6 +68,15 @@ class WhatsAppWebhookTest extends TestCase
         $this->call('POST', self::URI, [], [], [], $headers, $body)->assertStatus(401);
     }
 
+    public function test_missing_timestamp_is_rejected(): void
+    {
+        $body = json_encode($this->messageEvent());
+        $headers = $this->serverHeaders(hash_hmac('sha512', $body, self::SECRET));
+        unset($headers['HTTP_X_WEBHOOK_TIMESTAMP']);
+
+        $this->call('POST', self::URI, [], [], [], $headers, $body)->assertStatus(401);
+    }
+
     public function test_replayed_webhook_is_deduplicated(): void
     {
         $event = $this->messageEvent();

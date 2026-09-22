@@ -18,18 +18,37 @@ class WebhookEventTest extends TestCase
         $this->assertSame('id:evt_123', $event->idempotencyKey());
     }
 
-    public function test_it_falls_back_to_request_id_then_body_hash(): void
+    public function test_it_falls_back_to_the_body_hash_when_no_envelope_id_exists(): void
     {
         $event = WebhookEvent::fromRequest(
-            ['event' => 'message', 'session' => 'default', 'payload' => []],
+            ['event' => 'message', 'session' => 'default', 'payload' => ['body' => 'x']],
             'req_999',
             null,
         );
-        $this->assertSame('req:req_999', $event->idempotencyKey());
 
-        $body = ['event' => 'message', 'session' => 'default', 'payload' => ['body' => 'x']];
-        $event = WebhookEvent::fromRequest($body, null, null);
         $this->assertSame('body:'.hash('sha256', $event->raw), $event->idempotencyKey());
+    }
+
+    public function test_same_body_maps_to_the_same_key_and_different_bodies_do_not(): void
+    {
+        $first = WebhookEvent::fromRequest(
+            ['event' => 'message', 'session' => 'default', 'payload' => ['body' => 'x']],
+            'req_1',
+            null,
+        );
+        $retry = WebhookEvent::fromRequest(
+            ['event' => 'message', 'session' => 'default', 'payload' => ['body' => 'x']],
+            'req_2',
+            null,
+        );
+        $other = WebhookEvent::fromRequest(
+            ['event' => 'message', 'session' => 'default', 'payload' => ['body' => 'y']],
+            'req_3',
+            null,
+        );
+
+        $this->assertSame($first->idempotencyKey(), $retry->idempotencyKey());
+        $this->assertNotSame($first->idempotencyKey(), $other->idempotencyKey());
     }
 
     public function test_it_extracts_message_id_and_ack_name(): void

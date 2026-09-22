@@ -20,7 +20,8 @@ class WahaGateway implements WhatsAppGateway
 {
     public function enabled(): bool
     {
-        return (bool) config('whatsapp.enabled')
+        return config('whatsapp.provider') === 'waha'
+            && (bool) config('whatsapp.enabled')
             && filled(config('whatsapp.base_url'))
             && filled(config('whatsapp.api_key'));
     }
@@ -45,6 +46,16 @@ class WahaGateway implements WhatsAppGateway
         $payload = ['name' => $name];
 
         if ($webhooks !== []) {
+            // The webhook endpoint fails closed without a valid HMAC, so the
+            // configured secret is applied when the caller does not override it.
+            $secret = (string) config('whatsapp.webhook.secret');
+
+            if ($secret !== '') {
+                foreach ($webhooks as $index => $webhook) {
+                    $webhooks[$index]['hmac'] = $webhook['hmac'] ?? ['key' => $secret];
+                }
+            }
+
             $payload['config'] = ['webhooks' => $webhooks];
         }
 
@@ -55,7 +66,11 @@ class WahaGateway implements WhatsAppGateway
 
     public function session(string $name): ?SessionState
     {
-        $response = $this->client()->get('/api/sessions/'.rawurlencode($name));
+        try {
+            $response = $this->client()->get('/api/sessions/'.rawurlencode($name));
+        } catch (ConnectionException) {
+            throw WhatsAppException::unreachable('session');
+        }
 
         if ($response->status() === 404) {
             return null;
@@ -87,10 +102,14 @@ class WahaGateway implements WhatsAppGateway
     {
         // WAHA 2026.9.1 exposes the QR as GET /api/{session}/auth/qr and
         // returns {"mimetype": "...", "data": "<base64>"}.
-        $response = $this->client()->get('/api/'.rawurlencode($name).'/auth/qr');
+        try {
+            $response = $this->client()->get('/api/'.rawurlencode($name).'/auth/qr');
+        } catch (ConnectionException) {
+            throw WhatsAppException::unreachable('qr');
+        }
 
-        // No QR is available when the session is not waiting for pairing.
-        if ($response->status() >= 400 && $response->status() < 500) {
+        // A missing session has no QR; every other failure is a real error.
+        if ($response->status() === 404) {
             return null;
         }
 

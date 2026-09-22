@@ -22,6 +22,7 @@ class WahaGatewayTest extends TestCase
         config()->set('whatsapp.session', 'default');
         config()->set('whatsapp.timeout', 5);
         config()->set('whatsapp.verify_ssl', false);
+        config()->set('whatsapp.webhook.secret', 'test-hmac-secret');
     }
 
     public function test_container_resolves_the_interface_to_waha(): void
@@ -107,7 +108,23 @@ class WahaGatewayTest extends TestCase
         $this->assertSame('STARTING', $state->status);
 
         Http::assertSent(fn ($request) => $request->url() === 'http://waha.test/api/sessions'
-            && $request['config']['webhooks'][0]['events'] === ['message', 'message.ack', 'session.status']);
+            && $request['config']['webhooks'][0]['events'] === ['message', 'message.ack', 'session.status']
+            && $request['config']['webhooks'][0]['hmac']['key'] === 'test-hmac-secret');
+    }
+
+    public function test_create_session_keeps_an_explicit_hmac_override(): void
+    {
+        Http::fake(['*' => Http::response(['name' => 'default', 'status' => 'STARTING'], 201)]);
+
+        app(WhatsAppGateway::class)->createSession('default', [
+            [
+                'url' => 'https://app.test/webhooks/whatsapp',
+                'events' => ['message'],
+                'hmac' => ['key' => 'override-secret'],
+            ],
+        ]);
+
+        Http::assertSent(fn ($request) => $request['config']['webhooks'][0]['hmac']['key'] === 'override-secret');
     }
 
     public function test_outbound_calls_fail_closed_when_not_configured(): void
@@ -164,6 +181,18 @@ class WahaGatewayTest extends TestCase
 
         try {
             app(WhatsAppGateway::class)->sendText('111@c.us', 'hi');
+            $this->fail('Expected WhatsAppException was not thrown.');
+        } catch (WhatsAppException $exception) {
+            $this->assertStringContainsString('unreachable', $exception->getMessage());
+        }
+    }
+
+    public function test_session_timeout_is_wrapped_as_a_sanitized_exception(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('Operation timed out'));
+
+        try {
+            app(WhatsAppGateway::class)->session('default');
             $this->fail('Expected WhatsAppException was not thrown.');
         } catch (WhatsAppException $exception) {
             $this->assertStringContainsString('unreachable', $exception->getMessage());

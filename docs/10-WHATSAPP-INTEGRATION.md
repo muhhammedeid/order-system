@@ -77,13 +77,20 @@ Laravel always sends the plain key in the `X-Api-Key` header.
 ## Webhook Security
 
 - HMAC-SHA512 over the **raw request body**, compared with `hash_equals`.
-- Algorithm allowlist (`sha512`, `sha256`); anything else is rejected.
-- `X-Webhook-Timestamp` replay window (default 300 s); WAHA retries stay well inside it.
-- Duplicate protection uses the WAHA envelope `id` (`evt_...`), falling back to
-  `X-Webhook-Request-Id`, then to a SHA-256 hash of the raw body, stored for 24 h.
+- Only `sha512` is accepted; any other declared algorithm is rejected.
+- `X-Webhook-Timestamp` is required (missing or malformed is rejected) and must be inside
+  the replay window (default 300 s); WAHA retries stay well inside it.
+- Duplicate protection uses the WAHA envelope `id` (`evt_...`, part of the signed body),
+  falling back to a SHA-256 hash of the raw body, then to `X-Webhook-Request-Id`. Keys are
+  stored for 24 h.
 - Route is stateless (no session, no CSRF), throttled, and fails closed when unconfigured.
 - Logging is minimal and non-PII: event name, session, message id, ack name. No message
   bodies, credentials, or QR/auth material.
+- `createSession()` applies the configured webhook secret as the WAHA `hmac.key` unless the
+  caller supplies an explicit override, so inbound webhooks are signed from the start.
+- Note for later packages: dedupe is recorded before event handling. When real handlers are
+  added (inbox/campaign work), a handler that fails after the dedupe key is written will
+  need an explicit retry/replay path.
 
 ## Local Spike / Development
 
@@ -97,8 +104,9 @@ docker compose up -d
 ```
 
 The container binds to `127.0.0.1:3000` and persists sessions in the `waha_sessions`
-volume. Point `WHATSAPP_BASE_URL` at it and set `WHATSAPP_WEBHOOK_SECRET` to the HMAC key
-configured on the WAHA session webhook.
+volume. The image is pinned to the spike version (`2026.9.1`) by default and can be
+overridden with `WAHA_IMAGE_TAG`. Point `WHATSAPP_BASE_URL` at it and set
+`WHATSAPP_WEBHOOK_SECRET` to the HMAC key configured on the WAHA session webhook.
 
 ## Staging / Production Hosting Requirement
 

@@ -21,7 +21,8 @@ interface WhatsAppGateway
     public function health(): bool;
 
     /**
-     * @param  array<int, array{url: string, events: array<int, string>}>  $webhooks
+     * @param  array<int, array{url: string, events: array<int, string>, hmac?: array{key: string}}>  $webhooks
+     *                                                                                                           When `hmac` is omitted the configured webhook secret is applied.
      */
     public function createSession(string $name, array $webhooks = []): SessionState;
 
