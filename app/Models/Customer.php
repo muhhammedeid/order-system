@@ -88,6 +88,8 @@ class Customer extends Model
         $original = WhatsAppMarketingStatus::tryFrom((string) $this->getRawOriginal('whatsapp_marketing_status'));
         $current = $this->whatsapp_marketing_status ?? WhatsAppMarketingStatus::Unknown;
 
+        $this->whatsapp_marketing_status = $current;
+
         if ($original === $current) {
             return;
         }

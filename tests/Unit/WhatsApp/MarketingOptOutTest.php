@@ -34,6 +34,16 @@ class MarketingOptOutTest extends TestCase
         $this->assertTrue(MarketingOptOut::matches('«إلغاء الاشتراك»'));
     }
 
+    public function test_invisible_format_characters_and_unicode_spaces_are_ignored(): void
+    {
+        $this->assertTrue(MarketingOptOut::matches("إيقاف\u{200D} الاشتراك"));
+        $this->assertTrue(MarketingOptOut::matches("إيقاف\u{200F} الاشتراك"));
+        $this->assertTrue(MarketingOptOut::matches("إيقاف\u{200B}الاشتراك"));
+        $this->assertTrue(MarketingOptOut::matches("إيقاف\u{00A0}الاشتراك"));
+        $this->assertTrue(MarketingOptOut::matches("لا\u{00A0}أريد\u{00A0}رسائل"));
+        $this->assertTrue(MarketingOptOut::matches("\u{FEFF}stop\u{FEFF}"));
+    }
+
     public function test_english_case_whitespace_and_punctuation_are_normalized(): void
     {
         $this->assertTrue(MarketingOptOut::matches('STOP'));

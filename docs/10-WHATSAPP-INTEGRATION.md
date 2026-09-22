@@ -419,7 +419,8 @@ campaign send-time processing. Operational order/customer messaging never consul
 Only a regular inbound `message` (`fromMe=false`) whose conversation is linked to a customer
 can opt out, and only when the whole message matches one allowlisted keyword after
 normalization (trim, collapse whitespace, lowercase English, remove Arabic
-diacritics/tatweel, normalize alef variants, strip surrounding punctuation/emoji):
+diacritics/tatweel, remove invisible Unicode format characters, normalize alef variants,
+normalize Unicode spaces, strip surrounding punctuation/emoji):
 
 `stop`, `unsubscribe`, `ايقاف الاشتراك`, `الغاء الاشتراك`, `لا اريد رسائل`, `لا اريد عروض`.
 

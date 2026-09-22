@@ -151,10 +151,12 @@ class InboxProcessor
 
         $customer->forceFill(['whatsapp_marketing_status' => WhatsAppMarketingStatus::Unsubscribed])->save();
 
-        Log::info('WhatsApp marketing opt-out recorded', [
-            'customer_id' => $customer->id,
-            'status' => WhatsAppMarketingStatus::Unsubscribed->value,
-        ]);
+        DB::afterCommit(function () use ($customer): void {
+            Log::info('WhatsApp marketing opt-out recorded', [
+                'customer_id' => $customer->id,
+                'status' => WhatsAppMarketingStatus::Unsubscribed->value,
+            ]);
+        });
     }
 
     private function storeMessage(

@@ -730,8 +730,11 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
   reset to Unknown clears both; re-saving the same status changes nothing.
 - Inbound opt-out triggers only for `message` + `fromMe=false` + a linked customer and only
   on `stop`, `unsubscribe`, `ايقاف الاشتراك`, `الغاء الاشتراك`, `لا اريد رسائل`,
-  `لا اريد عروض` after normalization; bare «إلغاء»/«إيقاف» and «إلغاء الطلب» never opt out;
-  the message is still stored, the conversation is not altered and nothing is auto-replied.
+  `لا اريد عروض` after normalization (trim, whitespace/Unicode-space collapse, invisible
+  format characters removed, Arabic diacritics/tatweel removed, alef variants normalized,
+  English lowercased, surrounding punctuation/emoji stripped); bare «إلغاء»/«إيقاف» and
+  «إلغاء الطلب» never opt out; the message is still stored, the conversation is not altered
+  and nothing is auto-replied.
 - Templates reject unknown variables at save and at render; product variables fail closed
   without a product; `{{business_name}}` resolves `settings.business_name` then
   `config('app.name')`; replacement is single-pass and no template content is executed.

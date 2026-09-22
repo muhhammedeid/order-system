@@ -56,7 +56,7 @@ class MarketingOptOutIngestionTest extends TestCase
 
     public function test_arabic_and_english_spelling_variants_are_normalized(): void
     {
-        $variants = ['إيقاف الاشتراك', 'إلغاء الاشتراك', 'لا أريد رسائل', 'لا أريد عروض', '  STOP!  '];
+        $variants = ['إيقاف الاشتراك', 'إلغاء الاشتراك', 'لا أريد رسائل', 'لا أريد عروض', '  STOP!  ', "إيقاف\u{200F} الاشتراك"];
 
         foreach ($variants as $index => $variant) {
             [$customer, $chatId] = $this->linkedCustomer($index, 'VAR');
