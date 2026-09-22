@@ -641,3 +641,34 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
   sanitized provider errors and the disabled kill switch; full suite green.
 - Live QA on the paired local WAHA environment passes (connected, restart, stop, start,
   logout, QR re-pair, WAHA unavailable/recovery, disabled, Arabic/RTL, log scan).
+
+## P08-W03 — WhatsApp Inbox & Conversations
+
+### Scope
+
+- Persistent `whatsapp_conversations` and `whatsapp_messages`, plus an index on
+  `customers.whatsapp`; one-to-one chats only.
+- Inbound ingestion from the signed webhook (`message`), phone-sent outbound history
+  (`message.any`, `fromMe=true`, `source=app`) and acknowledgement updates
+  (`message.ack`).
+- Outbound manual text replies from the conversation view with a pending → sent/failed
+  lifecycle; no queue and no media storage.
+- Verified identity resolution (`@c.us` directly, `@lid` through the WAHA LIDs API when
+  available) and deterministic customer matching; manual link/change/unlink.
+- Read-only Filament Inbox list and conversation detail with an escaped message timeline.
+
+### Acceptance
+
+- Duplicate webhook deliveries and duplicate provider message tokens never create duplicate
+  rows; ingestion is idempotent and releases the replay reservation when processing fails.
+- `message.any source=api` and inbound `message.any` events are ignored; phone-sent
+  messages are stored exactly once.
+- Statuses move monotonically (PENDING/SERVER/DEVICE/READ/ERROR), unknown ack names are
+  preserved without changing status, and no behavior depends on READ.
+- `@lid` chats without a verified mapping stay unlinked and remain fully usable; no phone
+  is ever inferred and no customer is auto-created.
+- Message bodies are rendered escaped, never logged, and never stored as raw provider
+  payloads; groups/broadcasts are ignored.
+- Automated coverage for ingestion, dedupe, `message.any`, ack mapping, matching,
+  authorization, escaping, outbound lifecycle and disabled integration; full suite green.
+- Live QA on the paired local WAHA environment passes.

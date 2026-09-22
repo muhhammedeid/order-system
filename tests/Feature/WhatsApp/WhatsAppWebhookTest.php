@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\WhatsApp;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class WhatsAppWebhookTest extends TestCase
 {
+    use RefreshDatabase;
+
     private const SECRET = 'webhook-secret';
 
     private const URI = '/webhooks/whatsapp';

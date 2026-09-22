@@ -43,6 +43,14 @@ interface WhatsAppGateway
     public function qr(string $name): ?string;
 
     /**
+     * Best-effort verified phone resolution for a chat id. `@c.us` ids are
+     * read directly; `@lid` ids are resolved through the provider when the
+     * lookup is available. Returns null when no verified number exists —
+     * never guesses.
+     */
+    public function resolvePhoneNumber(string $chatId): ?string;
+
+    /**
      * @param  array<string, mixed>  $options  e.g. ['reply_to' => '...', 'linkPreview' => false]
      */
     public function sendText(string $chatId, string $text, array $options = []): SentMessage;

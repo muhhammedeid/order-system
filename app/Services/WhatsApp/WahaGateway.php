@@ -3,6 +3,7 @@
 namespace App\Services\WhatsApp;
 
 use App\Contracts\WhatsAppGateway;
+use App\Support\WhatsApp\PhoneNumber;
 use App\Support\WhatsApp\SentMessage;
 use App\Support\WhatsApp\SessionState;
 use App\Support\WhatsApp\WhatsAppException;
@@ -125,6 +126,36 @@ class WahaGateway implements WhatsAppGateway
         $data = $response->json('data');
 
         return is_string($data) && $data !== '' ? $data : null;
+    }
+
+    public function resolvePhoneNumber(string $chatId): ?string
+    {
+        $phone = PhoneNumber::fromChatId($chatId);
+
+        if ($phone !== null) {
+            return $phone;
+        }
+
+        if (! str_ends_with($chatId, '@lid') || ! $this->enabled()) {
+            return null;
+        }
+
+        try {
+            $response = $this->client()
+                ->get('/api/'.rawurlencode($this->sessionName()).'/lids/'.rawurlencode($chatId));
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        if ($response->failed()) {
+            // The lookup is best-effort: a disabled NOWEB store or a missing
+            // mapping (400/404) simply leaves the conversation unlinked.
+            return null;
+        }
+
+        $pn = $response->json('pn');
+
+        return is_string($pn) ? PhoneNumber::fromChatId($pn) : null;
     }
 
     public function sendText(string $chatId, string $text, array $options = []): SentMessage

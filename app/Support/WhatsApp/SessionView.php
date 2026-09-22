@@ -191,10 +191,6 @@ class SessionView
     {
         $id = $me['id'] ?? null;
 
-        if (! is_string($id) || ! preg_match('/^([0-9]{6,15})@c\.us$/', $id, $matches)) {
-            return null;
-        }
-
-        return $matches[1];
+        return is_string($id) ? PhoneNumber::fromChatId($id) : null;
     }
 }

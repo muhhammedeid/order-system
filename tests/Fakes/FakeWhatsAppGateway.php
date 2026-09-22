@@ -17,9 +17,15 @@ class FakeWhatsAppGateway implements WhatsAppGateway
 
     public ?string $qr = null;
 
-    public ?WhatsAppException $throwOnAction = null;
+    public ?string $resolvedPhone = null;
 
     public ?WhatsAppException $throwOnQr = null;
+
+    public ?WhatsAppException $throwOnAction = null;
+
+    public ?\Throwable $throwOnResolve = null;
+
+    public string $sentProviderId = 'SENT-1';
 
     public ?string $lastQrSession = null;
 
@@ -91,14 +97,31 @@ class FakeWhatsAppGateway implements WhatsAppGateway
         return $this->qr;
     }
 
+    public function resolvePhoneNumber(string $chatId): ?string
+    {
+        $this->calls[] = 'resolve_phone';
+
+        if ($this->throwOnResolve) {
+            throw $this->throwOnResolve;
+        }
+
+        return $this->resolvedPhone;
+    }
+
     public function sendText(string $chatId, string $text, array $options = []): SentMessage
     {
-        return new SentMessage('fake');
+        $this->calls[] = 'send_text';
+        $this->guardAction();
+
+        return new SentMessage($this->sentProviderId);
     }
 
     public function sendMedia(string $chatId, array $file, ?string $caption = null): SentMessage
     {
-        return new SentMessage('fake');
+        $this->calls[] = 'send_media';
+        $this->guardAction();
+
+        return new SentMessage($this->sentProviderId);
     }
 
     private function guardAction(): void

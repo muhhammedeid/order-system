@@ -189,6 +189,107 @@ Unavailable → recovery to Connected, disabled integration → Disabled with pr
 refused, Arabic/RTL desktop and mobile, and a log scan confirming zero QR data, API keys,
 HMAC secrets, dashboard passwords or phone numbers in `laravel.log`.
 
+## P08-W03 — WhatsApp Inbox & Conversations
+
+Laravel now owns the business communication history for one-to-one chats. No raw provider
+payload, engine `_data`, auth/session state or media file is stored.
+
+### Schema
+
+`whatsapp_conversations`: `id`, `customer_id` (nullable, `nullOnDelete`), `provider_chat_id`
+(unique), `resolved_phone` (nullable, verified only), `last_message_at`,
+`last_message_preview`, `last_message_direction`, `unread_count`, timestamps. Indexes:
+`unique(provider_chat_id)`, `customer_id`, `last_message_at`.
+
+`whatsapp_messages`: `id`, `conversation_id` (`cascadeOnDelete`), `provider_message_id`
+(nullable), `direction`, `message_type`, `body` (text only), `status` (outbound only),
+`provider_ack`, `provider_ack_name`, `occurred_at`, timestamps. Indexes:
+`unique(conversation_id, provider_message_id)`, `(conversation_id, occurred_at)`.
+
+A non-unique index was added on `customers.whatsapp` for inbound matching. `display_name`
+is intentionally not stored: the only safe source is the WAHA contacts API, which needs the
+NOWEB store, so titles fall back to the linked customer, the verified phone, or a neutral
+label plus a short chat-id suffix.
+
+### Message identity and ACK correlation
+
+WAHA event ids are `{fromMe}_{chatId}_{messageId}` while `sendText`/`sendMedia` responses
+return the bare `{messageId}` token. Provider identity therefore includes chat context:
+uniqueness is `(conversation_id, provider_message_id)` — **not** the token alone — and ACK
+correlation resolves the conversation from the ack's chat id first, then the message token
+inside that conversation. Verified live: the ack for a panel-sent message matched its stored
+row, and the same token is allowed in different conversations.
+
+### Identity and customer matching
+
+`@c.us` ids yield the phone directly. `@lid` ids are resolved through
+`GET /api/{session}/lids/{lid}`; the lookup is best-effort and returns null when the store
+is disabled, the mapping is unknown, or the provider is unreachable. Unresolved chats are
+created unlinked and remain fully usable, including replies to the `@lid` chat id.
+
+Matching is deterministic and exact: verified phone → candidate spellings (international,
+`+`, Egyptian national, `00` prefix) → exact match on `customers.phone` or
+`customers.whatsapp` → link only when exactly one distinct customer matches. Ambiguous or
+unknown numbers stay unlinked; no customer is ever auto-created. Admins can link, change or
+unlink a customer from the conversation header, which writes only `customer_id`.
+
+### Event handling
+
+- `message` with `fromMe=false` → inbound (stored, unread +1).
+- `message.any` with `fromMe=true, source=app` → phone-sent outbound history (stored once).
+- `message.any` with `fromMe=true, source=api` → ignored (the panel flow already stored it).
+- `message.any` with `fromMe=false` → ignored (already handled by `message`).
+- `message.ack` with `fromMe=true` → monotonic status update on the matching outbound row.
+- Groups, broadcasts, status and channels are ignored in application processing.
+
+Idempotency: the envelope replay cache runs first; if processing throws, the reservation is
+released so the provider retry can reprocess (verified live during a database outage), and
+the unique `(conversation_id, provider_message_id)` index is the final guard.
+
+### Outbound lifecycle and status
+
+Replies are stored as `pending`, sent through the gateway, then marked `sent` with the
+provider id; a provider failure leaves a `failed` row and a sanitized notification. No
+queue. Provider acks map monotonically: `PENDING → pending`, `SERVER → sent`,
+`DEVICE → delivered`, `READ → read`, `ERROR → failed`; unknown names are preserved without
+changing status, and `failed` is terminal. Inbound rows have no delivery status, and no
+behavior depends on READ.
+
+### Inbox UX
+
+`WhatsApp → Inbox` is a read-only resource: identity, linked-customer badge, last-message
+preview with direction, last activity, unread badge, newest first, search by customer
+name/phone/code, verified phone or chat id. The navigation badge counts conversations with
+unread messages. The conversation view shows identity, linked customer, verified phone, a
+small provider-chat diagnostic, an escaped chronological timeline with outbound status and
+non-text placeholders, and a text composer (Link / Change / Unlink customer in the header).
+Opening a conversation resets its unread counter.
+
+### P08-W03 live QA (WAHA 2026.9.1, NOWEB, paired account)
+
+- Inbound `@lid` message → conversation created, `resolved_phone` = the verified number,
+  linked to the matching customer, unread incremented and reset on open.
+- Panel reply to the `@lid` chat id → delivered with `SERVER` → `DEVICE` acks updating the
+  stored row.
+- Phone-sent message → persisted exactly once via `message.any source=app`; the
+  `source=api` event for a panel send was ignored (no duplicate).
+- Duplicate/replay and failure-release behavior re-verified.
+- Log scan: no message bodies, QR data, API keys, HMAC secrets or phone numbers.
+
+### Operational notes
+
+- **NOWEB store prerequisite:** `@lid`→phone resolution and contact names require
+  `config.noweb.store.enabled=true` on the WAHA session and the contact to be present in
+  the paired account's address book. Enabling it restarts the session but does not require
+  re-pairing. The Inbox works fully without it (unlinked conversations).
+- ACK webhooks are not guaranteed for every message: WAHA's store showed a panel-sent
+  message at `DEVICE` while no `message.ack` webhook was pushed, so such a row correctly
+  remains `sent`. `READ` webhooks are also not reliable.
+- The webhook endpoint fails closed (503) when `WHATSAPP_WEBHOOK_SECRET` is missing; a local
+  server started without the `WHATSAPP_*` environment variables therefore causes WAHA to
+  retry and eventually drop events. Always start the local/admin server with the module
+  configuration present.
+
 ## P08-W01 Spike Results
 
 Environment: WAHA `2026.9.1`, engine `NOWEB`, tier `CORE`, Docker on Windows.

@@ -249,7 +249,7 @@ class WhatsAppAccount extends Page
         $gateway->createSession($name, [
             [
                 'url' => url('/'.config('whatsapp.webhook.path')),
-                'events' => ['message', 'message.ack', 'session.status'],
+                'events' => ['message', 'message.any', 'message.ack', 'session.status'],
             ],
         ]);
 

@@ -222,4 +222,50 @@ class WahaGatewayTest extends TestCase
             $this->assertStringContainsString('unreachable', $exception->getMessage());
         }
     }
+
+    public function test_resolve_phone_extracts_regular_c_us_ids_without_http(): void
+    {
+        Http::fake();
+
+        $this->assertSame('20112347663', app(WhatsAppGateway::class)->resolvePhoneNumber('20112347663@c.us'));
+        Http::assertNothingSent();
+    }
+
+    public function test_resolve_phone_uses_the_provider_lid_lookup(): void
+    {
+        Http::fake(['*' => Http::response(['lid' => '214457011683409@lid', 'pn' => '20112347663@c.us'], 200)]);
+
+        $this->assertSame('20112347663', app(WhatsAppGateway::class)->resolvePhoneNumber('214457011683409@lid'));
+
+        Http::assertSent(fn ($request) => $request->method() === 'GET'
+            && str_contains($request->url(), '/api/default/lids/')
+            && str_contains($request->url(), '214457011683409%40lid'));
+    }
+
+    public function test_resolve_phone_returns_null_when_no_mapping_exists(): void
+    {
+        Http::fake(['*' => Http::response(['lid' => '214457011683409@lid', 'pn' => null], 200)]);
+
+        $this->assertNull(app(WhatsAppGateway::class)->resolvePhoneNumber('214457011683409@lid'));
+    }
+
+    public function test_resolve_phone_returns_null_when_the_lookup_is_unavailable(): void
+    {
+        Http::fake(['*' => Http::response([], 400)]);
+
+        $this->assertNull(app(WhatsAppGateway::class)->resolvePhoneNumber('214457011683409@lid'));
+
+        Http::fake(fn () => throw new ConnectionException('down'));
+
+        $this->assertNull(app(WhatsAppGateway::class)->resolvePhoneNumber('214457011683409@lid'));
+    }
+
+    public function test_resolve_phone_returns_null_when_disabled(): void
+    {
+        config()->set('whatsapp.enabled', false);
+        Http::fake();
+
+        $this->assertNull(app(WhatsAppGateway::class)->resolvePhoneNumber('214457011683409@lid'));
+        Http::assertNothingSent();
+    }
 }
