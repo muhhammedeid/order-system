@@ -615,3 +615,29 @@ protection with a captured event. Live verification exposed and fixed one defect
 `NOWEB` send responses carry the message id in `key.id` and the timestamp in
 `messageTimestamp`, which `SentMessage` now handles with a regression test. Details and
 observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
+
+## P08-W02 — WhatsApp Account & Sessions
+
+### Scope
+
+- Filament page **Account** under the new **WhatsApp** navigation group, for the single
+  session defined by `config('whatsapp.session')` (`WHATSAPP_SESSION`).
+- Separate WAHA service health and WhatsApp account status cards, with business-friendly
+  state labels and operator guidance; raw provider status kept only as a diagnostic line.
+- Actions: Refresh, Start, Stop, Restart, Logout/Unlink (confirmed) and Create & Start.
+- Authenticated on-demand QR route for the configured session.
+- Gateway addition: `restartSession(string $name): void`.
+
+### Acceptance
+
+- Config-only session management: no `whatsapp_accounts` table, and no credentials, QR
+  data or provider session state persisted in the database.
+- Actions appear only in valid states and are re-checked against the live provider state
+  before execution.
+- QR is fetched on demand, never logged and never persisted; it is served only to
+  authenticated admins and only for the configured session, with `Cache-Control: no-store`.
+- Logout requires explicit confirmation and is never used as an automatic recovery action.
+- Automated coverage for authorization, status mapping, every action, QR behavior,
+  sanitized provider errors and the disabled kill switch; full suite green.
+- Live QA on the paired local WAHA environment passes (connected, restart, stop, start,
+  logout, QR re-pair, WAHA unavailable/recovery, disabled, Arabic/RTL, log scan).

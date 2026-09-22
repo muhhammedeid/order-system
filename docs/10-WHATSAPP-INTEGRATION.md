@@ -132,6 +132,63 @@ No queues, jobs, workers or Redis are introduced in P08-W01. Database Queue is e
 in the later campaign package. Note that staging currently runs `QUEUE_CONNECTION=sync`
 with no worker, so campaign work will need a worker process.
 
+## P08-W02 — WhatsApp Account & Sessions (Admin)
+
+The Filament page **Account** (navigation group **WhatsApp**) operates the single WAHA
+session defined by `config('whatsapp.session')`. It reads and writes nothing in the
+database: the configured session remains the only source of truth and WAHA keeps ownership
+of session/auth state. `restartSession()` was added to `WhatsAppGateway` for this package.
+
+The page shows two separate cards: **WAHA Service** (Healthy / Unavailable / Disabled) and
+**WhatsApp Account** (business state below). Provider errors are caught and shown as
+sanitized notifications; the provider message is logged server-side without credentials,
+QR data or payloads.
+
+| WAHA raw | Admin state | Actions |
+|---|---|---|
+| `WORKING` | Connected | Refresh, Restart, Stop, Logout |
+| `STARTING` | Connecting | Refresh |
+| `SCAN_QR_CODE` | QR Required | Refresh QR, Stop |
+| `STOPPED` | Stopped | Start, Refresh |
+| `FAILED` | Attention Required | Refresh, Restart, Logout |
+| `PASSKEY_REQUIRED`, `PASSKEY_CONFIRMATION_REQUIRED` | Verification Required | Refresh, Restart |
+| session missing | Not Set Up | Create & Start, Refresh |
+| config disabled | Disabled | Refresh |
+| health unreachable | Service Unavailable | Refresh |
+
+Any other raw status falls back to Attention Required; the raw value is preserved and shown
+only as a small diagnostic line.
+
+Operational behavior:
+
+- All actions re-check the live provider state server-side before executing and report a
+  "state changed" warning instead of acting on stale UI state.
+- **Logout/Unlink** is destructive: a confirmation modal explains that the linked device is
+  removed and a new QR scan is required. Logout is never triggered automatically to recover
+  from connection problems.
+- **Create & Start** can only create the session from application configuration; there is
+  no session-name input and no multi-account UI.
+- Status/health refresh happens on page load, manual refresh, and after each action. No
+  general polling exists; only the QR image auto-refreshes (~20 s) while QR is required,
+  matching WAHA's rotation.
+
+QR security: the QR is served by an authenticated Laravel route
+(`/admin/whatsapp/qr`, `filament.admin.whatsapp.qr`). It is fetched from WAHA on demand,
+never persisted, never logged, returned as a binary PNG with `Cache-Control: no-store`, and
+restricted to the configured session (no session parameter). Guests are redirected to the
+admin login. The browser never contacts WAHA directly.
+
+Authorization uses the existing single-Admin Filament model. Granular WhatsApp permissions
+(per-user or per-role) are not part of P08-W02 and would need a later approved scope if the
+Admin user base expands.
+
+P08-W02 live QA (paired local WAHA `2026.9.1`, engine `NOWEB`): Connected state with
+identity, browser-driven Logout confirmation, QR Required with automatic rotation,
+re-pair back to Connected, Restart, Stop, Start, WAHA container unavailable → Service
+Unavailable → recovery to Connected, disabled integration → Disabled with provider calls
+refused, Arabic/RTL desktop and mobile, and a log scan confirming zero QR data, API keys,
+HMAC secrets, dashboard passwords or phone numbers in `laravel.log`.
+
 ## P08-W01 Spike Results
 
 Environment: WAHA `2026.9.1`, engine `NOWEB`, tier `CORE`, Docker on Windows.

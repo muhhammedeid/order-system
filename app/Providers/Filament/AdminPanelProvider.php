@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Widgets\OrderStatsWidget;
 use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Http\Controllers\OrderPrintController;
+use App\Http\Controllers\WhatsAppQrController;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -64,6 +65,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make()->label(fn (): string => __('admin.navigation.operations')),
                 NavigationGroup::make()->label(fn (): string => __('admin.navigation.catalog')),
                 NavigationGroup::make()->label(fn (): string => __('admin.navigation.customers')),
+                NavigationGroup::make()->label(fn (): string => __('admin.navigation.whatsapp')),
                 NavigationGroup::make()->label(fn (): string => __('admin.navigation.settings')),
             ])
             ->renderHook(
@@ -87,6 +89,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authenticatedRoutes(function (): void {
                 Route::get('/order-management/{order}/print', OrderPrintController::class)->name('orders.print');
+                Route::get('/whatsapp/qr', WhatsAppQrController::class)->name('whatsapp.qr');
             })
             ->middleware([
                 EncryptCookies::class,

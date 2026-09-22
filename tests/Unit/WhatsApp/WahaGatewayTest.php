@@ -111,6 +111,16 @@ class WahaGatewayTest extends TestCase
         $this->assertNull(app(WhatsAppGateway::class)->session('default'));
     }
 
+    public function test_restart_session_posts_to_the_restart_endpoint(): void
+    {
+        Http::fake(['*' => Http::response(['name' => 'default', 'status' => 'STARTING'], 201)]);
+
+        app(WhatsAppGateway::class)->restartSession('default');
+
+        Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && $request->url() === 'http://waha.test/api/sessions/default/restart');
+    }
+
     public function test_create_session_sends_webhooks_when_provided(): void
     {
         Http::fake(['*' => Http::response(['name' => 'default', 'status' => 'STARTING'], 201)]);

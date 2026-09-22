@@ -32,6 +32,8 @@ interface WhatsAppGateway
 
     public function stopSession(string $name): void;
 
+    public function restartSession(string $name): void;
+
     public function logoutSession(string $name): void;
 
     /**

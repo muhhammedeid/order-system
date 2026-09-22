@@ -93,6 +93,11 @@ class WahaGateway implements WhatsAppGateway
         $this->json('stop session', 'post', '/api/sessions/'.rawurlencode($name).'/stop', []);
     }
 
+    public function restartSession(string $name): void
+    {
+        $this->json('restart session', 'post', '/api/sessions/'.rawurlencode($name).'/restart', []);
+    }
+
     public function logoutSession(string $name): void
     {
         $this->json('logout session', 'post', '/api/sessions/'.rawurlencode($name).'/logout', []);
