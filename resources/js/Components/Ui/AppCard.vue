@@ -27,9 +27,9 @@ const TONES = {
 };
 
 const classes = computed(() => [
-    'rounded-card border-2 border-line',
+    'rounded-card border border-line',
     TONES[props.tone] ?? TONES.soft,
-    props.shadow ? 'shadow-retro' : '',
+    props.shadow ? 'shadow-soft' : '',
     props.padded ? 'p-4 sm:p-5' : '',
 ]);
 </script>

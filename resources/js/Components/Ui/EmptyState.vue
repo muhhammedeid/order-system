@@ -18,8 +18,8 @@ defineProps({
 </script>
 
 <template>
-    <div class="flex flex-col items-center gap-3 rounded-card border-2 border-dashed border-line px-6 py-14 text-center">
-        <span class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-line bg-surface-muted text-ink-muted">
+    <div class="flex flex-col items-center gap-3 rounded-card border border-dashed border-line-strong/60 px-6 py-14 text-center">
+        <span class="flex h-16 w-16 items-center justify-center rounded-full bg-stopped-soft text-stopped">
             <AppIcon
                 :name="icon"
                 :size="30"

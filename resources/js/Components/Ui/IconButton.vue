@@ -27,13 +27,13 @@ const props = defineProps({
 
 const VARIANTS = {
     primary:
-        'bg-primary text-on-primary border-line-strong hover:bg-primary-strong',
+        'bg-primary text-on-primary hover:bg-primary-strong',
     secondary:
-        'bg-surface-soft text-ink border-line-strong hover:bg-surface-muted',
+        'border-2 border-line-strong bg-surface text-ink hover:bg-surface-soft',
     ghost:
-        'bg-transparent text-ink border-transparent hover:bg-surface-muted',
+        'bg-transparent text-ink hover:bg-surface-muted',
     danger:
-        'bg-transparent text-danger border-transparent hover:bg-danger-soft',
+        'bg-transparent text-danger hover:bg-danger-soft',
 };
 
 const SIZES = {
@@ -42,7 +42,7 @@ const SIZES = {
 };
 
 const classes = computed(() => [
-    'inline-flex items-center justify-center rounded-control border-2 transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50',
+    'inline-flex items-center justify-center rounded-control transition-[transform,background-color,color,border-color] duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50',
     VARIANTS[props.variant] ?? VARIANTS.secondary,
     SIZES[props.size] ?? SIZES.md,
 ]);

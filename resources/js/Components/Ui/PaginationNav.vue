@@ -50,7 +50,7 @@ const pages = computed(() => {
     >
         <button
             type="button"
-            class="inline-flex h-11 items-center gap-1 rounded-control border-2 border-line bg-surface-soft px-3.5 font-semibold text-ink transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
+            class="inline-flex h-11 items-center gap-1 rounded-control border border-line bg-surface px-3.5 font-semibold text-ink shadow-soft-sm transition-colors duration-200 ease-out hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             :disabled="currentPage <= 1"
             :aria-label="t('pagination.previous_page')"
             @click="emit('change', currentPage - 1)"
@@ -74,10 +74,10 @@ const pages = computed(() => {
             <button
                 v-else
                 type="button"
-                class="inline-flex h-11 min-w-11 items-center justify-center rounded-control border-2 px-3 font-semibold tabular-nums transition-colors"
+                class="inline-flex h-11 min-w-11 items-center justify-center rounded-control border border-line px-3 font-semibold tabular-nums transition-colors duration-200 ease-out"
                 :class="page === currentPage
-                    ? 'border-line-strong bg-primary text-on-primary shadow-retro-sm'
-                    : 'border-line bg-surface-soft text-ink hover:border-line-strong'"
+                    ? 'bg-primary text-on-primary shadow-soft-sm'
+                    : 'bg-surface text-ink shadow-soft-sm hover:bg-surface-soft'"
                 :aria-current="page === currentPage ? 'page' : undefined"
                 :aria-label="t('pagination.page', { number: page })"
                 @click="emit('change', page)"
@@ -88,7 +88,7 @@ const pages = computed(() => {
 
         <button
             type="button"
-            class="inline-flex h-11 items-center gap-1 rounded-control border-2 border-line bg-surface-soft px-3.5 font-semibold text-ink transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
+            class="inline-flex h-11 items-center gap-1 rounded-control border border-line bg-surface px-3.5 font-semibold text-ink shadow-soft-sm transition-colors duration-200 ease-out hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             :disabled="currentPage >= lastPage"
             :aria-label="t('pagination.next_page')"
             @click="emit('change', currentPage + 1)"
