@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\WhatsAppGateway;
+use App\Services\WhatsApp\WahaGateway;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Support\ServiceProvider;
@@ -13,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(WhatsAppGateway::class, WahaGateway::class);
     }
 
     /**

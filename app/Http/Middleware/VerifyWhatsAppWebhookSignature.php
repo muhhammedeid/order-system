@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Verifies that an inbound WhatsApp webhook really comes from the provider.
+ *
+ * WAHA signs the raw request body with HMAC. The signature is compared in
+ * constant time. When no secret is configured the endpoint fails closed.
+ */
+class VerifyWhatsAppWebhookSignature
+{
+    private const ALLOWED_ALGORITHMS = ['sha512', 'sha256'];
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        $secret = (string) config('whatsapp.webhook.secret');
+
+        if ($secret === '') {
+            abort(503, 'WhatsApp webhook is not configured.');
+        }
+
+        $signature = (string) $request->header('X-Webhook-Hmac', '');
+        $algorithm = strtolower((string) $request->header('X-Webhook-Hmac-Algorithm', 'sha512'));
+
+        if ($signature === '' || ! in_array($algorithm, self::ALLOWED_ALGORITHMS, true)) {
+            abort(401, 'Invalid webhook signature.');
+        }
+
+        $expected = hash_hmac($algorithm, $request->getContent(), $secret);
+
+        if (! hash_equals($expected, $signature)) {
+            abort(401, 'Invalid webhook signature.');
+        }
+
+        if (! $this->timestampWithinTolerance($request)) {
+            abort(401, 'Stale webhook timestamp.');
+        }
+
+        return $next($request);
+    }
+
+    private function timestampWithinTolerance(Request $request): bool
+    {
+        $tolerance = (int) config('whatsapp.webhook.tolerance', 300);
+        $header = $request->header('X-Webhook-Timestamp');
+
+        if ($tolerance <= 0 || ! is_numeric($header)) {
+            return true;
+        }
+
+        // WAHA sends the header in milliseconds.
+        $seconds = (int) floor(((int) $header) / 1000);
+
+        return abs(time() - $seconds) <= $tolerance;
+    }
+}

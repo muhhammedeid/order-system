@@ -572,3 +572,36 @@ documents live in `Revision phase/`.
   size choice is disabled the quantity per color must divide evenly by every selected
   color's available size count. Order items store requested quantity, color count, and the
   derived actual-piece quantity; pre-migration historical totals are preserved.
+
+---
+
+# Phase 08 — WhatsApp Communication & Marketing
+
+Branch ownership: all Phase 08 work is committed only to `feature/p08-whatsapp-module`.
+`staging` and `main` must not receive Phase 08 commits until explicit merge approval.
+Integration document: `10-WHATSAPP-INTEGRATION.md`.
+
+## P08-W01 — WhatsApp Provider Spike & Foundation
+
+### Scope
+
+- WAHA CORE as the single approved provider, isolated behind
+  `App\Contracts\WhatsAppGateway`.
+- Local WAHA container for the spike (`deploy/waha/docker-compose.yml`).
+- Session creation/status, QR retrieval, outbound text, outbound media, health checking.
+- Inbound webhook endpoint with HMAC-SHA512 verification, throttling, duplicate/replay
+  protection and minimal non-PII logging.
+- Minimal configuration and automated Laravel-side tests.
+- Manual spike scenarios and the production/staging hosting requirement.
+
+### Acceptance
+
+- WAHA runs locally with persistent session storage.
+- The 14 spike scenarios are executed and recorded (pairing-dependent scenarios require a
+  real WhatsApp account and a human operator).
+- Real `session.status`, `message` and `message.ack` payload shapes are captured and the
+  idempotency key is confirmed against observed data.
+- Laravel-side tests pass; no secrets or QR/auth material appear in logs.
+- No inbox, conversations, customer linking, templates, consent, campaigns, scheduling,
+  throttling or campaign-safety features are implemented.
+- No queues, Redis, jobs or workers are introduced.
