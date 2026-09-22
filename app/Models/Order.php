@@ -333,6 +333,18 @@ class Order extends Model
     }
 
     /**
+     * True when at least one ordered color of this order still requires
+     * delivery. The partial-delivery action is only offered in that case.
+     */
+    public function hasOutstandingColors(): bool
+    {
+        return OrderItemColorQuantity::query()
+            ->whereIn('order_item_id', $this->items()->select('id'))
+            ->outstanding()
+            ->exists();
+    }
+
+    /**
      * One-time allocation of the legacy unallocated delivered quantities to
      * the exact colors that received them. The physical totals stay
      * unchanged; only their color attribution is recorded. Every submitted

@@ -167,12 +167,44 @@ class OrderDeliveryTest extends TestCase
             $this->colorRow($item, 'Beige')->id => $this->submission(1),
         ]);
 
-        $this->assertSame(5, $item->refresh()->delivered_quantity);
+        $item->refresh();
+
+        $this->assertSame(5, $item->delivered_quantity);
         $this->assertSame(10, $item->remaining_quantity);
         $this->assertSame(
             (int) $item->colorQuantities()->sum('delivered_quantity'),
             (int) $item->delivered_quantity,
         );
+        $this->assertSame(
+            (int) $item->quantity,
+            (int) $item->colorQuantities()->sum('requested_quantity'),
+            'The per-color requested quantities must add up to the stored physical total.',
+        );
+    }
+
+    public function test_reconciled_aggregates_keep_both_quantities_in_sync(): void
+    {
+        [$order, $item] = $this->multiColorOrder();
+
+        $item->forceFill([
+            'delivered_quantity' => 4,
+            'unallocated_delivered_quantity' => 4,
+        ])->save();
+        $item->refresh();
+
+        $order->reconcileUnallocatedDeliveries([
+            $this->colorRow($item, 'Black')->id => 3,
+            $this->colorRow($item, 'White')->id => 1,
+        ]);
+
+        $item->refresh();
+
+        $this->assertSame(4, (int) $item->delivered_quantity);
+        $this->assertSame(
+            (int) $item->colorQuantities()->sum('delivered_quantity') + (int) $item->unallocated_delivered_quantity,
+            (int) $item->delivered_quantity,
+        );
+        $this->assertSame((int) $item->quantity, (int) $item->colorQuantities()->sum('requested_quantity'));
     }
 
     public function test_repeated_partial_deliveries_accumulate_per_color_until_completion(): void

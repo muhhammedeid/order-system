@@ -7,6 +7,7 @@ use App\Filament\Resources\OrderManagement\OrderManagementResource;
 use App\Filament\Resources\OrderManagement\Pages\EditOrder;
 use App\Filament\Resources\OrderManagement\Pages\ListOrders;
 use App\Filament\Resources\OrderManagement\Pages\ViewOrder;
+use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -327,7 +328,7 @@ class OrderManagementPageTest extends TestCase
     /**
      * @return array{0: Order, 1: OrderItem, 2: array<string, OrderItemColorQuantity>}
      */
-    private function multiColorOrder(): array
+    private function multiColorOrder(OrderStatus $status = OrderStatus::Confirmed): array
     {
         $product = Product::factory()->create([
             'color_enabled' => false,
@@ -356,7 +357,11 @@ class OrderManagementPageTest extends TestCase
         ]);
 
         $order->recalculateTotalQuantity();
-        $order->confirm();
+
+        if ($status !== OrderStatus::New) {
+            $order->confirm();
+        }
+
         $order->refresh();
 
         return [
@@ -446,6 +451,373 @@ class OrderManagementPageTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ViewOrder::class, ['record' => $order->getKey()])
             ->assertActionHidden('reconcileDeliveries');
+    }
+
+    public function test_partial_delivery_modal_lists_only_outstanding_snapshot_colors(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        // Black is fully delivered; White and Beige still require delivery.
+        $colors['Black']->setDeliveredQuantity(5);
+        $order->refreshDeliveryStatus();
+
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([
+            $colors['White']->id => 0,
+            $colors['Beige']->id => 0,
+        ], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+
+        $component->assertMountedActionModalSee('White')
+            ->assertMountedActionModalSee('Beige')
+            ->assertMountedActionModalSee('المطلوب لهذا اللون: 5')
+            ->assertMountedActionModalSee('تم تسليمه من هذا اللون: 0')
+            ->assertMountedActionModalSee('المتبقي من هذا اللون: 5');
+    }
+
+    public function test_partial_delivery_modal_ignores_product_colors_added_after_the_order(): void
+    {
+        $admin = User::factory()->create();
+
+        $product = Product::factory()->create([
+            'price_visibility' => 'public',
+            'price' => 100,
+            'size_enabled' => true,
+        ]);
+
+        $black = ProductVariant::factory()
+            ->for($product)
+            ->create(['color' => 'Black', 'size' => '41', 'available_quantity' => 0]);
+
+        $order = Order::create([
+            'order_number' => Order::nextOrderNumber(),
+            'customer_id' => Customer::factory()->create()->id,
+            'total_quantity' => 0,
+        ]);
+
+        $item = $order->items()->create(
+            OrderItem::snapshotFromVariant($black) + ['quantity' => 5]
+        );
+
+        $order->recalculateTotalQuantity();
+        $order->confirm();
+        $order->refresh();
+
+        // A color added to the product after the order was submitted.
+        ProductVariant::factory()
+            ->for($product)
+            ->create(['color' => 'Beige', 'size' => '41', 'available_quantity' => 0]);
+
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([
+            $item->refresh()->colorQuantities()->firstOrFail()->id => 0,
+        ], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+
+        $component->assertMountedActionModalDontSee('Beige');
+    }
+
+    public function test_fully_delivered_items_disappear_from_the_partial_delivery_modal(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $deliveredItem, $deliveredColors] = $this->multiColorOrder();
+
+        foreach ($deliveredColors as $colorRow) {
+            $colorRow->setDeliveredQuantity($colorRow->requested_quantity);
+        }
+
+        $pendingVariant = ProductVariant::factory()
+            ->for(Product::factory()->create([
+                'price_visibility' => 'public',
+                'price' => 100,
+                'size_enabled' => true,
+            ]))
+            ->create(['color' => 'Brown', 'size' => '41', 'available_quantity' => 0]);
+
+        $pendingItem = $order->items()->create(
+            OrderItem::snapshotFromVariant($pendingVariant) + ['quantity' => 4]
+        );
+
+        $order->recalculateTotalQuantity();
+        $order->refreshDeliveryStatus();
+
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([
+            $pendingItem->refresh()->colorQuantities()->firstOrFail()->id => 0,
+        ], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+
+        $component->assertMountedActionModalSee('Brown')
+            ->assertMountedActionModalDontSee($deliveredItem->product_name);
+    }
+
+    public function test_partial_delivery_action_is_unavailable_when_no_color_remains(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->assertActionVisible('recordDelivery');
+
+        foreach ($colors as $colorRow) {
+            $colorRow->setDeliveredQuantity($colorRow->requested_quantity);
+        }
+
+        $order->refreshDeliveryStatus();
+
+        $this->assertFalse($order->refresh()->hasOutstandingColors());
+
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->assertActionHidden('recordDelivery')
+            ->assertActionHidden('deliverAll');
+    }
+
+    public function test_order_view_shows_remaining_quantities_grouped_by_color(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        $colors['Black']->setDeliveredQuantity(5);
+        $order->refreshDeliveryStatus();
+
+        $this->actingAs($admin)
+            ->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('المتبقي حسب اللون')
+            ->assertSee('White — 5 قطعة')
+            ->assertSee('Beige — 5 قطعة')
+            ->assertSee('ألوان مكتملة التسليم')
+            ->assertSee('Black — تم التسليم بالكامل');
+    }
+
+    public function test_order_view_states_when_every_color_is_delivered(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        foreach ($colors as $colorRow) {
+            $colorRow->setDeliveredQuantity($colorRow->requested_quantity);
+        }
+
+        $order->refreshDeliveryStatus();
+
+        $this->actingAs($admin)
+            ->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('تم تسليم جميع الألوان')
+            ->assertDontSee('المتبقي حسب اللون');
+    }
+
+    public function test_order_view_warns_about_unallocated_legacy_deliveries(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item] = $this->multiColorOrder();
+
+        $item->forceFill([
+            'delivered_quantity' => 2,
+            'unallocated_delivered_quantity' => 2,
+        ])->save();
+
+        $this->actingAs($admin)
+            ->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('كمية مسلمة قديمة تحتاج إلى توزيع على الألوان');
+    }
+
+    public function test_partial_delivery_modal_blocks_unallocated_items_until_reconciled(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        $item->forceFill([
+            'delivered_quantity' => 2,
+            'unallocated_delivered_quantity' => 2,
+        ])->save();
+        $item->refresh();
+
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+        $component->assertMountedActionModalSee('كمية مسلمة قديمة تحتاج إلى توزيع على الألوان: 2');
+
+        // After the reconciliation, only the colors with a positive
+        // remaining quantity are offered again.
+        $order->reconcileUnallocatedDeliveries([$colors['Black']->id => 2]);
+
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([
+            $colors['Black']->id => 0,
+            $colors['White']->id => 0,
+            $colors['Beige']->id => 0,
+        ], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+    }
+
+    public function test_item_card_never_exposes_a_bare_aggregate_remaining_entry(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        $colors['Black']->setDeliveredQuantity(5);
+        $order->refreshDeliveryStatus();
+
+        $html = $this->actingAs($admin)
+            ->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->getContent();
+
+        preg_match_all('/fi-in-entry-label" role="term">\s*([^<]+?)\s*<\/div>/u', $html, $matches);
+
+        $labels = array_map('trim', $matches[1]);
+
+        $this->assertNotEmpty($labels, 'Expected the item cards to render labelled entries.');
+        $this->assertContains('المتبقي حسب اللون', $labels);
+        $this->assertNotContains('المتبقي', $labels, 'A bare aggregate remaining value must not be displayed.');
+        $this->assertNotContains('تم تسليمه', $labels, 'A bare aggregate delivered value must not be displayed.');
+    }
+
+    public function test_confirmation_view_shows_remaining_quantities_grouped_by_color(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder(OrderStatus::New);
+
+        $this->actingAs($admin)
+            ->get("/admin/order-management/{$order->getKey()}/confirm")
+            ->assertOk()
+            ->assertSee('المتبقي حسب اللون')
+            ->assertSee('Black — 5 قطعة')
+            ->assertSee('White — 5 قطعة')
+            ->assertSee('Beige — 5 قطعة')
+            ->assertDontSee('ألوان مكتملة التسليم');
+    }
+
+    public function test_delivered_order_view_shows_all_colors_delivered(): void
+    {
+        $admin = User::factory()->create();
+        [$order, $item, $colors] = $this->multiColorOrder();
+
+        $order->deliverAllRemaining();
+
+        $this->actingAs($admin)
+            ->get("/admin/orders/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('تم تسليم جميع الألوان')
+            ->assertSee('ألوان مكتملة التسليم')
+            ->assertSee('Black — تم التسليم بالكامل')
+            ->assertDontSee('المتبقي حسب اللون');
+    }
+
+    public function test_partial_delivery_visual_acceptance_scenario(): void
+    {
+        $admin = User::factory()->create();
+
+        $product = Product::factory()->create([
+            'name' => 'ZARA Heel',
+            'product_code' => 'mai_002',
+            'color_enabled' => false,
+            'size_enabled' => false,
+            'price_visibility' => 'public',
+            'price' => 100,
+        ]);
+
+        $variants = collect(['Black', 'White'])->map(fn (string $color): ProductVariant => ProductVariant::factory()
+            ->for($product)
+            ->create(['color' => $color, 'size' => '37', 'available_quantity' => 0]));
+
+        $order = Order::create([
+            'order_number' => Order::nextOrderNumber(),
+            'customer_id' => Customer::factory()->create()->id,
+            'total_quantity' => 0,
+        ]);
+
+        $snapshot = OrderItem::snapshotFromVariant($variants->first());
+        $snapshot['color'] = 'Black، White';
+
+        $item = $order->items()->create($snapshot + [
+            'requested_quantity' => 10,
+            'color_count' => 2,
+            'quantity' => 20,
+        ]);
+
+        $order->recalculateTotalQuantity();
+        $order->confirm();
+        $order->refresh();
+
+        $black = $item->refresh()->colorQuantities()->where('color', 'Black')->firstOrFail();
+        $white = $item->colorQuantities()->where('color', 'White')->firstOrFail();
+
+        // 5 pieces delivered from each color.
+        $order->recordDeliveries([
+            $black->id => ['quantity' => 5, 'expected_delivered' => 0],
+            $white->id => ['quantity' => 5, 'expected_delivered' => 0],
+        ]);
+
+        // Modal: both colors, with their explicit per-color values.
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([$black->id => 0, $white->id => 0], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+        $component->assertMountedActionModalSee('ZARA Heel — mai_002 — Black')
+            ->assertMountedActionModalSee('ZARA Heel — mai_002 — White')
+            ->assertMountedActionModalSee('المطلوب لهذا اللون: 10')
+            ->assertMountedActionModalSee('تم تسليمه من هذا اللون: 5')
+            ->assertMountedActionModalSee('المتبقي من هذا اللون: 5');
+
+        // Order details: remaining grouped by color.
+        $this->actingAs($admin)->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('المتبقي حسب اللون')
+            ->assertSee('Black — 5 قطعة')
+            ->assertSee('White — 5 قطعة');
+
+        // Production Requirements cards: the remaining quantities per color.
+        $this->assertSame([
+            ['color' => 'Black', 'remaining' => 5],
+            ['color' => 'White', 'remaining' => 5],
+        ], ProductionRequirementsWidget::requirementsFor()->first()['pending_colors']);
+
+        // Deliver the remaining 5 of Black only.
+        $order->recordDeliveries([$black->id => ['quantity' => 5, 'expected_delivered' => 5]]);
+
+        $component = Livewire::actingAs($admin)->test(ViewOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([$white->id => 0], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
+        $component->assertMountedActionModalDontSee('Black');
+
+        $this->actingAs($admin)->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('White — 5 قطعة')
+            ->assertSee('ألوان مكتملة التسليم')
+            ->assertSee('Black — تم التسليم بالكامل');
+
+        $this->assertSame([
+            ['color' => 'White', 'remaining' => 5],
+        ], ProductionRequirementsWidget::requirementsFor()->first()['pending_colors']);
+
+        // Deliver the remaining 5 of White.
+        $order->recordDeliveries([$white->id => ['quantity' => 5, 'expected_delivered' => 5]]);
+
+        $this->assertSame(OrderStatus::Delivered, $order->refresh()->status);
+        $this->assertTrue(ProductionRequirementsWidget::requirementsFor()->isEmpty());
+
+        Livewire::actingAs($admin)
+            ->test(ViewOrder::class, ['record' => $order->getKey()])
+            ->assertActionHidden('recordDelivery')
+            ->assertActionHidden('deliverAll');
+
+        $this->actingAs($admin)->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('تم تسليم جميع الألوان')
+            ->assertDontSee('المتبقي حسب اللون');
     }
 
     public function test_deliver_all_action_completes_the_order_from_the_view_page(): void

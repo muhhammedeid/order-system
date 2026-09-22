@@ -524,8 +524,12 @@ class AdminExcelExportTest extends TestCase
         $order->recalculateTotalQuantity();
         $order->confirm();
 
-        $item->colorQuantities()->where('color', 'Black')->firstOrFail()->setDeliveredQuantity(10);
-        $item->colorQuantities()->where('color', 'White')->firstOrFail()->setDeliveredQuantity(4);
+        $blackRow = $item->colorQuantities()->where('color', 'Black')->firstOrFail();
+        $whiteRow = $item->colorQuantities()->where('color', 'White')->firstOrFail();
+        $beigeRow = $item->colorQuantities()->where('color', 'Beige')->firstOrFail();
+
+        $blackRow->setDeliveredQuantity(10);
+        $whiteRow->setDeliveredQuantity(4);
         $order->refreshDeliveryStatus();
 
         $expected = [
@@ -555,6 +559,25 @@ class AdminExcelExportTest extends TestCase
         $this->assertSame($expected, $cardRemainders);
         $this->assertSame($expected, $tableRemainders);
         $this->assertSame($expected, $exportRemainders);
+
+        // Order details: the same values, grouped by color.
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->get("/admin/order-management/{$order->getKey()}")
+            ->assertOk()
+            ->assertSee('White — 6 قطعة')
+            ->assertSee('Beige — 10 قطعة')
+            ->assertSee('Black — تم التسليم بالكامل');
+
+        // Partial-delivery modal: only the colors that still require delivery.
+        $component = Livewire::actingAs($admin)->test(ViewManagedOrder::class, ['record' => $order->getKey()]);
+        $component->mountAction('recordDelivery');
+
+        $this->assertSame([
+            $whiteRow->id => 0,
+            $beigeRow->id => 0,
+        ], $component->instance()->mountedActions[0]['data']['deliveries'] ?? []);
     }
 
     public function test_selected_orders_bulk_export_contains_only_selected_orders(): void
