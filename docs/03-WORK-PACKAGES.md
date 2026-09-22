@@ -597,11 +597,21 @@ Integration document: `10-WHATSAPP-INTEGRATION.md`.
 ### Acceptance
 
 - WAHA runs locally with persistent session storage.
-- The 14 spike scenarios are executed and recorded (pairing-dependent scenarios require a
-  real WhatsApp account and a human operator).
+- The 14 spike scenarios are executed and recorded.
 - Real `session.status`, `message` and `message.ack` payload shapes are captured and the
   idempotency key is confirmed against observed data.
 - Laravel-side tests pass; no secrets or QR/auth material appear in logs.
 - No inbox, conversations, customer linking, templates, consent, campaigns, scheduling,
   throttling or campaign-safety features are implemented.
 - No queues, Redis, jobs or workers are introduced.
+
+### P08-W01A — Live Pairing & End-to-End Verification
+
+Completed after P08-W01: a real WhatsApp account was paired on WAHA `2026.9.1` (engine
+`NOWEB`) and all 14 scenarios passed, including outbound text/media through the Laravel
+gateway, inbound webhook delivery, `SERVER`/`DEVICE` acknowledgements, session persistence
+across container restart and recreate, a real unlink/re-pair cycle and duplicate webhook
+protection with a captured event. Live verification exposed and fixed one defect: WAHA
+`NOWEB` send responses carry the message id in `key.id` and the timestamp in
+`messageTimestamp`, which `SentMessage` now handles with a regression test. Details and
+observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.

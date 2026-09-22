@@ -135,52 +135,120 @@ with no worker, so campaign work will need a worker process.
 ## P08-W01 Spike Results
 
 Environment: WAHA `2026.9.1`, engine `NOWEB`, tier `CORE`, Docker on Windows.
+P08-W01A completed live pairing and end-to-end verification with a real WhatsApp account.
 
 | # | Scenario | Result |
 |---|---|---|
 | 1 | Create session | PASS (`POST /api/sessions`) |
 | 2 | Obtain QR | PASS (`GET /api/{session}/auth/qr`, base64 PNG) |
-| 3 | Pair a real device | NOT RUN — requires a real WhatsApp account and operator |
-| 4 | Reach `WORKING` | NOT RUN — depends on scenario 3 |
-| 5 | Send text | NOT RUN — depends on scenario 3 |
-| 6 | Send media | NOT RUN — depends on scenario 3 |
-| 7 | Receive inbound message | NOT RUN — depends on scenario 3 |
-| 8 | Observe ack/status | NOT RUN — depends on scenario 3; documented shape used |
-| 9 | Restart WAHA | PASS (container restart and recreate) |
-| 10 | Session persists without re-pairing | PASS for session state/config across restart and recreate; full `WORKING` persistence depends on scenario 3 |
-| 11 | Disconnect/reconnect | PARTIAL — stop/start transitions verified; real unlink depends on scenario 3 |
-| 12 | Replay webhook duplicate protection | PASS with a real captured payload (202 then 200 duplicate; tampered body 401) |
+| 3 | Pair a real device | PASS |
+| 4 | Reach `WORKING` | PASS |
+| 5 | Send text | PASS through `WahaGateway::sendText` (real message delivered) |
+| 6 | Send media | PASS through `WahaGateway::sendMedia` (real image delivered) |
+| 7 | Receive inbound message | PASS (real inbound `message` webhook accepted by Laravel) |
+| 8 | Observe ack/status | PASS — `SERVER` then `DEVICE` observed for outbound messages |
+| 9 | Restart/recreate WAHA | PASS (container restart and full `docker run` recreate) |
+| 10 | Session persists without re-pairing | PASS — `WORKING` after restart and after container recreate |
+| 11 | Disconnect/reconnect | PASS — `logout` cleared `me` and moved to `SCAN_QR_CODE`; re-pair restored `WORKING`; config preserved |
+| 12 | Replay webhook duplicate protection | PASS with a real captured event (202 accepted, then 200 duplicate; tampered body 401) |
 | 13 | Health endpoint | PASS (`GET /health` 200 with key; 401 without) |
 | 14 | Invalid API credentials rejected | PASS (401) |
 
-Observed payload shapes (live capture):
+Ack transitions observed for outbound messages: `PENDING` (send response `status`),
+`SERVER` (`ack=1`), `DEVICE` (`ack=2`). `READ` (`ack=3`) was **not** emitted by this
+engine/account even after the recipient opened the messages, so later packages must not
+assume `READ` is always available.
+
+Observed payload shapes (values redacted; envelope fields are common to all events):
 
 ```jsonc
-// session.status
+// message (inbound)
 {
-  "id": "evt_01m342gajes9cv2h56dj6fgbzk",
-  "timestamp": 1790064471511,
-  "event": "session.status",
-  "session": "spike",
-  "me": null,
-  "payload": { "name": "spike", "status": "SCAN_QR_CODE",
-    "statuses": [{ "status": "STARTING", "timestamp": 1790064470606 }], "data": null },
+  "id": "evt_<ULID>",
+  "timestamp": 1790000000000,
+  "event": "message",
+  "session": "live",
+  "me": { "id": "<account>@c.us", "pushName": "..." },
+  "payload": {
+    "id": "false_<chat>@lid_<message-id>",
+    "timestamp": 1790000000,
+    "from": "<sender>@lid",
+    "fromMe": false,
+    "source": "app",
+    "body": "<message text>",
+    "hasMedia": false,
+    "media": null,
+    "ack": 2,
+    "ackName": "DEVICE",
+    "location": null,
+    "vCards": [],
+    "replyTo": {
+      "id": "<message-id>", "participant": "<sender>@lid", "body": "...",
+      "hasMedia": false, "media": null, "_data": {}
+    },
+    "_data": {
+      "key": {}, "messageTimestamp": "...", "pushName": "...",
+      "broadcast": false, "message": {}, "status": "..."
+    }
+  },
   "engine": "NOWEB",
   "environment": { "version": "2026.9.1", "engine": "NOWEB", "tier": "CORE" }
 }
 ```
 
-Headers observed: `X-Webhook-Request-Id`, `X-Webhook-Timestamp` (ms),
-`X-Webhook-Hmac` (sha512 hex), `X-Webhook-Hmac-Algorithm: sha512`, `User-Agent: WAHA/2026.9.1`.
+```jsonc
+// message.ack
+{
+  "id": "evt_<ULID>",
+  "timestamp": 1790000000000,
+  "event": "message.ack",
+  "session": "live",
+  "me": { "id": "<account>@c.us", "pushName": "..." },
+  "payload": {
+    "id": "true_<chat>@lid_<message-id>",
+    "from": "<chat>@lid",
+    "fromMe": true,
+    "ack": 2,
+    "ackName": "DEVICE"
+  },
+  "engine": "NOWEB",
+  "environment": { "version": "2026.9.1", "engine": "NOWEB", "tier": "CORE" }
+}
+```
 
-`message` and `message.ack` shapes follow the documented WAHA envelope with
-`payload.id`, `payload.ack`, `payload.ackName`; live capture is pending pairing
-(scenarios 3–8). Parsing is defensive and covered by automated tests.
+Notes on the observed data:
+
+- `payload.from` and the ack `payload.id` can use the `@lid` hidden user id instead of the
+  `@c.us` phone JID used when sending; later packages must correlate by the message-id
+  suffix, not by the chat JID.
+- The `message.ack` payload has no `participant` field on this engine (the WAHA docs
+  example showed `participant: null`).
+- `_data` is engine-specific and is not relied upon.
+
+Operational notes for later P08 packages:
+
+- A session created through the API starts in `STOPPED` and must be started explicitly
+  (the WAHA docs say creation starts it by default).
+- QR codes rotate about every 20 seconds; leaving one unscanned moves the session to
+  `FAILED` after roughly two minutes. `restart` returns it to `SCAN_QR_CODE`.
+- On logout/unlink the session config is preserved but the device must be paired again.
+- The webhook dedupe stores keys in the database cache. When the database is unavailable
+  the endpoint returns 500 and WAHA retries the delivery (observed), which is the expected
+  fail-closed behavior; retries are deduplicated once the database is reachable.
+- WAHA delivers the same event to every configured webhook, so running a capture listener
+  alongside Laravel is a valid debugging setup.
 
 ## Known Limitations
 
 - QR retrieval is `GET /api/{session}/auth/qr` in WAHA 2026.9.1 (older docs showed POST).
+- `sendText`/`sendMedia` responses use `key.id` and `messageTimestamp`, not the documented
+  top-level `id`/`timestamp`. `SentMessage` handles both; this was a real defect found by
+  live verification and fixed with a regression test.
 - WAHA send endpoints can hang without an HTTP response while the session is not `WORKING`;
   the gateway timeout converts this into a sanitized `WhatsAppException`.
-- Pairing, sending, receiving and ack scenarios need a real WhatsApp account; using an
-  unofficial client carries account/session ban risk.
+- `READ` acknowledgements were not produced on this engine/account; only `SERVER` and
+  `DEVICE` were observed.
+- Application logs contain the event name, session name, provider message id (which embeds
+  the chat JID/LID) and ack name, but never QR data, message bodies, API keys or the HMAC
+  secret.
+- Using an unofficial client carries account/session ban risk.

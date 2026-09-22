@@ -62,6 +62,20 @@ class WahaGatewayTest extends TestCase
             && $request->hasHeader('X-Api-Key', 'test-api-key'));
     }
 
+    public function test_send_text_reads_the_noweb_key_id_shape(): void
+    {
+        Http::fake(['*' => Http::response([
+            'key' => ['remoteJid' => '111@s.whatsapp.net', 'fromMe' => true, 'id' => '3EB0ABC'],
+            'messageTimestamp' => '1790068606',
+            'status' => 'PENDING',
+        ], 201)]);
+
+        $message = app(WhatsAppGateway::class)->sendText('111@c.us', 'hi');
+
+        $this->assertSame('3EB0ABC', $message->providerId);
+        $this->assertSame(1790068606, $message->timestamp);
+    }
+
     public function test_send_image_uses_send_image_endpoint(): void
     {
         Http::fake(['*' => Http::response(['id' => 'true_111@c.us_IMG'], 201)]);

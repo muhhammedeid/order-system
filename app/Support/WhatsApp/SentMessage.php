@@ -13,11 +13,25 @@ class SentMessage
         public readonly ?int $timestamp = null,
     ) {}
 
+    /**
+     * WAHA 2026.9.1 (NOWEB) returns the message id under `key.id` and the
+     * timestamp as a string `messageTimestamp`. Other shapes keep the
+     * documented `id` / `timestamp` fields, which are tried first.
+     */
     public static function fromArray(array $data): self
     {
+        $id = $data['id']
+            ?? $data['key']['id']
+            ?? $data['_data']['id']['id']
+            ?? '';
+
+        $timestamp = $data['timestamp']
+            ?? $data['messageTimestamp']
+            ?? null;
+
         return new self(
-            providerId: (string) ($data['id'] ?? $data['_data']['id']['id'] ?? ''),
-            timestamp: isset($data['timestamp']) ? (int) $data['timestamp'] : null,
+            providerId: (string) $id,
+            timestamp: is_numeric($timestamp) ? (int) $timestamp : null,
         );
     }
 
