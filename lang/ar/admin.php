@@ -22,6 +22,7 @@ return [
         'general_settings' => 'الإعدادات العامة',
         'whatsapp_account' => 'الحساب',
         'whatsapp_inbox' => 'الوارد',
+        'whatsapp_templates' => 'القوالب',
     ],
     'models' => [
         'order' => 'طلب',
@@ -88,6 +89,50 @@ return [
         'save' => 'حفظ',
     ],
     'whatsapp' => [
+        'marketing' => [
+            'section' => 'تسويق واتساب',
+            'status' => 'حالة التسويق',
+            'statuses' => [
+                'unknown' => 'غير معروفة',
+                'subscribed' => 'مشترك',
+                'unsubscribed' => 'غير مشترك',
+            ],
+            'opted_in_at' => 'تاريخ الاشتراك',
+            'opted_out_at' => 'تاريخ إلغاء الاشتراك',
+            'hint' => 'الأهلية للتسويق تتطلب اشتراكًا صريحًا ورقمًا صالحًا. رسائل الطلبات التشغيلية لا تتأثر بهذه الحالة.',
+        ],
+        'templates' => [
+            'model' => 'قالب',
+            'models' => 'القوالب',
+            'fields' => [
+                'name' => 'الاسم',
+                'type' => 'النوع',
+                'body' => 'نص الرسالة',
+                'active' => 'مفعّل',
+                'updated_at' => 'آخر تحديث',
+            ],
+            'types' => [
+                'marketing' => 'تسويقي',
+                'general' => 'عام',
+            ],
+            'variables_hint' => 'المتغيرات المعتمدة: :variables',
+            'actions' => [
+                'preview' => 'معاينة',
+                'close' => 'إغلاق',
+            ],
+            'preview' => [
+                'heading' => 'معاينة: :name',
+                'customer' => 'العميل',
+                'product' => 'المنتج (اختياري)',
+                'product_required' => 'هذا القالب يستخدم متغيرات المنتج — اختر منتجًا.',
+                'choose_customer' => 'اختر عميلًا لعرض المعاينة.',
+                'hint' => 'معاينة فقط — لا يتم إرسال أي شيء.',
+            ],
+            'errors' => [
+                'unknown_tokens' => 'متغيرات قالب غير معروفة: :tokens',
+                'missing_product' => 'هذا القالب يتطلب منتجًا، ولم يتم تحديد منتج.',
+            ],
+        ],
         'service' => [
             'title' => 'خدمة واتساب',
             'healthy' => 'تعمل بشكل سليم',

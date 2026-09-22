@@ -22,6 +22,7 @@ return [
         'general_settings' => 'General Settings',
         'whatsapp_account' => 'Account',
         'whatsapp_inbox' => 'Inbox',
+        'whatsapp_templates' => 'Templates',
     ],
     'models' => [
         'order' => 'Order',
@@ -88,6 +89,50 @@ return [
         'save' => 'Save',
     ],
     'whatsapp' => [
+        'marketing' => [
+            'section' => 'WhatsApp Marketing',
+            'status' => 'Marketing status',
+            'statuses' => [
+                'unknown' => 'Unknown',
+                'subscribed' => 'Subscribed',
+                'unsubscribed' => 'Unsubscribed',
+            ],
+            'opted_in_at' => 'Opted in at',
+            'opted_out_at' => 'Opted out at',
+            'hint' => 'Marketing eligibility requires an explicit subscription and a usable number. Operational order messages are not affected by this status.',
+        ],
+        'templates' => [
+            'model' => 'Template',
+            'models' => 'Templates',
+            'fields' => [
+                'name' => 'Name',
+                'type' => 'Type',
+                'body' => 'Message body',
+                'active' => 'Active',
+                'updated_at' => 'Last updated',
+            ],
+            'types' => [
+                'marketing' => 'Marketing',
+                'general' => 'General',
+            ],
+            'variables_hint' => 'Approved variables: :variables',
+            'actions' => [
+                'preview' => 'Preview',
+                'close' => 'Close',
+            ],
+            'preview' => [
+                'heading' => 'Preview: :name',
+                'customer' => 'Customer',
+                'product' => 'Product (optional)',
+                'product_required' => 'This template uses product variables — select a product.',
+                'choose_customer' => 'Select a customer to render the preview.',
+                'hint' => 'Preview only — nothing is sent.',
+            ],
+            'errors' => [
+                'unknown_tokens' => 'Unknown template variable(s): :tokens',
+                'missing_product' => 'This template requires a product, but no product was provided.',
+            ],
+        ],
         'service' => [
             'title' => 'WAHA Service',
             'healthy' => 'Healthy',

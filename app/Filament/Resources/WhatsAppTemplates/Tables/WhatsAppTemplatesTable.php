@@ -1,0 +1,128 @@
+<?php
+
+namespace App\Filament\Resources\WhatsAppTemplates\Tables;
+
+use App\Enums\WhatsAppTemplateType;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\WhatsAppTemplate;
+use App\Support\WhatsApp\Templates\WhatsAppTemplateException;
+use App\Support\WhatsApp\Templates\WhatsAppTemplateRenderer;
+use App\Support\WhatsApp\Templates\WhatsAppTemplateVariables;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class WhatsAppTemplatesTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('name')
+                    ->label(__('admin.whatsapp.templates.fields.name'))
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('type')
+                    ->label(__('admin.whatsapp.templates.fields.type'))
+                    ->badge()
+                    ->formatStateUsing(fn (?WhatsAppTemplateType $state): string => $state?->label() ?? '')
+                    ->color(fn (?WhatsAppTemplateType $state): string => $state === WhatsAppTemplateType::Marketing
+                        ? 'info'
+                        : 'gray'),
+                IconColumn::make('active')
+                    ->label(__('admin.whatsapp.templates.fields.active'))
+                    ->boolean(),
+                TextColumn::make('updated_at')
+                    ->label(__('admin.whatsapp.templates.fields.updated_at'))
+                    ->dateTime()
+                    ->sortable(),
+            ])
+            ->recordActions([
+                EditAction::make(),
+                self::previewAction(),
+                DeleteAction::make(),
+            ])
+            ->defaultSort('name');
+    }
+
+    /**
+     * Read-only, escaped, non-sending preview against real Customer/Product
+     * records. Product becomes required when the template uses product
+     * variables; missing context is reported instead of rendering empty text.
+     */
+    private static function previewAction(): Action
+    {
+        return Action::make('preview')
+            ->label(__('admin.whatsapp.templates.actions.preview'))
+            ->icon('heroicon-o-eye')
+            ->modalHeading(fn (WhatsAppTemplate $record): string => __('admin.whatsapp.templates.preview.heading', [
+                'name' => $record->name,
+            ]))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('admin.whatsapp.templates.actions.close'))
+            ->form([
+                Select::make('customer_id')
+                    ->label(__('admin.whatsapp.templates.preview.customer'))
+                    ->searchable()
+                    ->required()
+                    ->live()
+                    ->getSearchResultsUsing(fn (string $search): array => Customer::query()
+                        ->where(function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%")
+                                ->orWhere('customer_code', 'like', "%{$search}%");
+                        })
+                        ->orderBy('name')
+                        ->limit(20)
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->getOptionLabelUsing(fn ($value): ?string => Customer::query()->whereKey($value)->value('name')),
+                Select::make('product_id')
+                    ->label(__('admin.whatsapp.templates.preview.product'))
+                    ->searchable()
+                    ->live()
+                    ->required(fn (WhatsAppTemplate $record): bool => WhatsAppTemplateVariables::usesProductContext($record->body))
+                    ->helperText(fn (WhatsAppTemplate $record): ?string => WhatsAppTemplateVariables::usesProductContext($record->body)
+                        ? __('admin.whatsapp.templates.preview.product_required')
+                        : null)
+                    ->getSearchResultsUsing(fn (string $search): array => Product::query()
+                        ->where(function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('product_code', 'like', "%{$search}%");
+                        })
+                        ->orderBy('name')
+                        ->limit(20)
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->getOptionLabelUsing(fn ($value): ?string => Product::query()->whereKey($value)->value('name')),
+                Placeholder::make('preview')
+                    ->hiddenLabel()
+                    ->helperText(__('admin.whatsapp.templates.preview.hint'))
+                    ->content(function (Get $get, WhatsAppTemplate $record): string {
+                        $customer = Customer::query()->find($get('customer_id'));
+
+                        if ($customer === null) {
+                            return __('admin.whatsapp.templates.preview.choose_customer');
+                        }
+
+                        $product = filled($get('product_id'))
+                            ? Product::query()->find($get('product_id'))
+                            : null;
+
+                        try {
+                            return app(WhatsAppTemplateRenderer::class)->render($record, $customer, $product);
+                        } catch (WhatsAppTemplateException $exception) {
+                            return $exception->getMessage();
+                        }
+                    }),
+            ]);
+    }
+}

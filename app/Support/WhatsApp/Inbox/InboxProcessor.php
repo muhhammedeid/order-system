@@ -3,13 +3,16 @@
 namespace App\Support\WhatsApp\Inbox;
 
 use App\Contracts\WhatsAppGateway;
+use App\Enums\WhatsAppMarketingStatus;
 use App\Enums\WhatsAppMessageDirection;
 use App\Enums\WhatsAppMessageStatus;
+use App\Models\Customer;
 use App\Models\WhatsAppConversation;
 use App\Support\WhatsApp\WebhookEvent;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -83,6 +86,8 @@ class InboxProcessor
                 return;
             }
 
+            $this->recordMarketingOptOut($conversation, $message);
+
             $conversation->forceFill([
                 'last_message_at' => $occurredAt,
                 'last_message_preview' => $message->type->isText()
@@ -121,6 +126,35 @@ class InboxProcessor
         if ($customer !== null) {
             $conversation->forceFill(['customer_id' => $customer->id])->save();
         }
+    }
+
+    /**
+     * Inbound keyword opt-out. Only a regular inbound text message of a
+     * conversation linked to a customer can trigger it, and only on a
+     * whole-message allowlisted keyword. Conversation data is untouched, no
+     * automatic reply is sent, and no message body is logged.
+     */
+    private function recordMarketingOptOut(WhatsAppConversation $conversation, InboundMessage $message): void
+    {
+        if ($message->fromMe
+            || $conversation->customer_id === null
+            || ! $message->type->isText()
+            || ! MarketingOptOut::matches($message->body)) {
+            return;
+        }
+
+        $customer = Customer::query()->find($conversation->customer_id);
+
+        if ($customer === null || $customer->whatsapp_marketing_status === WhatsAppMarketingStatus::Unsubscribed) {
+            return;
+        }
+
+        $customer->forceFill(['whatsapp_marketing_status' => WhatsAppMarketingStatus::Unsubscribed])->save();
+
+        Log::info('WhatsApp marketing opt-out recorded', [
+            'customer_id' => $customer->id,
+            'status' => WhatsAppMarketingStatus::Unsubscribed->value,
+        ]);
     }
 
     private function storeMessage(

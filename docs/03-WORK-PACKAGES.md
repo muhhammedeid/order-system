@@ -699,3 +699,43 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
 - ACKs keep updating the same order-linked message; no automatic sending on status changes.
 - Automated coverage for relations, number verification, resolution, sending, templates and
   the panel; full suite green; live QA passes.
+
+## P08-W05 — Marketing Consent & Message Templates
+
+### Scope
+
+- Marketing consent on `customers`: `whatsapp_marketing_status`
+  (`unknown|subscribed|unsubscribed`, default `unknown`) plus nullable
+  `whatsapp_marketing_opted_in_at` / `whatsapp_marketing_opted_out_at`; no consent-history
+  table.
+- Transition rules centralized in the `Customer` model (`saving` hook), shared by Admin
+  edits and the inbound opt-out; timestamps are never written anywhere else.
+- Deterministic inbound keyword opt-out from regular inbound `message` events of linked
+  conversations, with a restricted whole-message exact-match allowlist and normalization;
+  no automatic reply.
+- Reusable `whatsapp_templates` (`name` unique, `type` `marketing|general`, `body` ≤ 4096,
+  `active`) and a minimal allowlisted renderer with single-pass replacement.
+- Filament `WhatsApp → Templates` resource (list/create/edit/delete) with a read-only,
+  escaped, non-sending preview built from real Customer/optional Product records.
+- Compact **WhatsApp Marketing** section on the Customer form and a status badge in the
+  Customer list.
+
+### Acceptance
+
+- Existing and new customers default to Unknown and are not marketing-eligible; Subscribed
+  is eligible only with a syntactically usable WhatsApp/phone number; Unsubscribed is never
+  eligible. Provider verification is not part of eligibility.
+- Transitions: opt-in sets `opted_in_at` and preserves an older `opted_out_at`; opt-out sets
+  `opted_out_at` and preserves `opted_in_at`; re-subscription refreshes `opted_in_at`;
+  reset to Unknown clears both; re-saving the same status changes nothing.
+- Inbound opt-out triggers only for `message` + `fromMe=false` + a linked customer and only
+  on `stop`, `unsubscribe`, `ايقاف الاشتراك`, `الغاء الاشتراك`, `لا اريد رسائل`,
+  `لا اريد عروض` after normalization; bare «إلغاء»/«إيقاف» and «إلغاء الطلب» never opt out;
+  the message is still stored, the conversation is not altered and nothing is auto-replied.
+- Templates reject unknown variables at save and at render; product variables fail closed
+  without a product; `{{business_name}}` resolves `settings.business_name` then
+  `config('app.name')`; replacement is single-pass and no template content is executed.
+- Previews are read-only and escaped; P08-W04 operational order messages remain
+  code/localization-driven and independent of marketing consent.
+- Automated coverage for consent, opt-out ingestion/normalization, renderer/variables,
+  resource CRUD and preview; full suite green; live signed-webhook/DB QA passes.

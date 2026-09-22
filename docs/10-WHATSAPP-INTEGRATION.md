@@ -387,6 +387,88 @@ back to the order; unlinked messages render unchanged.
   messages remained unlinked.
 - Log scan: no message bodies, order numbers, API keys or HMAC secrets.
 
+## P08-W05 — Marketing Consent & Message Templates
+
+Marketing consent and reusable templates are separate from operational order communication.
+No campaigns, audience building, scheduling, throttling, capping or sending exist in this
+package.
+
+### Consent schema and semantics
+
+`customers` gains `whatsapp_marketing_status` (`unknown` default, `subscribed`,
+`unsubscribed`), `whatsapp_marketing_opted_in_at` and `whatsapp_marketing_opted_out_at`. No
+consent-history table exists.
+
+| Situation | Result |
+|---|---|
+| Unknown | Not marketing-eligible |
+| Subscribed + syntactically usable number (`whatsapp` else `phone`, 6–15 digits) | Marketing-eligible |
+| Subscribed without a usable number | Not eligible |
+| Unsubscribed | Never eligible |
+
+Transitions are centralized in a `Customer` `saving` hook so Admin edits and the inbound
+opt-out share one rule: opt-in sets `opted_in_at` (preserving an older `opted_out_at`);
+opt-out sets `opted_out_at` (preserving `opted_in_at`); re-subscription refreshes
+`opted_in_at` and preserves the previous opt-out; reset to Unknown clears both; re-saving
+the same status leaves timestamps untouched. Eligibility is a read-only method
+(`canReceiveWhatsAppMarketing()`) and performs no provider verification — that belongs to
+campaign send-time processing. Operational order/customer messaging never consults consent.
+
+### Inbound keyword opt-out
+
+Only a regular inbound `message` (`fromMe=false`) whose conversation is linked to a customer
+can opt out, and only when the whole message matches one allowlisted keyword after
+normalization (trim, collapse whitespace, lowercase English, remove Arabic
+diacritics/tatweel, normalize alef variants, strip surrounding punctuation/emoji):
+
+`stop`, `unsubscribe`, `ايقاف الاشتراك`, `الغاء الاشتراك`, `لا اريد رسائل`, `لا اريد عروض`.
+
+Bare «إلغاء» / «إيقاف» and order phrases such as «إلغاء الطلب» are explicitly not opt-outs.
+No substring, fuzzy, NLP or AI matching exists. The inbound message is stored normally, the
+conversation is untouched, no automatic reply is sent, and the log records only the customer
+id and the new status (never the message body). Unlinked conversations mutate nothing;
+`message.any source=app` and outbound/API messages never trigger the rule.
+
+### Template schema, variables and renderer
+
+`whatsapp_templates`: `id`, `name` (unique, ≤120), `type` (`marketing|general`), `body`
+(text, ≤4096), `active` (default true), timestamps. No versions, approval workflows, folders,
+localization tables, Meta ids, provider synchronization or WYSIWYG.
+
+Approved variables: `{{customer_name}}`, `{{product_name}}`, `{{product_code}}`,
+`{{business_name}}`. `business_name` resolves `settings.business_name` first and falls back
+to `config('app.name')`. The renderer (`WhatsAppTemplateRenderer`) is deterministic: no
+Blade/Twig/PHP/expression evaluation, unknown variables are rejected at save and at render,
+missing product context fails closed, values are inserted as plain text (trimmed, control
+characters stripped) and replacement is a single pass so inserted values are never
+re-expanded. The 4096 limit is the existing provider-safe maximum.
+
+### Admin UX
+
+- Customer form: a compact **WhatsApp Marketing** section with the status select and
+  read-only opt-in/opt-out timestamps; the Customer list shows a status badge.
+- `WhatsApp → Templates`: list (name, type, active, updated at), create/edit/delete, a plain
+  textarea body with the approved-variables helper, and a Preview action using real
+  searchable Customer and optional Product records. Product becomes required when the
+  template uses product variables. Preview is read-only, escaped and never sends.
+- P08-W04 operational order messages stay code/localization-driven and were not migrated
+  into `whatsapp_templates`.
+
+### P08-W05 live QA (local MySQL, signed webhook)
+
+- Migrations ran cleanly; guest access to `/admin/whatsapp-templates` redirected to the
+  admin login.
+- A signed inbound `message` with «إلغاء الاشتراك» on a linked conversation set the customer
+  to Unsubscribed with an opt-out timestamp, stored the message and left the conversation
+  linked; «إلغاء الطلب» and bare «إلغاء» stored messages without opting out; `stop` from an
+  unlinked chat mutated no customer.
+- Live transitions: subscribe set `opted_in_at` and preserved the previous opt-out; reset to
+  Unknown cleared both; eligibility was true only while Subscribed with a usable number.
+- `{{business_name}}` rendered the `settings.business_name` value while `app.name` was
+  renamed in-process, and fell back to `config('app.name')` with no setting present.
+- Log scan: no message bodies, template bodies, API keys or HMAC secrets; the opt-out log
+  contains only `customer_id` and `status`.
+
 ## P08-W01 Spike Results
 
 Environment: WAHA `2026.9.1`, engine `NOWEB`, tier `CORE`, Docker on Windows.

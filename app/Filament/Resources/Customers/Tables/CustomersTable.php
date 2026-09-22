@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Customers\Tables;
 
+use App\Enums\WhatsAppMarketingStatus;
 use App\Filament\Concerns\HasExcelExport;
 use App\Models\Customer;
 use App\Support\Exports\CustomersExport;
@@ -35,6 +36,16 @@ class CustomersTable
                 TextColumn::make('customer_code')
                     ->label(__('filament.fields.customer_code'))
                     ->searchable(),
+                TextColumn::make('whatsapp_marketing_status')
+                    ->label(__('admin.whatsapp.marketing.status'))
+                    ->badge()
+                    ->formatStateUsing(fn (?WhatsAppMarketingStatus $state): string => $state?->label()
+                        ?? __('admin.whatsapp.marketing.statuses.unknown'))
+                    ->color(fn (?WhatsAppMarketingStatus $state): string => match ($state) {
+                        WhatsAppMarketingStatus::Subscribed => 'success',
+                        WhatsAppMarketingStatus::Unsubscribed => 'danger',
+                        default => 'gray',
+                    }),
                 TextColumn::make('created_at')
                     ->label(__('filament.fields.created_at'))
                     ->dateTime()

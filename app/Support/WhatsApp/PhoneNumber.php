@@ -20,6 +20,21 @@ class PhoneNumber
     }
 
     /**
+     * Syntactic usability only (no provider verification): a customer-entered
+     * number with 6–15 digits, matching the accepted `@c.us` length range.
+     */
+    public static function isSyntacticallyUsable(?string $number): bool
+    {
+        if (! is_string($number)) {
+            return false;
+        }
+
+        $digits = preg_replace('/\D+/', '', $number) ?? '';
+
+        return strlen($digits) >= 6 && strlen($digits) <= 15;
+    }
+
+    /**
      * Deterministic spelling variants used for exact customer matching.
      * No fuzzy matching: every candidate is a full value.
      *
