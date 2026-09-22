@@ -31,7 +31,7 @@ const colorsLabel = computed(() => {
 <template>
     <Link
         :href="`/product/${product.slug}`"
-        class="group flex flex-col overflow-hidden rounded-card border-2 border-line bg-surface-soft transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-retro"
+        class="group flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-soft-sm transition-[transform,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-soft"
     >
         <div class="relative aspect-square w-full overflow-hidden bg-surface-muted">
             <img
@@ -44,7 +44,7 @@ const colorsLabel = computed(() => {
             >
             <div
                 v-else
-                class="flex h-full w-full items-center justify-center text-ink-muted/50"
+                class="flex h-full w-full items-center justify-center text-ink-muted"
             >
                 <AppIcon
                     name="swatch"

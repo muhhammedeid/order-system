@@ -19,10 +19,10 @@ defineProps({
 </script>
 
 <template>
-    <div class="flex min-h-screen flex-col bg-surface text-ink">
+    <div class="flex min-h-[100dvh] flex-col bg-page text-ink">
         <a
             href="#main"
-            class="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-control focus:border-2 focus:border-line-strong focus:bg-surface-soft focus:px-4 focus:py-3 focus:font-semibold"
+            class="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-[500] focus:rounded-control focus:border border-line-strong focus:bg-surface focus:px-4 focus:py-3 focus:font-semibold focus:shadow-soft"
         >
             {{ t('nav.skip') }}
         </a>

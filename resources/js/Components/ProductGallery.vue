@@ -41,7 +41,7 @@ function step(delta) {
 
 <template>
     <div class="flex flex-col gap-3">
-        <div class="group relative aspect-square w-full overflow-hidden rounded-card border-2 border-line bg-surface-muted">
+        <div class="group relative aspect-square w-full overflow-hidden rounded-card border border-line bg-surface-muted">
             <img
                 v-if="mainImage"
                 :src="mainImage"
@@ -51,7 +51,7 @@ function step(delta) {
             >
             <div
                 v-else
-                class="flex h-full w-full items-center justify-center text-ink-muted/50"
+                class="flex h-full w-full items-center justify-center text-ink-muted"
             >
                 <AppIcon
                     name="swatch"
@@ -62,7 +62,7 @@ function step(delta) {
             <template v-if="images.length > 1">
                 <button
                     type="button"
-                    class="absolute start-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-line-strong bg-surface-soft/95 text-ink opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
+                    class="absolute start-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface/95 text-ink shadow-soft opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
                     :aria-label="t('gallery.previous')"
                     @click="step(-1)"
                 >
@@ -73,7 +73,7 @@ function step(delta) {
                 </button>
                 <button
                     type="button"
-                    class="absolute end-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-line-strong bg-surface-soft/95 text-ink opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
+                    class="absolute end-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface/95 text-ink shadow-soft opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
                     :aria-label="t('gallery.next')"
                     @click="step(1)"
                 >
@@ -83,7 +83,7 @@ function step(delta) {
                     />
                 </button>
 
-                <span class="absolute bottom-2 end-2 rounded-full border-2 border-line-strong bg-surface-soft/95 px-2.5 py-1 text-xs font-semibold tabular-nums text-ink">
+                <span class="absolute bottom-2 end-2 rounded-full border border-line bg-surface/95 px-2.5 py-1 text-xs font-semibold tabular-nums text-ink shadow-soft-sm">
                     {{ mainIndex + 1 }} / {{ images.length }}
                 </span>
             </template>
@@ -99,10 +99,10 @@ function step(delta) {
                 v-for="(image, index) in images"
                 :key="image"
                 type="button"
-                class="aspect-square overflow-hidden rounded-control border-2 bg-surface-muted transition-opacity duration-150"
+                class="aspect-square overflow-hidden rounded-control border bg-surface-muted transition-opacity duration-200 ease-out"
                 :class="index === mainIndex
-                    ? 'border-line-strong'
-                    : 'border-line opacity-75 hover:opacity-100'"
+                    ? 'border-primary'
+                    : 'border-line opacity-70 hover:opacity-100'"
                 :aria-label="t('gallery.show', { number: index + 1 })"
                 :aria-current="index === mainIndex ? 'true' : undefined"
                 @click="mainIndex = index"

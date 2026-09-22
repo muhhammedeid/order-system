@@ -81,10 +81,10 @@ function selectSize(size) {
                         @change="toggleColor(group.color)"
                     >
                     <span
-                        class="inline-flex min-h-11 items-center gap-2 rounded-control border-2 px-4 text-sm font-semibold transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface"
+                        class="inline-flex min-h-11 items-center gap-2 rounded-control border px-4 text-sm font-semibold transition-colors duration-200 ease-out peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface"
                         :class="selectedColors.includes(group.color)
-                            ? 'border-line-strong bg-navy text-cream'
-                            : 'border-line bg-surface-soft text-ink hover:border-line-strong'"
+                            ? 'border-primary bg-selected text-primary'
+                            : 'border-line bg-surface text-ink hover:bg-surface-soft'"
                     >
                         {{ group.color || t('variants.unspecified') }}
                     </span>
@@ -111,7 +111,7 @@ function selectSize(size) {
                 <div
                     v-for="group in variants"
                     :key="group.color ?? 'default'"
-                    class="rounded-control border-2 border-line bg-surface px-3.5 py-3"
+                    class="rounded-control border border-line bg-surface px-3.5 py-3"
                 >
                     <p class="font-semibold text-ink">{{ group.color || t('variants.unspecified') }}</p>
                     <p
@@ -137,7 +137,7 @@ function selectSize(size) {
                 <div
                     v-for="group in selectedGroups"
                     :key="group.color"
-                    class="rounded-control border-2 border-line bg-surface px-3.5 py-3"
+                    class="rounded-control border border-line bg-surface px-3.5 py-3"
                 >
                     <p class="font-semibold text-ink">{{ group.color }}</p>
                     <p class="mt-1 text-xs text-ink-muted">
@@ -176,10 +176,10 @@ function selectSize(size) {
                         @change="selectSize(size)"
                     >
                     <span
-                        class="inline-flex min-h-11 min-w-14 items-center justify-center rounded-control border-2 px-3.5 text-sm font-bold tabular-nums transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface"
+                        class="inline-flex min-h-11 min-w-14 items-center justify-center rounded-control border px-3.5 text-sm font-bold tabular-nums transition-colors duration-200 ease-out peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface"
                         :class="selectedSize === size
-                            ? 'border-line-strong bg-navy text-cream'
-                            : 'border-line bg-surface-soft text-ink hover:border-line-strong'"
+                            ? 'border-primary bg-selected text-primary'
+                            : 'border-line bg-surface text-ink hover:bg-surface-soft'"
                     >
                         {{ size }}
                     </span>
@@ -187,7 +187,7 @@ function selectSize(size) {
             </div>
             <p
                 v-else
-                class="rounded-control border-2 border-dashed border-line px-3.5 py-3 text-sm text-ink-muted"
+                class="rounded-control border border-dashed border-line-strong/60 px-3.5 py-3 text-sm text-ink-muted"
             >
                 {{ t('variants.no_common_size') }}
             </p>
@@ -203,7 +203,7 @@ function selectSize(size) {
 
         <p
             v-else-if="sizeEnabled"
-            class="flex items-center gap-2 rounded-control border-2 border-dashed border-line px-3.5 py-3 text-sm text-ink-muted"
+            class="flex items-center gap-2 rounded-control border border-dashed border-line-strong/60 px-3.5 py-3 text-sm text-ink-muted"
         >
             <AppIcon name="swatch" :size="18" />
             {{ t('variants.choose_color_for_sizes') }}

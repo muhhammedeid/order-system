@@ -44,7 +44,7 @@ watch(currentUrl, () => {
 </script>
 
 <template>
-    <header class="sticky top-0 z-40 border-b-4 border-navy bg-crimson text-cream">
+    <header class="sticky top-0 z-[100] border-b border-line bg-surface text-ink shadow-soft-sm">
         <div class="mx-auto flex h-18 w-full max-w-7xl items-center gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
             <BrandLockup />
 
@@ -56,8 +56,8 @@ watch(currentUrl, () => {
                     v-for="item in NAV"
                     :key="item.href"
                     :href="item.href"
-                    class="inline-flex min-h-11 items-center rounded-control px-3.5 text-base font-semibold transition-colors duration-150 hover:bg-cream/15"
-                    :class="isActive(item) ? 'bg-cream/20 text-white' : 'text-cream/90'"
+                    class="inline-flex min-h-11 items-center rounded-control px-3.5 text-base transition-colors duration-200 ease-out hover:bg-surface-soft"
+                    :class="isActive(item) ? 'bg-primary-soft font-semibold text-primary' : 'font-medium text-ink-muted'"
                     :aria-current="isActive(item) ? 'page' : undefined"
                 >
                     {{ item.label }}
@@ -70,7 +70,7 @@ watch(currentUrl, () => {
 
                 <Link
                     href="/cart"
-                    class="relative inline-flex h-12 items-center gap-2 rounded-control border-2 border-cream/25 px-3.5 font-semibold transition-colors duration-150 hover:bg-cream/15"
+                    class="relative inline-flex h-12 items-center gap-2 rounded-control border border-line bg-surface px-3.5 font-medium text-ink shadow-soft-sm transition-colors duration-200 ease-out hover:bg-surface-soft"
                     :aria-label="`${t('nav.cart')} — ${cartCount}`"
                 >
                     <AppIcon
@@ -81,7 +81,7 @@ watch(currentUrl, () => {
 
                     <span
                         v-if="cartCount > 0"
-                        class="flex h-6 min-w-6 items-center justify-center rounded-full bg-cream px-1.5 text-xs font-bold tabular-nums text-crimson"
+                        class="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold tabular-nums text-on-primary"
                         :class="cartPulse ? 'animate-[badge-pop_450ms_ease-out]' : ''"
                         aria-live="polite"
                     >
@@ -91,7 +91,7 @@ watch(currentUrl, () => {
 
                 <button
                     type="button"
-                    class="inline-flex h-12 w-12 items-center justify-center rounded-control border-2 border-cream/25 transition-colors duration-150 hover:bg-cream/15 sm:hidden"
+                    class="inline-flex h-12 w-12 items-center justify-center rounded-control border border-line text-ink transition-colors duration-200 ease-out hover:bg-surface-soft sm:hidden"
                     :aria-expanded="menuOpen"
                     aria-controls="mobile-nav"
                     :aria-label="t('nav.menu')"
@@ -108,7 +108,7 @@ watch(currentUrl, () => {
         <div
             v-show="menuOpen"
             id="mobile-nav"
-            class="border-t-2 border-cream/20 bg-crimson sm:hidden"
+            class="border-t border-line bg-surface sm:hidden"
         >
             <nav
                 class="mx-auto flex w-full max-w-7xl flex-col gap-1 px-4 py-3 sm:px-6"
@@ -118,8 +118,8 @@ watch(currentUrl, () => {
                     v-for="item in NAV"
                     :key="`mobile-${item.href}`"
                     :href="item.href"
-                    class="rounded-control px-3.5 py-3 text-base font-semibold transition-colors duration-150 hover:bg-cream/15"
-                    :class="isActive(item) ? 'bg-cream/20 text-white' : 'text-cream/90'"
+                    class="rounded-control px-3.5 py-3 text-base transition-colors duration-200 ease-out hover:bg-surface-soft"
+                    :class="isActive(item) ? 'bg-primary-soft font-semibold text-primary' : 'font-medium text-ink-muted'"
                     :aria-current="isActive(item) ? 'page' : undefined"
                 >
                     {{ item.label }}

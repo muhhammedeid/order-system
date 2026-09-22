@@ -17,7 +17,7 @@ defineProps({
         :href="href"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-control border-2 border-line-strong bg-whatsapp px-5 text-base font-bold text-white shadow-retro-sm transition-[transform,box-shadow,filter] duration-150 hover:brightness-110 active:translate-y-[2px] active:shadow-none"
+        class="inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-control bg-external px-5 text-base font-bold text-on-external shadow-soft-sm transition-[transform,box-shadow,filter] duration-200 ease-out hover:-translate-y-px hover:brightness-105 hover:shadow-soft active:translate-y-0 active:shadow-soft-sm"
     >
         <AppIcon
             name="whatsapp"

@@ -133,7 +133,7 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                 </p>
             </div>
 
-            <div class="flex flex-col gap-4 rounded-card border-2 border-line bg-surface-soft p-4 shadow-retro-sm">
+            <div class="flex flex-col gap-4 rounded-card border border-line bg-surface p-4 shadow-soft-sm">
                 <form
                     class="flex flex-col gap-2 sm:flex-row"
                     role="search"
@@ -151,13 +151,13 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                             inputmode="search"
                             :placeholder="t('catalog.search_placeholder')"
                             :aria-label="t('catalog.search_label')"
-                            class="min-h-12 w-full rounded-control border-2 border-line bg-surface ps-11 pe-11 text-base text-ink placeholder:text-ink-muted/60 hover:border-ink-muted focus:border-line-strong"
+                            class="min-h-12 w-full rounded-control border-2 border-line-strong bg-surface ps-11 pe-14 text-base text-ink placeholder:text-ink-muted transition-colors duration-200 ease-out hover:border-ink-muted"
                             @input="onSearchInput"
                         >
                         <button
                             v-if="search"
                             type="button"
-                            class="absolute end-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+                            class="absolute end-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted transition-colors duration-200 ease-out hover:bg-surface-muted hover:text-ink"
                             :aria-label="t('catalog.clear_search')"
                             @click="clearSearch"
                         >
@@ -186,10 +186,10 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                 >
                     <button
                         type="button"
-                        class="inline-flex min-h-11 items-center rounded-full border-2 px-3.5 text-sm font-semibold whitespace-nowrap transition-colors"
+                        class="inline-flex min-h-11 items-center rounded-full border px-3.5 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ease-out"
                         :class="category === ''
-                            ? 'border-line-strong bg-navy text-cream'
-                            : 'border-line bg-surface text-ink hover:border-line-strong'"
+                            ? 'border-primary bg-selected text-primary'
+                            : 'border-line bg-surface text-ink hover:bg-surface-soft'"
                         :aria-pressed="category === ''"
                         @click="selectCategory('')"
                     >
@@ -200,10 +200,10 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                         v-for="item in categories"
                         :key="item.id"
                         type="button"
-                        class="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 px-3.5 text-sm font-semibold whitespace-nowrap transition-colors"
+                        class="inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ease-out"
                         :class="category === String(item.id)
-                            ? 'border-line-strong bg-navy text-cream'
-                            : 'border-line bg-surface text-ink hover:border-line-strong'"
+                            ? 'border-primary bg-selected text-primary'
+                            : 'border-line bg-surface text-ink hover:bg-surface-soft'"
                         :aria-pressed="category === String(item.id)"
                         @click="selectCategory(item.id)"
                     >
@@ -216,7 +216,7 @@ const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4';
                     <button
                         v-if="hasFilters"
                         type="button"
-                        class="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-transparent px-3 text-sm font-semibold text-primary transition-colors hover:bg-surface-muted"
+                        class="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-transparent px-3 text-sm font-semibold text-primary transition-colors duration-200 ease-out hover:bg-surface-muted"
                         @click="clearFilters"
                     >
                         <AppIcon

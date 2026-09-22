@@ -52,7 +52,7 @@ async function copyOrderNumber() {
         <Head :title="t('success.title')" />
 
         <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 py-8 text-center sm:py-12">
-            <span class="flex h-20 w-20 items-center justify-center rounded-full border-2 border-line-strong bg-success-soft text-success shadow-retro">
+            <span class="flex h-20 w-20 items-center justify-center rounded-full bg-success-soft text-success shadow-soft">
                 <AppIcon
                     name="check"
                     :size="38"
@@ -81,7 +81,7 @@ async function copyOrderNumber() {
                     </span>
                     <button
                         type="button"
-                        class="inline-flex min-h-11 items-center gap-2 rounded-control border-2 border-line-strong bg-surface px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-surface-muted"
+                        class="inline-flex min-h-11 items-center gap-2 rounded-control border border-line-strong bg-surface px-3.5 text-sm font-semibold text-ink transition-colors duration-200 ease-out hover:bg-surface-soft"
                         @click="copyOrderNumber"
                     >
                         <AppIcon
@@ -97,11 +97,11 @@ async function copyOrderNumber() {
                 </p>
             </AppCard>
 
-            <ol class="grid w-full gap-3 text-start sm:grid-cols-3">
+            <ol class="grid w-full gap-3 text-start sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
                 <li
                     v-for="step in STEPS"
                     :key="step.title"
-                    class="flex flex-col gap-2 rounded-card border-2 border-line bg-surface-soft p-4"
+                    class="flex flex-col gap-2 rounded-card border border-line bg-surface p-4 shadow-soft-sm"
                 >
                     <AppIcon
                         :name="step.icon"
@@ -130,7 +130,7 @@ async function copyOrderNumber() {
                     :href="whatsappHref"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex min-h-14 items-center gap-2.5 rounded-control border-2 border-line-strong bg-whatsapp px-6 text-lg font-bold text-white shadow-retro-sm transition-[transform,box-shadow,filter] duration-150 hover:brightness-110 active:translate-y-[2px] active:shadow-none"
+                    class="inline-flex min-h-14 items-center gap-2.5 rounded-control bg-external px-6 text-lg font-bold text-on-external shadow-soft-sm transition-[transform,box-shadow,filter] duration-200 ease-out hover:-translate-y-px hover:brightness-105 hover:shadow-soft active:translate-y-0 active:shadow-soft-sm"
                 >
                     <AppIcon
                         name="whatsapp"

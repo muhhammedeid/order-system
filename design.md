@@ -286,6 +286,15 @@ display `clamp(2.5rem, 5vw, 4rem)`. Numerals that represent quantities or codes 
 three-column feature layouts (use asymmetric or zig-zag). Use `h-screen`. Ship a
 colour-only signal. Hide the focus ring.
 
+**Layout.** Mobile-first. All multi-column layouts collapse below 768 px and no viewport
+may scroll horizontally. Containment is `max-width: 1280px` centred with 16–24 px side
+padding. Feature and step grids are asymmetric (`lg:grid-cols-[1.3fr_1fr_1fr]`), never
+three equal columns. Grids of content items (products, categories) may use 2/3/4 columns
+because they are lists, not feature layouts. Full-height containers use
+`min-h-[100dvh]`, never `h-screen`.
+
+Z-index contract: base `0` / sticky nav `100` / overlay `200` / modal `300` / toast `500`.
+
 ## 8. DEFERRED — Admin (Phase B) colour contract
 
 **Not implemented. Do not apply this section in Phase A.** Phase A is storefront-only and

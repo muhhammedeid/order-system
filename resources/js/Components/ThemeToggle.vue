@@ -10,7 +10,7 @@ const { t } = useTranslations();
 <template>
     <button
         type="button"
-        class="inline-flex h-12 w-12 items-center justify-center rounded-control border-2 border-cream/25 transition-colors duration-150 hover:bg-cream/15"
+        class="inline-flex h-12 w-12 items-center justify-center rounded-control border border-line text-ink transition-colors duration-200 ease-out hover:bg-surface-soft"
         :aria-label="isDark ? t('theme.enable_light') : t('theme.enable_dark')"
         :title="isDark ? t('theme.light') : t('theme.dark')"
         :aria-pressed="isDark"

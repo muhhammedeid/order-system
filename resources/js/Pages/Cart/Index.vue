@@ -116,7 +116,7 @@ function confirmDialog() {
 
             <p
                 v-if="topError"
-                class="rounded-card border-2 border-danger/40 bg-danger-soft px-4 py-3 text-sm font-semibold text-danger"
+                class="rounded-card border border-danger/40 bg-danger-soft px-4 py-3 text-sm font-semibold text-danger"
                 role="alert"
             >
                 {{ topError }}
