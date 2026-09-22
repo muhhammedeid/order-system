@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Support\WhatsApp\NumberCheck;
 use App\Support\WhatsApp\SentMessage;
 use App\Support\WhatsApp\SessionState;
 
@@ -49,6 +50,18 @@ interface WhatsAppGateway
      * never guesses.
      */
     public function resolvePhoneNumber(string $chatId): ?string;
+
+    /**
+     * Verifies whether a phone number is a WhatsApp account and returns the
+     * provider chat id when it is.
+     *
+     * A successful "number does not exist" answer returns notExists(). A
+     * transport, authorization or unexpected-response failure throws
+     * WhatsAppException and must never be treated as an invalid number.
+     *
+     * @throws WhatsAppException
+     */
+    public function checkNumber(string $phone): NumberCheck;
 
     /**
      * @param  array<string, mixed>  $options  e.g. ['reply_to' => '...', 'linkPreview' => false]

@@ -55,6 +55,16 @@
                                 @if ($outbound && $storedMessage->status)
                                     <span>· {{ $storedMessage->status->label() }}</span>
                                 @endif
+
+                                @if ($storedMessage->order_id)
+                                    <a
+                                        href="{{ route('filament.admin.resources.order-management.view', ['record' => $storedMessage->order_id]) }}"
+                                        title="{{ __('admin.whatsapp.order.badge_title') }}"
+                                        class="underline"
+                                    >
+                                        #{{ $storedMessage->order?->order_number }}
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>

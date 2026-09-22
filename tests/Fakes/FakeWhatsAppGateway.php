@@ -3,6 +3,7 @@
 namespace Tests\Fakes;
 
 use App\Contracts\WhatsAppGateway;
+use App\Support\WhatsApp\NumberCheck;
 use App\Support\WhatsApp\SentMessage;
 use App\Support\WhatsApp\SessionState;
 use App\Support\WhatsApp\WhatsAppException;
@@ -24,6 +25,15 @@ class FakeWhatsAppGateway implements WhatsAppGateway
     public ?WhatsAppException $throwOnAction = null;
 
     public ?\Throwable $throwOnResolve = null;
+
+    public ?WhatsAppException $throwOnCheckNumber = null;
+
+    public ?NumberCheck $numberCheck = null;
+
+    /**
+     * @var array<int, string>
+     */
+    public array $checkedNumbers = [];
 
     public string $sentProviderId = 'SENT-1';
 
@@ -106,6 +116,18 @@ class FakeWhatsAppGateway implements WhatsAppGateway
         }
 
         return $this->resolvedPhone;
+    }
+
+    public function checkNumber(string $phone): NumberCheck
+    {
+        $this->calls[] = 'check_number';
+        $this->checkedNumbers[] = $phone;
+
+        if ($this->throwOnCheckNumber) {
+            throw $this->throwOnCheckNumber;
+        }
+
+        return $this->numberCheck ?? NumberCheck::notExists();
     }
 
     public function sendText(string $chatId, string $text, array $options = []): SentMessage

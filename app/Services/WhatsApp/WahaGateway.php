@@ -3,6 +3,7 @@
 namespace App\Services\WhatsApp;
 
 use App\Contracts\WhatsAppGateway;
+use App\Support\WhatsApp\NumberCheck;
 use App\Support\WhatsApp\PhoneNumber;
 use App\Support\WhatsApp\SentMessage;
 use App\Support\WhatsApp\SessionState;
@@ -156,6 +157,51 @@ class WahaGateway implements WhatsAppGateway
         $pn = $response->json('pn');
 
         return is_string($pn) ? PhoneNumber::fromChatId($pn) : null;
+    }
+
+    public function checkNumber(string $phone): NumberCheck
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+        if ($digits === '') {
+            return NumberCheck::notExists();
+        }
+
+        try {
+            $response = $this->client()->get('/api/contacts/check-exists', [
+                'phone' => $digits,
+                'session' => $this->sessionName(),
+            ]);
+        } catch (ConnectionException) {
+            throw WhatsAppException::unreachable('check number');
+        }
+
+        if ($response->failed()) {
+            throw WhatsAppException::requestFailed('check number', $response->status());
+        }
+
+        $exists = $response->json('numberExists');
+
+        if (! is_bool($exists)) {
+            throw WhatsAppException::unexpectedResponse('check number');
+        }
+
+        if (! $exists) {
+            return NumberCheck::notExists();
+        }
+
+        $chatId = $response->json('chatId');
+
+        if (! is_string($chatId) || $chatId === '') {
+            throw WhatsAppException::unexpectedResponse('check number');
+        }
+
+        $pn = $response->json('pn');
+        $resolvedPhone = is_string($pn)
+            ? PhoneNumber::fromChatId($pn)
+            : PhoneNumber::fromChatId($chatId);
+
+        return NumberCheck::exists($chatId, $resolvedPhone);
     }
 
     public function sendText(string $chatId, string $text, array $options = []): SentMessage

@@ -15,10 +15,12 @@ use App\Support\WhatsApp\WhatsAppException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\Fakes\FakeWhatsAppGateway;
+use Tests\Support\CreatesTestOrders;
 use Tests\TestCase;
 
 class WhatsAppConversationPageTest extends TestCase
 {
+    use CreatesTestOrders;
     use RefreshDatabase;
 
     private FakeWhatsAppGateway $gateway;
@@ -201,6 +203,26 @@ class WhatsAppConversationPageTest extends TestCase
         WhatsAppConversation::query()->firstOrFail()->forceFill(['unread_count' => 2])->save();
 
         $this->assertSame('1', WhatsAppConversationResource::getNavigationBadge());
+    }
+
+    public function test_conversation_timeline_shows_the_order_badge_only_for_order_linked_messages(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $order = $this->createOrderWithCustomer();
+        $conversation = $this->conversationWithMessage('General note');
+
+        $conversation->messages()->create([
+            'order_id' => $order->id,
+            'direction' => WhatsAppMessageDirection::Outbound,
+            'message_type' => WhatsAppMessageType::Text,
+            'body' => 'Order linked message',
+            'occurred_at' => now(),
+        ]);
+
+        Livewire::test(ViewWhatsAppConversation::class, ['record' => $conversation->id])
+            ->assertSee('Order linked message')
+            ->assertSee('#'.$order->order_number)
+            ->assertSee('/admin/order-management/'.$order->id);
     }
 
     private function conversationWithMessage(string $body = 'Hello there'): WhatsAppConversation

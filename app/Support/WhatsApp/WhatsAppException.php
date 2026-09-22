@@ -24,4 +24,9 @@ class WhatsAppException extends RuntimeException
     {
         return new self("WhatsApp provider is unreachable or timed out: {$action}.");
     }
+
+    public static function unexpectedResponse(string $action): self
+    {
+        return new self("WhatsApp provider returned an unexpected response: {$action}.");
+    }
 }

@@ -22,6 +22,7 @@ class WhatsAppMessage extends Model
 
     protected $fillable = [
         'conversation_id',
+        'order_id',
         'provider_message_id',
         'direction',
         'message_type',
@@ -46,6 +47,11 @@ class WhatsAppMessage extends Model
     public function conversation(): BelongsTo
     {
         return $this->belongsTo(WhatsAppConversation::class, 'conversation_id');
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function isInbound(): bool

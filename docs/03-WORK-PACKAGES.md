@@ -672,3 +672,30 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
 - Automated coverage for ingestion, dedupe, `message.any`, ack mapping, matching,
   authorization, escaping, outbound lifecycle and disabled integration; full suite green.
 - Live QA on the paired local WAHA environment passes.
+
+## P08-W04 — Order Communication Integration
+
+### Scope
+
+- `whatsapp_messages.order_id` nullable FK (`nullOnDelete`) plus an
+  `(order_id, occurred_at)` index; conversations stay customer/chat scoped.
+- Compact **WhatsApp Communication** panel on both order view pages (Order Management and
+  Delivered Orders): availability, customer identity, Open Conversation, up to five
+  order-linked messages, a custom composer and predefined operational messages.
+- First contact verifies the customer number with WAHA `check-exists` and creates the
+  conversation shell only on an actual send attempt.
+- Shared outbound lifecycle extracted into `MessageSender`; order-panel messages carry
+  `order_id`, while conversation-composer and phone-sent messages stay general.
+
+### Acceptance
+
+- Number verification distinguishes exists / not-exists / provider failure: an unavailable
+  service is never reported as an invalid customer number.
+- Rendering an order never creates a conversation and never calls the provider.
+- Multiple customer conversations require explicit operator selection; nothing is merged
+  and a conversation linked to another customer is never reassigned.
+- Predefined messages use the real order statuses and approved delivery totals, with a
+  read-only preview, and never leak internal notes, production aggregates or prices.
+- ACKs keep updating the same order-linked message; no automatic sending on status changes.
+- Automated coverage for relations, number verification, resolution, sending, templates and
+  the panel; full suite green; live QA passes.

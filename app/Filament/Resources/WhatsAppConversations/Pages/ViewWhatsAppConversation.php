@@ -3,12 +3,9 @@
 namespace App\Filament\Resources\WhatsAppConversations\Pages;
 
 use App\Contracts\WhatsAppGateway;
-use App\Enums\WhatsAppMessageDirection;
-use App\Enums\WhatsAppMessageStatus;
-use App\Enums\WhatsAppMessageType;
 use App\Filament\Resources\WhatsAppConversations\WhatsAppConversationResource;
 use App\Models\Customer;
-use App\Support\WhatsApp\Inbox\ProviderMessageId;
+use App\Support\WhatsApp\Outbound\MessageSender;
 use App\Support\WhatsApp\WhatsAppException;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -41,6 +38,7 @@ class ViewWhatsAppConversation extends ViewRecord
     public function history(): Collection
     {
         return $this->record->messages()
+            ->with('order:id,order_number')
             ->orderBy('occurred_at')
             ->orderBy('id')
             ->get();
@@ -65,21 +63,9 @@ class ViewWhatsAppConversation extends ViewRecord
             return;
         }
 
-        $body = trim((string) $validated['replyBody']);
-
-        $message = $this->record->messages()->create([
-            'direction' => WhatsAppMessageDirection::Outbound,
-            'message_type' => WhatsAppMessageType::Text,
-            'body' => $body,
-            'status' => WhatsAppMessageStatus::Pending,
-            'occurred_at' => now(),
-        ]);
-
         try {
-            $sent = $gateway->sendText($this->record->provider_chat_id, $body);
+            app(MessageSender::class)->send($this->record, (string) $validated['replyBody']);
         } catch (WhatsAppException $exception) {
-            $message->forceFill(['status' => WhatsAppMessageStatus::Failed])->save();
-
             Log::warning('WhatsApp reply failed', [
                 'conversation_id' => $this->record->id,
                 'reason' => $exception->getMessage(),
@@ -96,17 +82,6 @@ class ViewWhatsAppConversation extends ViewRecord
 
             return;
         }
-
-        $message->forceFill([
-            'provider_message_id' => ProviderMessageId::normalize($sent->providerId),
-            'status' => WhatsAppMessageStatus::Sent,
-        ])->save();
-
-        $this->record->forceFill([
-            'last_message_at' => $message->occurred_at,
-            'last_message_preview' => $message->previewText(),
-            'last_message_direction' => WhatsAppMessageDirection::Outbound->value,
-        ])->save();
 
         $this->replyBody = '';
         unset($this->history);

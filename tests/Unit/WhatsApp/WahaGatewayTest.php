@@ -268,4 +268,101 @@ class WahaGatewayTest extends TestCase
         $this->assertNull(app(WhatsAppGateway::class)->resolvePhoneNumber('214457011683409@lid'));
         Http::assertNothingSent();
     }
+
+    public function test_check_number_returns_the_chat_id_when_the_number_exists(): void
+    {
+        Http::fake(['*' => Http::response(['numberExists' => true, 'chatId' => '20112347663@c.us'], 200)]);
+
+        $check = app(WhatsAppGateway::class)->checkNumber('0112347663');
+
+        $this->assertTrue($check->exists);
+        $this->assertSame('20112347663@c.us', $check->chatId);
+        $this->assertSame('20112347663', $check->phone);
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/api/contacts/check-exists')
+            && str_contains($request->url(), 'phone=0112347663')
+            && str_contains($request->url(), 'session=default'));
+    }
+
+    public function test_check_number_reports_a_missing_number(): void
+    {
+        Http::fake(['*' => Http::response(['numberExists' => false], 200)]);
+
+        $check = app(WhatsAppGateway::class)->checkNumber('999999999999');
+
+        $this->assertFalse($check->exists);
+        $this->assertNull($check->chatId);
+    }
+
+    public function test_check_number_uses_the_pn_mapping_when_present(): void
+    {
+        Http::fake(['*' => Http::response([
+            'numberExists' => true,
+            'chatId' => '214457011683409@lid',
+            'pn' => '20112347663@c.us',
+        ], 200)]);
+
+        $check = app(WhatsAppGateway::class)->checkNumber('0112347663');
+
+        $this->assertSame('214457011683409@lid', $check->chatId);
+        $this->assertSame('20112347663', $check->phone);
+    }
+
+    public function test_check_number_treats_non_numeric_input_as_missing_without_http(): void
+    {
+        Http::fake();
+
+        $check = app(WhatsAppGateway::class)->checkNumber('abc');
+
+        $this->assertFalse($check->exists);
+        Http::assertNothingSent();
+    }
+
+    public function test_check_number_throws_on_http_failure(): void
+    {
+        Http::fake(['*' => Http::response([], 500)]);
+
+        $this->assertCheckNumberThrows('HTTP 500');
+    }
+
+    public function test_check_number_throws_on_an_unexpected_payload(): void
+    {
+        Http::fake(['*' => Http::response(['unexpected' => true], 200)]);
+
+        $this->assertCheckNumberThrows('unexpected response');
+    }
+
+    public function test_check_number_throws_when_the_chat_id_is_missing(): void
+    {
+        Http::fake(['*' => Http::response(['numberExists' => true], 200)]);
+
+        $this->assertCheckNumberThrows('unexpected response');
+    }
+
+    public function test_check_number_throws_on_a_transport_failure(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('down'));
+
+        $this->assertCheckNumberThrows('unreachable');
+    }
+
+    public function test_check_number_throws_when_disabled(): void
+    {
+        config()->set('whatsapp.enabled', false);
+        Http::fake();
+
+        $this->expectException(WhatsAppException::class);
+
+        app(WhatsAppGateway::class)->checkNumber('0112347663');
+    }
+
+    private function assertCheckNumberThrows(string $expectedMessagePart): void
+    {
+        try {
+            app(WhatsAppGateway::class)->checkNumber('0112347663');
+            $this->fail('Expected WhatsAppException was not thrown.');
+        } catch (WhatsAppException $exception) {
+            $this->assertStringContainsString($expectedMessagePart, $exception->getMessage());
+        }
+    }
 }

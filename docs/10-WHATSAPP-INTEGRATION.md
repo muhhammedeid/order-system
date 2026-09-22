@@ -290,6 +290,103 @@ Opening a conversation resets its unread counter.
   retry and eventually drop events. Always start the local/admin server with the module
   configuration present.
 
+## P08-W04 — Order Communication Integration
+
+Orders communicate through the existing conversation and message history; no second
+messaging system exists.
+
+### Relationship model
+
+`whatsapp_messages.order_id` is a nullable FK to `orders` with `nullOnDelete`, indexed as
+`(order_id, occurred_at)`. The relation lives on the message because only a message can be
+"about" an order: one conversation spans many orders and the conversation stays
+customer/chat scoped. Existing history keeps `order_id = null`, general and phone-sent
+messages stay unlinked, and messages survive an order removal. No `conversation_id` was
+added to `orders` and no pivot table exists.
+
+### Number verification model
+
+`WhatsAppGateway::checkNumber()` returns a typed `NumberCheck`:
+
+- `NumberCheck::exists($chatId, $phone)` — WAHA `check-exists` confirmed the account;
+- `NumberCheck::notExists()` — the provider successfully answered `numberExists = false`;
+- transport, HTTP, authorization or unexpected-response failures **throw**
+  `WhatsAppException` and are never treated as an invalid number.
+
+Non-numeric input is a local "does not exist" without a provider call. The panel shows
+**رقم هذا العميل غير مسجّل على واتساب** for a confirmed missing number and
+**خدمة واتساب غير متاحة حاليًا — حاول لاحقًا** for a provider failure.
+
+### First contact and conversation resolution
+
+1. Conversations linked to the order's customer, newest activity first.
+2. Exactly one → used.
+3. More than one → explicit operator selection (chat id, verified phone, last activity);
+   nothing is merged, and a conversation linked to another customer is never reassigned.
+4. None → the candidate number is `customer.whatsapp` else `customer.phone` (neither field
+   is ever modified). `check-exists` verifies it; on success the returned `chatId` is reused
+   or the local conversation shell is created, then linked to the order's customer when it
+   was unlinked.
+
+The shell is created **only** during an actual send attempt after successful verification:
+rendering an order panel performs no provider call and creates nothing. Missing number,
+confirmed non-WhatsApp number and provider failure each produce their own operator message
+and never send blindly.
+
+### Predefined operational messages
+
+Composed by `OrderMessageTemplates` from translations plus the order number, customer name
+and approved delivery totals; a read-only preview is shown before Send and there is no
+template table or editor. Only the current status has a template:
+
+| Status | Template |
+|---|---|
+| `new` | Order Received |
+| `confirmed` | Order Confirmed (preparation started) |
+| `partially_delivered` | Partial Delivery Update (delivered / remaining) |
+| `delivered` | Order Delivered |
+| `cancelled` | Order Cancelled |
+
+There is no "Production Update" template: no production lifecycle status exists, and R03's
+outstanding-production aggregate is internal. `admin_notes`, `customer_notes`, prices and
+production aggregates are never included (covered by tests). Status changes never send
+anything automatically.
+
+### Outbound architecture
+
+The existing conversation-composer lifecycle moved into
+`App\Support\WhatsApp\Outbound\MessageSender::send($conversation, $body, ?int $orderId)`
+(pending → provider send → sent + provider id, or failed retained and rethrown). The
+conversation page and the order panel both use it; no queue, repository, event bus or
+workflow engine was added. Order-panel sends set `order_id`; the conversation composer and
+phone-sent `message.any` messages keep `order_id = null`. ACKs keep updating the same row.
+
+### Order panel and conversation timeline
+
+The compact panel is embedded on both order view pages (Order Management and the read-only
+Delivered Orders view) via a plain Livewire component: availability badge, customer and
+verified phone, selected/existing conversation, Open Conversation, up to five order-linked
+messages (general history only via the conversation link), custom composer, predefined
+buttons with read-only preview, and the conversation selector when several exist.
+Messages with `order_id` show a small `#ORD-…` badge in the conversation timeline linking
+back to the order; unlinked messages render unchanged.
+
+### P08-W04 live QA (WAHA 2026.9.1, NOWEB, paired account)
+
+- Existing single conversation used; multiple conversations blocked sending until one was
+  selected in the browser.
+- First contact verified a real number and created the conversation only on send; a
+  non-WhatsApp number was refused; stopping WAHA produced the service-unavailable message
+  instead of an invalid-number message.
+- Custom and predefined order messages were delivered with `order_id` set and stayed `sent`
+  (no ACK webhook was pushed for API sends, as observed before); a delivered order could
+  still communicate.
+- Provider failure retained a `failed` order-linked row; after restarting WAHA the next send
+  succeeded and history remained.
+- Conversation timeline showed the order badge; phone-sent and conversation-composer
+  messages remained unlinked.
+- Log scan: no message bodies, order numbers, API keys or HMAC secrets.
+
 ## P08-W01 Spike Results
 
 Environment: WAHA `2026.9.1`, engine `NOWEB`, tier `CORE`, Docker on Windows.

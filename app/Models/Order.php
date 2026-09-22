@@ -41,6 +41,16 @@ class Order extends Model
     }
 
     /**
+     * WhatsApp messages explicitly associated with this order. Conversations
+     * stay customer-scoped; only messages sent from the order panel carry an
+     * order_id, so general history is never attributed to an order.
+     */
+    public function whatsappMessages(): HasMany
+    {
+        return $this->hasMany(WhatsAppMessage::class, 'order_id');
+    }
+
+    /**
      * Candidate order number for the current year (ORD-YYYY-NNNNN).
      * Collision safety is guaranteed by the unique(order_number)
      * constraint; the caller retries on collision.
