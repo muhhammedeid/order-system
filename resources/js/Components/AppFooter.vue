@@ -26,11 +26,11 @@ const LINKS = computed(() => [
                     <BrandMark :size="34" />
                     <span class="flex flex-col leading-none">
                         <span
-                            class="font-brand text-lg"
+                            class="font-display text-lg"
                             dir="ltr"
                         >MAI<span class="text-primary">*</span></span>
                         <span
-                            class="mt-0.5 font-brand text-[0.5rem] tracking-[0.3em] text-ink-muted"
+                            class="mt-0.5 font-display text-[0.5rem] tracking-[0.3em] text-ink-muted"
                             dir="ltr"
                         >SHOES</span>
                     </span>

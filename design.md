@@ -81,7 +81,6 @@ Semantic roles. Each role is three values: tint surface, ink, solid CTA.
 
 Supporting tokens: `--color-primary-strong: #093D54`,
 `--color-on-primary: #FFFFFF`, `--color-selected: #D7EAF6`,
-`--color-accent: #0B4A66`, `--color-accent-soft: #E4F1F9`,
 and `*-strong` CTA values as listed above.
 
 On-fill tokens for solid surfaces. A role whose fill is light in dark mode needs a dark
@@ -95,10 +94,13 @@ on-colour, so these flip with the theme:
 
 Measured: `on-primary` 9.61 / 10.88, `on-danger` 7.18 / 9.37, `on-external` 5.38 / 9.75.
 
-Legacy names retained for existing callers: `--color-warning` and
-`--color-warning-soft` resolve to the `attention` role; `--color-whatsapp` resolves to
-`--color-external`. The previous dark `#25D366` WhatsApp fill is retired: it carried
-`text-white` at **1.98 : 1**, which fails AA. The external role replaces it at 9.75 : 1.
+The previous dark `#25D366` WhatsApp fill is retired: it carried `text-white` at
+**1.98 : 1**, which fails AA. The external role replaces it at 9.75 : 1.
+
+The migration-era compatibility aliases (`--font-brand`, `--font-retro`,
+`--color-crimson`, `--color-burgundy`, `--color-navy`, `--color-powder`,
+`--color-powder-ink`, `--color-cream`, `--color-warning`, `--color-whatsapp`,
+`--shadow-retro*`) have been removed. No component references them.
 
 ## 4. Normative scales — dark theme
 

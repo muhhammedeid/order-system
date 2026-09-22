@@ -10,10 +10,6 @@ const props = defineProps({
         type: String,
         default: 'md',
     },
-    tilt: {
-        type: Boolean,
-        default: false,
-    },
 });
 
 const TONES = {
@@ -26,12 +22,6 @@ const TONES = {
     danger: 'bg-danger-soft text-danger border-danger/25',
     external: 'bg-external-soft text-external border-external/25',
     data: 'bg-data-soft text-data border-data/25',
-
-    /* Deprecated aliases kept until callers migrate to the semantic roles. */
-    'primary-soft': 'bg-primary-soft text-primary border-primary/25',
-    powder: 'bg-primary text-on-primary border-primary',
-    'powder-soft': 'bg-attention-soft text-attention border-attention/25',
-    warning: 'bg-attention-soft text-attention border-attention/25',
 };
 
 const SIZES = {
@@ -43,7 +33,6 @@ const classes = computed(() => [
     'inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border font-semibold',
     TONES[props.tone] ?? TONES.neutral,
     SIZES[props.size] ?? SIZES.md,
-    props.tilt ? '-rotate-2' : '',
 ]);
 </script>
 

@@ -33,13 +33,13 @@ defineProps({
 
         <span class="flex flex-col items-start leading-none" aria-hidden="true">
             <span
-                class="font-brand text-xl leading-none tracking-tight text-ink sm:text-2xl"
+                class="font-display text-xl leading-none tracking-tight text-ink sm:text-2xl"
                 dir="ltr"
             >
                 MAI<span class="text-primary">*</span>
             </span>
             <span
-                class="mt-0.5 font-brand text-[0.55rem] leading-none tracking-[0.34em] text-ink-muted sm:text-[0.6rem]"
+                class="mt-0.5 font-display text-[0.55rem] leading-none tracking-[0.34em] text-ink-muted sm:text-[0.6rem]"
                 dir="ltr"
             >
                 SHOES

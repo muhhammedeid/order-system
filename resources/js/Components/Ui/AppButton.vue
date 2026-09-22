@@ -58,9 +58,6 @@ const VARIANTS = {
     ghost:
         'bg-transparent text-ink shadow-none hover:bg-surface-muted hover:shadow-none',
     danger: 'bg-danger text-on-danger hover:bg-danger-strong',
-
-    /* Deprecated aliases kept until callers migrate to the semantic roles. */
-    powder: 'border-2 border-primary/30 bg-primary-soft text-primary hover:bg-selected',
 };
 
 const SIZES = {
