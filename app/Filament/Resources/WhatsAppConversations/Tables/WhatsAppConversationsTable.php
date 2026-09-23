@@ -18,9 +18,9 @@ class WhatsAppConversationsTable
                 TextColumn::make('display_title')
                     ->label(__('admin.whatsapp.inbox.contact'))
                     ->state(fn (WhatsAppConversation $record): string => $record->displayTitle())
-                    ->description(fn (WhatsAppConversation $record): ?string => $record->customer_id === null
-                        ? $record->provider_chat_id
-                        : null)
+                    ->description(fn (WhatsAppConversation $record): ?string => $record->customer_id !== null
+                        ? $record->customer?->phone
+                        : $record->provider_chat_id)
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query
                         ->where(function (Builder $query) use ($search): void {
                             $query->where('provider_chat_id', 'like', "%{$search}%")
@@ -30,29 +30,34 @@ class WhatsAppConversationsTable
                                     ->orWhere('phone', 'like', "%{$search}%")
                                     ->orWhere('customer_code', 'like', "%{$search}%"));
                         }))
+                    ->weight('medium')
                     ->wrap(),
+                TextColumn::make('last_message_preview')
+                    ->label(__('admin.whatsapp.inbox.last_message'))
+                    ->state(fn (WhatsAppConversation $record): string => self::preview($record))
+                    ->color('gray')
+                    ->wrap(),
+                TextColumn::make('last_message_at')
+                    ->label(__('admin.whatsapp.inbox.last_activity'))
+                    ->since()
+                    ->sortable()
+                    ->visibleFrom('sm'),
+                TextColumn::make('unread_count')
+                    ->label(__('admin.whatsapp.inbox.unread'))
+                    ->badge()
+                    ->color('danger')
+                    ->weight('bold')
+                    ->state(fn (WhatsAppConversation $record): ?string => $record->unread_count > 0
+                        ? (string) $record->unread_count
+                        : null),
                 TextColumn::make('customer_id')
                     ->label(__('admin.whatsapp.inbox.linked'))
                     ->badge()
                     ->state(fn (WhatsAppConversation $record): string => $record->customer_id !== null
                         ? __('admin.whatsapp.inbox.linked_yes')
                         : __('admin.whatsapp.inbox.linked_no'))
-                    ->color(fn (WhatsAppConversation $record): string => $record->customer_id !== null ? 'success' : 'gray'),
-                TextColumn::make('last_message_preview')
-                    ->label(__('admin.whatsapp.inbox.last_message'))
-                    ->state(fn (WhatsAppConversation $record): string => self::preview($record))
-                    ->wrap(),
-                TextColumn::make('last_message_at')
-                    ->label(__('admin.whatsapp.inbox.last_activity'))
-                    ->since()
-                    ->sortable(),
-                TextColumn::make('unread_count')
-                    ->label(__('admin.whatsapp.inbox.unread'))
-                    ->badge()
-                    ->color('danger')
-                    ->state(fn (WhatsAppConversation $record): ?string => $record->unread_count > 0
-                        ? (string) $record->unread_count
-                        : null),
+                    ->color(fn (WhatsAppConversation $record): string => $record->customer_id !== null ? 'success' : 'gray')
+                    ->visibleFrom('md'),
             ])
             ->recordActions([
                 ViewAction::make()->label(__('admin.whatsapp.inbox.open')),

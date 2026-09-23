@@ -771,3 +771,33 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
   Preview with a real Customer, real Product and `{{business_name}}`; the Settings value
   wins over `APP_NAME`.
 - WhatsApp suite, full suite and Pint pass after the merge.
+
+## P08-W05B — Frontend Sync & WhatsApp UI Alignment
+
+### Scope
+
+- Synchronize the feature branch with the latest stable `origin/staging` when it advances
+  (staging → feature only) and rebuild the gitignored frontend bundle in each checkout.
+- Align all existing WhatsApp Admin screens with the current Filament/Admin design language
+  (Filament cards, badges, inputs, callouts, theme tokens, logical RTL utilities). No
+  storefront Soft UI palette is applied to Admin; the deferred Admin Phase B contract in
+  `design.md` is not started.
+- Environment correction: document the active PHP binary/php.ini and its extensions.
+
+### Acceptance
+
+- The latest staging Storefront design is built and visibly served from both worktrees;
+  stale `public/build` is identified as the cause of any old design rather than missing
+  frontend source.
+- Conversation view: logical RTL/LTR bubble alignment, distinct pending/sent/delivered/
+  failed presentation, stronger order badge, readable timestamps, mobile-friendly width and
+  latest-message auto-scroll.
+- Account page prioritizes session state, identity and operator guidance over raw provider
+  diagnostics; QR presentation improved without changing QR behavior.
+- Inbox hierarchy: contact → latest message → activity → unread → linked; raw chat ids are
+  demoted (kept for unlinked diagnostics) and low-priority columns hide on mobile.
+- Order panel uses Filament field styling and stays a compact operational card; the
+  Templates list gains a toggleable, hidden-by-default body column and a clearer preview
+  surface; the Customer marketing section keeps only status + timestamps.
+- No business logic changes: consent, opt-out, matching, ACK mapping, order semantics and
+  template rules are untouched; all existing tests stay green.

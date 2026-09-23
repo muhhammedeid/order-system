@@ -37,6 +37,11 @@ class WhatsAppTemplatesTable
                     ->color(fn (?WhatsAppTemplateType $state): string => $state === WhatsAppTemplateType::Marketing
                         ? 'info'
                         : 'gray'),
+                TextColumn::make('body')
+                    ->label(__('admin.whatsapp.templates.fields.body'))
+                    ->limit(80)
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('active')
                     ->label(__('admin.whatsapp.templates.fields.active'))
                     ->boolean(),
@@ -105,12 +110,15 @@ class WhatsAppTemplatesTable
                     ->getOptionLabelUsing(fn ($value): ?string => Product::query()->whereKey($value)->value('name')),
                 Placeholder::make('preview')
                     ->hiddenLabel()
+                    ->extraAttributes(['class' => 'rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40'])
+                    ->listWithLineBreaks()
+                    ->bulleted(false)
                     ->helperText(__('admin.whatsapp.templates.preview.hint'))
-                    ->content(function (Get $get, WhatsAppTemplate $record): string {
+                    ->content(function (Get $get, WhatsAppTemplate $record): array {
                         $customer = Customer::query()->find($get('customer_id'));
 
                         if ($customer === null) {
-                            return __('admin.whatsapp.templates.preview.choose_customer');
+                            return [__('admin.whatsapp.templates.preview.choose_customer')];
                         }
 
                         $product = filled($get('product_id'))
@@ -118,10 +126,12 @@ class WhatsAppTemplatesTable
                             : null;
 
                         try {
-                            return app(WhatsAppTemplateRenderer::class)->render($record, $customer, $product);
+                            $rendered = app(WhatsAppTemplateRenderer::class)->render($record, $customer, $product);
                         } catch (WhatsAppTemplateException $exception) {
-                            return $exception->getMessage();
+                            return [$exception->getMessage()];
                         }
+
+                        return explode("\n", $rendered);
                     }),
             ]);
     }

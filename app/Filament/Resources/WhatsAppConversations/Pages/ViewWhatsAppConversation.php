@@ -34,6 +34,11 @@ class ViewWhatsAppConversation extends ViewRecord
         $this->record->markRead();
     }
 
+    public function getTitle(): string
+    {
+        return $this->record->displayTitle();
+    }
+
     #[Computed]
     public function history(): Collection
     {
@@ -42,6 +47,15 @@ class ViewWhatsAppConversation extends ViewRecord
             ->orderBy('occurred_at')
             ->orderBy('id')
             ->get();
+    }
+
+    /**
+     * Read-only UI state for the composer. The send action still re-checks the
+     * gateway itself; this only drives the disabled presentation.
+     */
+    public function whatsappEnabled(): bool
+    {
+        return app(WhatsAppGateway::class)->enabled();
     }
 
     public function sendReply(): void

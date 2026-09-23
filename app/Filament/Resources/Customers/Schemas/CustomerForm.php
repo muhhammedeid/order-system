@@ -64,14 +64,17 @@ class CustomerForm
                             ->required()
                             ->rules([Rule::in(array_column(WhatsAppMarketingStatus::cases(), 'value'))])
                             ->helperText(__('admin.whatsapp.marketing.hint')),
-                        Placeholder::make('whatsapp_marketing_opted_in_at_display')
-                            ->label(__('admin.whatsapp.marketing.opted_in_at'))
-                            ->content(fn (?Customer $record): string => $record?->whatsapp_marketing_opted_in_at?->format('Y-m-d H:i') ?? __('filament.common.none')),
-                        Placeholder::make('whatsapp_marketing_opted_out_at_display')
-                            ->label(__('admin.whatsapp.marketing.opted_out_at'))
-                            ->content(fn (?Customer $record): string => $record?->whatsapp_marketing_opted_out_at?->format('Y-m-d H:i') ?? __('filament.common.none')),
+                        Grid::make(2)
+                            ->schema([
+                                Placeholder::make('whatsapp_marketing_opted_in_at_display')
+                                    ->label(__('admin.whatsapp.marketing.opted_in_at'))
+                                    ->content(fn (?Customer $record): string => $record?->whatsapp_marketing_opted_in_at?->format('Y-m-d H:i') ?? __('filament.common.none')),
+                                Placeholder::make('whatsapp_marketing_opted_out_at_display')
+                                    ->label(__('admin.whatsapp.marketing.opted_out_at'))
+                                    ->content(fn (?Customer $record): string => $record?->whatsapp_marketing_opted_out_at?->format('Y-m-d H:i') ?? __('filament.common.none')),
+                            ]),
                     ])
-                    ->columns(3)
+                    ->columns(2)
                     ->columnSpanFull(),
             ]);
     }

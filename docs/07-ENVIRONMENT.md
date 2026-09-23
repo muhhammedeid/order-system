@@ -12,14 +12,23 @@ The project development database is **MariaDB 10.11.14 running inside WSL (Ubunt
 - Access: dedicated application DB user only (`wholesale_user`). Credentials are kept in the local `.env` file only and must never be committed.
 - WSL-side administrative commands run via `wsl -- sudo -n mysql -e "..."`.
 
-## PHP — XAMPP 8.2.12
+## PHP — PHP 8.3.33 (C:\php83)
 
-- PHP CLI used for all artisan/composer commands: `C:\xampp\php\php.exe`.
-- Required/enabled extensions beyond defaults:
-  - `intl` — required by Filament 4.13.2.
-  - `gd` — required for product image uploads (needed from P01-W01 onward).
-  - Both were enabled in `C:\xampp\php\php.ini` during P00-W01.
-- Note: the PHPUnit test suite runs on in-memory SQLite (`pdo_sqlite` is present); application runtime is MySQL only.
+- PHP CLI used for all artisan/composer commands: `C:\php83\php.exe` (PHP 8.3.33 ZTS).
+- Active configuration file: `C:\php83\php.ini` (`extension_dir = ext` → `C:\php83\ext`).
+- Enabled extensions required beyond defaults:
+  - `intl` — required by Filament 4.13.2 (pagination/number formatting). Without it
+    Filament pages fail with `RuntimeException: The "intl" PHP extension is required to
+    use the [format] method`.
+  - `pdo_sqlite` and `sqlite3` — required by the PHPUnit suite (in-memory SQLite). With
+    both enabled, `php artisan test` / `vendor/bin/phpunit` run without `-d` flags.
+  - `pdo_mysql` — application runtime database driver.
+- `gd` is currently **not enabled** in `C:\php83\php.ini`. It was part of the original
+  environment contract for product image uploads; re-enable it
+  (`extension=gd`) if an image-processing path actually fails during QA.
+- Note: application runtime is MySQL only; SQLite is used exclusively by the test suite.
+- Historical note: earlier revisions of this document referenced `C:\xampp\php\php.exe`
+  (XAMPP 8.2.12). That installation no longer exists on this machine.
 
 ## Node / Frontend
 

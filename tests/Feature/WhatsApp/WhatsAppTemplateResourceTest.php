@@ -228,6 +228,22 @@ class WhatsAppTemplateResourceTest extends TestCase
         return implode('', $component->effects['partials'] ?? []);
     }
 
+    public function test_templates_list_body_column_is_toggleable_and_hidden_by_default(): void
+    {
+        $this->template([
+            'name' => 'Toggleable marker',
+            'body' => 'BODY_COLUMN_MARKER_98765',
+        ]);
+
+        $component = Livewire::actingAs(User::factory()->create())
+            ->test(ListWhatsAppTemplates::class)
+            ->assertTableColumnExists('body')
+            ->assertDontSee('BODY_COLUMN_MARKER_98765');
+
+        $component->toggleAllTableColumns()
+            ->assertSee('BODY_COLUMN_MARKER_98765');
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      */
