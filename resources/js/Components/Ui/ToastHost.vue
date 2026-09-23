@@ -31,15 +31,24 @@ watch(
 
 const TONES = {
     success: {
-        wrapper: 'border-success/40 bg-success-soft text-success',
+        wrapper: 'border-success/25 bg-success-soft text-success',
         icon: 'check-circle',
     },
-    danger: {
-        wrapper: 'border-danger/40 bg-danger-soft text-danger',
+    attention: {
+        wrapper: 'border-attention/25 bg-attention-soft text-attention',
         icon: 'alert',
     },
+    danger: {
+        wrapper: 'border-danger/25 bg-danger-soft text-danger',
+        icon: 'alert',
+    },
+    data: {
+        wrapper: 'border-data/25 bg-data-soft text-data',
+        icon: 'info',
+    },
+    /* Informational flash messages share the data role. */
     info: {
-        wrapper: 'border-line-strong bg-surface-soft text-ink',
+        wrapper: 'border-data/25 bg-data-soft text-data',
         icon: 'info',
     },
 };
@@ -47,7 +56,7 @@ const TONES = {
 
 <template>
     <div
-        class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4"
+        class="pointer-events-none fixed inset-x-0 bottom-4 z-[500] flex flex-col items-center gap-2 px-4"
         role="region"
         :aria-label="t('accessibility.notifications')"
     >
@@ -60,7 +69,7 @@ const TONES = {
             <div
                 v-for="item in items"
                 :key="item.id"
-                class="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-card border-2 px-4 py-3 shadow-retro"
+                class="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-card border px-4 py-3 shadow-soft-lg"
                 :class="(TONES[item.tone] ?? TONES.info).wrapper"
                 role="status"
                 aria-live="polite"

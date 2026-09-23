@@ -25,7 +25,7 @@ defineProps({
                     v-if="index > 0"
                     name="chevron-left"
                     :size="14"
-                    class="text-line-strong/40"
+                    class="text-ink-muted/70"
                 />
 
                 <Link

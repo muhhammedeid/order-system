@@ -87,7 +87,7 @@ function onBlur() {
         >
             <button
                 type="button"
-                class="flex h-12 w-12 items-center justify-center bg-surface-soft text-ink transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
+                class="flex h-12 w-12 items-center justify-center bg-surface-soft text-ink transition-colors duration-200 ease-out hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
                 :disabled="! canDecrease || busy"
                 :aria-label="t('common.decrease', { label: label ?? t('common.quantity') })"
                 @click="step(-1)"
@@ -115,7 +115,7 @@ function onBlur() {
 
             <button
                 type="button"
-                class="flex h-12 w-12 items-center justify-center bg-surface-soft text-ink transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
+                class="flex h-12 w-12 items-center justify-center bg-surface-soft text-ink transition-colors duration-200 ease-out hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
                 :disabled="! canIncrease || busy"
                 :aria-label="t('common.increase', { label: label ?? t('common.quantity') })"
                 @click="step(1)"

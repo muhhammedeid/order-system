@@ -3,7 +3,7 @@ import SkeletonBlock from '@/Components/Ui/SkeletonBlock.vue';
 </script>
 
 <template>
-    <div class="flex flex-col overflow-hidden rounded-card border-2 border-line bg-surface-soft">
+    <div class="flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-soft-sm">
         <SkeletonBlock
             rounded="rounded-none"
             class="aspect-square w-full"

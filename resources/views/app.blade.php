@@ -11,7 +11,7 @@
         <title>{{ $meta['title'] ?? $brandName }}</title>
         <meta name="description" content="{{ $meta['description'] ?? $defaultDescription }}">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <meta name="theme-color" content="#1D4ED8">
+        <meta name="theme-color" content="#FFFFFF">
         <meta name="color-scheme" content="light dark">
 
         <meta property="og:type" content="{{ $meta['type'] ?? 'website' }}">
@@ -37,7 +37,7 @@
 
                     var meta = document.querySelector('meta[name="theme-color"]');
                     if (meta) {
-                        meta.setAttribute('content', '#04222F');
+                        meta.setAttribute('content', '#16222C');
                     }
                 } catch (error) {
                     /* theme stays light when storage is unavailable */
@@ -48,7 +48,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link
-            href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lalezar&family=Reem+Kufi:wght@400..700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Reem+Kufi:wght@400..700&display=swap"
             rel="stylesheet"
         >
 

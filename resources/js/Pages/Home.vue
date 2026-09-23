@@ -53,16 +53,16 @@ const FEATURES = computed(() => [
     <StorefrontLayout full>
         <Head :title="meta.title ?? t('home.title')" />
 
-        <section class="relative overflow-hidden border-b-4 border-line-strong bg-crimson text-cream">
+        <section class="relative overflow-hidden border-b border-line bg-primary-soft">
             <AppIcon
                 name="sparkles"
                 :size="360"
-                class="pointer-events-none absolute -start-24 -top-24 text-cream/10"
+                class="pointer-events-none absolute -start-24 -top-24 text-primary/10"
             />
 
             <div class="relative mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-8">
                 <div class="flex flex-col items-start gap-5">
-                    <span class="inline-flex -rotate-2 items-center gap-2 rounded-full border-2 border-cream/40 bg-burgundy px-3.5 py-1.5 text-sm font-bold shadow-retro-sm">
+                    <span class="inline-flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-sm font-bold text-on-primary shadow-soft-sm">
                         <AppIcon
                             name="sparkles"
                             :size="16"
@@ -70,19 +70,19 @@ const FEATURES = computed(() => [
                         {{ t('home.badge') }}
                     </span>
 
-                    <h1 class="font-retro text-5xl leading-[1.15] text-cream sm:text-6xl lg:text-7xl">
+                    <h1 class="font-display text-[clamp(2.5rem,5vw,4rem)] leading-tight text-ink">
                         {{ t('home.heading') }}<br>
-                        <span class="text-powder">{{ t('home.heading_accent') }}</span>
+                        <span class="text-primary">{{ t('home.heading_accent') }}</span>
                     </h1>
 
-                    <p class="max-w-xl text-lg leading-relaxed text-cream/90">
+                    <p class="max-w-xl text-lg leading-relaxed text-ink-muted">
                         {{ t('home.intro') }}
                     </p>
 
                     <div class="flex flex-wrap items-center gap-3">
                         <AppButton
                             href="/catalog"
-                            variant="powder"
+                            variant="primary"
                             size="lg"
                             icon="search"
                         >
@@ -93,29 +93,30 @@ const FEATURES = computed(() => [
                             :href="whatsappHref"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex min-h-14 items-center gap-2.5 rounded-control border-2 border-cream/40 px-6 text-lg font-bold text-cream transition-colors duration-150 hover:bg-cream/10"
+                            class="inline-flex min-h-14 items-center gap-2.5 rounded-control border border-line-strong bg-surface px-6 text-lg font-bold text-ink shadow-soft-sm transition-colors duration-200 ease-out hover:bg-surface-soft"
                         >
                             <AppIcon
                                 name="whatsapp"
                                 :size="22"
+                                class="text-external"
                             />
                             {{ t('home.whatsapp') }}
                         </a>
                     </div>
 
                     <dl class="flex flex-wrap gap-3 pt-1">
-                        <div class="rounded-control border-2 border-cream/30 px-3.5 py-2">
-                            <dt class="text-xs text-cream/75">{{ t('home.available_products') }}</dt>
-                            <dd class="font-display text-xl font-bold tabular-nums">
+                        <div class="rounded-control border border-line bg-surface px-3.5 py-2 shadow-soft-sm">
+                            <dt class="text-xs text-ink-muted">{{ t('home.available_products') }}</dt>
+                            <dd class="font-display text-xl font-bold tabular-nums text-ink">
                                 {{ formatQuantity(stats.products ?? 0) }}
                             </dd>
                         </div>
                         <div
                             v-if="stats.categories"
-                            class="rounded-control border-2 border-cream/30 px-3.5 py-2"
+                            class="rounded-control border border-line bg-surface px-3.5 py-2 shadow-soft-sm"
                         >
-                            <dt class="text-xs text-cream/75">{{ t('home.categories') }}</dt>
-                            <dd class="font-display text-xl font-bold tabular-nums">
+                            <dt class="text-xs text-ink-muted">{{ t('home.categories') }}</dt>
+                            <dd class="font-display text-xl font-bold tabular-nums text-ink">
                                 {{ formatQuantity(stats.categories) }}
                             </dd>
                         </div>
@@ -158,7 +159,7 @@ const FEATURES = computed(() => [
                     v-for="category in categories"
                     :key="category.id"
                     :href="`/catalog?category=${category.id}`"
-                    class="group flex items-center justify-between gap-3 rounded-card border-2 border-line bg-surface-soft p-4 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-retro-sm"
+                    class="group flex items-center justify-between gap-3 rounded-card border border-line bg-surface p-4 shadow-soft-sm transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-soft"
                 >
                     <span class="flex flex-col gap-0.5">
                         <span class="font-display text-lg font-bold text-ink">
@@ -177,7 +178,7 @@ const FEATURES = computed(() => [
             </div>
             <p
                 v-else
-                class="rounded-card border-2 border-dashed border-line px-4 py-10 text-center text-sm text-ink-muted"
+                class="rounded-card border border-dashed border-line-strong/60 px-4 py-10 text-center text-sm text-ink-muted"
             >
                 {{ t('home.no_categories') }}
             </p>
@@ -185,7 +186,7 @@ const FEATURES = computed(() => [
 
         <section
             v-if="products.length"
-            class="border-y-4 border-line bg-surface-muted/60"
+            class="border-y border-line bg-surface-muted"
         >
             <div class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -221,9 +222,9 @@ const FEATURES = computed(() => [
                 <li
                     v-for="(step, index) in STEPS"
                     :key="step.title"
-                    class="flex flex-col gap-3 rounded-card border-2 border-line bg-surface-soft p-4"
+                    class="flex flex-col gap-3 rounded-card border border-line bg-surface p-4 shadow-soft-sm"
                 >
-                    <span class="flex h-11 w-11 items-center justify-center rounded-control border-2 border-line-strong bg-powder font-display text-lg font-bold text-powder-ink">
+                    <span class="flex h-11 w-11 items-center justify-center rounded-control bg-primary font-display text-lg font-bold text-on-primary">
                         {{ index + 1 }}
                     </span>
                     <span class="flex items-center gap-2 font-display text-lg font-bold text-ink">
@@ -240,11 +241,11 @@ const FEATURES = computed(() => [
         </section>
 
         <section class="mx-auto w-full max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
-            <div class="grid gap-3 sm:grid-cols-3">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
                 <div
                     v-for="feature in FEATURES"
                     :key="feature.title"
-                    class="flex flex-col gap-2 rounded-card border-2 border-line-strong bg-surface-soft p-4 shadow-retro-sm"
+                    class="flex flex-col gap-2 rounded-card border border-line bg-surface p-4 shadow-soft-sm"
                 >
                     <AppIcon
                         :name="feature.icon"

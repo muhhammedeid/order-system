@@ -57,7 +57,7 @@ watch(
 <template>
     <dialog
         ref="dialog"
-        class="w-[min(28rem,calc(100vw-2rem))] rounded-card border-2 border-line-strong bg-surface-soft p-5 text-ink shadow-retro backdrop:bg-navy/50"
+        class="w-[min(28rem,calc(100vw-2rem))] rounded-card border border-line bg-surface p-5 text-ink shadow-soft-lg backdrop:bg-ink/40"
         aria-labelledby="confirm-dialog-title"
         @cancel.prevent="emit('cancel')"
         @close="emit('cancel')"

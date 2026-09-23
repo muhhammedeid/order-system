@@ -55,14 +55,14 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
                 </span>
                 <span
                     v-else
-                    class="text-xs font-semibold text-accent"
+                    class="text-xs font-semibold text-attention"
                 >
                     {{ t('common.on_request') }}
                 </span>
             </li>
         </ul>
 
-        <dl class="flex flex-col gap-2 border-t-2 border-line pt-3">
+        <dl class="flex flex-col gap-2 border-t border-line pt-3">
             <div class="flex items-center justify-between text-sm">
                 <dt class="text-ink-muted">{{ t('common.total_pieces') }}</dt>
                 <dd class="font-bold tabular-nums text-ink">
@@ -84,7 +84,7 @@ const hasRequestPrice = computed(() => props.items.some((item) => ! item.unit_pr
 
         <p
             v-if="hasRequestPrice"
-            class="flex items-start gap-2 rounded-control border-2 border-line bg-surface px-3 py-2.5 text-xs text-ink-muted"
+            class="flex items-start gap-2 rounded-control border border-line bg-surface px-3 py-2.5 text-xs text-ink-muted"
         >
             <AppIcon
                 name="info"

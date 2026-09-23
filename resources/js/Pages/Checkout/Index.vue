@@ -75,7 +75,7 @@ function submit() {
 
             <div
                 v-if="! items.length"
-                class="flex flex-col items-center gap-4 rounded-card border-2 border-dashed border-line px-6 py-16 text-center"
+                class="flex flex-col items-center gap-4 rounded-card border border-dashed border-line-strong/60 px-6 py-16 text-center"
             >
                 <p class="text-lg text-ink-muted">{{ t('checkout.empty') }}</p>
                 <AppButton
@@ -98,7 +98,7 @@ function submit() {
                             v-if="errorList.length"
                             ref="summary"
                             tabindex="-1"
-                            class="rounded-card border-2 border-danger bg-danger-soft px-4 py-3.5"
+                            class="rounded-card border border-danger bg-danger-soft px-4 py-3.5"
                             role="alert"
                             aria-labelledby="error-summary-title"
                         >
@@ -231,7 +231,7 @@ function submit() {
                                 <AppIcon
                                     name="info"
                                     :size="20"
-                                    class="mt-0.5 text-accent"
+                                    class="mt-0.5 text-data"
                                 />
                                 <div class="flex flex-col gap-1">
                                     <h2 class="font-display text-lg font-bold text-ink">
@@ -274,7 +274,7 @@ function submit() {
                                 :href="`https://wa.me/${whatsapp}`"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="font-semibold text-whatsapp underline underline-offset-2"
+                                class="font-semibold text-external underline underline-offset-2"
                             >
                                 {{ t('checkout.contact_whatsapp') }}
                             </a>

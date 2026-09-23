@@ -33,13 +33,13 @@ defineProps({
 
         <span class="flex flex-col items-start leading-none" aria-hidden="true">
             <span
-                class="font-brand text-xl leading-none tracking-tight text-cream sm:text-2xl"
+                class="font-display text-xl leading-none tracking-tight text-ink sm:text-2xl"
                 dir="ltr"
             >
-                MAI<span class="text-powder">*</span>
+                MAI<span class="text-primary">*</span>
             </span>
             <span
-                class="mt-0.5 font-brand text-[0.55rem] leading-none tracking-[0.34em] text-cream/80 sm:text-[0.6rem]"
+                class="mt-0.5 font-display text-[0.55rem] leading-none tracking-[0.34em] text-ink-muted sm:text-[0.6rem]"
                 dir="ltr"
             >
                 SHOES
@@ -48,7 +48,7 @@ defineProps({
 
         <span
             v-if="showTagline"
-            class="hidden border-s border-cream/25 ps-2.5 font-display text-sm text-cream/90 lg:block"
+            class="hidden border-s border-line ps-2.5 font-display text-sm text-ink-muted lg:block"
         >
             {{ t('brand.tagline') }}
         </span>

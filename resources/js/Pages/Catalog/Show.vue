@@ -217,7 +217,7 @@ const pickerError = computed(
                     <div class="flex flex-wrap items-center gap-2">
                         <AppBadge
                             v-if="product.category"
-                            tone="powder-soft"
+                            tone="primary"
                         >
                             {{ product.category.name }}
                         </AppBadge>
@@ -248,7 +248,7 @@ const pickerError = computed(
 
                     <div
                         v-if="variants.length"
-                        class="flex flex-col gap-5 rounded-card border-2 border-line bg-surface-soft p-4 shadow-retro-sm sm:p-5"
+                        class="flex flex-col gap-5 rounded-card border border-line bg-surface p-4 shadow-soft-sm sm:p-5"
                     >
                         <VariantSelector
                             v-model:selected-colors="selectedColors"
@@ -262,7 +262,7 @@ const pickerError = computed(
 
                         <div
                             v-if="selectedVariantIds.length"
-                            class="flex flex-col gap-3 rounded-control border-2 border-line bg-surface p-3.5"
+                            class="flex flex-col gap-3 rounded-control border border-line bg-surface-soft p-3.5"
                         >
                             <p
                                 v-if="(colorEnabled && selectedColors.length) || (sizeEnabled && selectedSize)"
@@ -314,7 +314,7 @@ const pickerError = computed(
 
                         <p
                             v-else-if="colorError || sizeError"
-                            class="rounded-control border-2 border-danger/40 bg-danger-soft px-3.5 py-2.5 text-sm font-semibold text-danger"
+                            class="rounded-control border border-danger/40 bg-danger-soft px-3.5 py-2.5 text-sm font-semibold text-danger"
                             role="alert"
                         >
                             {{ colorError || sizeError }}
@@ -343,14 +343,14 @@ const pickerError = computed(
 
                     <p
                         v-else
-                        class="rounded-card border-2 border-dashed border-line px-4 py-6 text-center text-sm text-ink-muted"
+                        class="rounded-card border border-dashed border-line-strong/60 px-4 py-6 text-center text-sm text-ink-muted"
                     >
                         {{ t('product.no_variants') }}
                     </p>
 
                     <div
                         v-if="product.description"
-                        class="rounded-card border-2 border-line bg-surface-soft p-4"
+                        class="rounded-card border border-line bg-surface p-4"
                     >
                         <h2 class="mb-1.5 font-display text-lg font-bold text-ink">
                             {{ t('product.details') }}

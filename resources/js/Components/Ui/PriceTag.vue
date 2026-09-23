@@ -42,7 +42,7 @@ const isPublic = computed(() => props.visibility === 'public' && props.value !==
 
     <AppBadge
         v-else
-        tone="powder-soft"
+        tone="attention"
         size="md"
     >
         {{ t('common.request_price') }}

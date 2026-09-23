@@ -31,11 +31,11 @@ const unitPriceLabel = computed(() =>
 </script>
 
 <template>
-    <div class="rounded-card border-2 border-line bg-surface-soft p-3 sm:p-4">
+    <div class="rounded-card border border-line bg-surface p-3 shadow-soft-sm sm:p-4">
         <div class="flex gap-3">
             <a
                 :href="`/product/${item.product.slug}`"
-                class="h-20 w-20 shrink-0 overflow-hidden rounded-control border-2 border-line bg-surface-muted sm:h-24 sm:w-24"
+                class="h-20 w-20 shrink-0 overflow-hidden rounded-control border border-line bg-surface-muted sm:h-24 sm:w-24"
                 tabindex="-1"
                 aria-hidden="true"
             >
@@ -49,7 +49,7 @@ const unitPriceLabel = computed(() =>
                 >
                 <span
                     v-else
-                    class="flex h-full w-full items-center justify-center text-ink-muted/50"
+                    class="flex h-full w-full items-center justify-center text-ink-muted"
                 >
                     <AppIcon
                         name="swatch"
@@ -132,7 +132,7 @@ const unitPriceLabel = computed(() =>
                     </div>
                     <p
                         v-else
-                        class="rounded-full border border-powder/40 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent"
+                        class="rounded-full border border-attention/25 bg-attention-soft px-2.5 py-1 text-xs font-semibold text-attention"
                     >
                         {{ t('common.request_price') }}
                     </p>
@@ -142,7 +142,7 @@ const unitPriceLabel = computed(() =>
 
         <p
             v-if="error"
-            class="mt-2 rounded-control border-2 border-danger/40 bg-danger-soft px-3 py-2 text-sm font-semibold text-danger"
+            class="mt-2 rounded-control border border-danger/40 bg-danger-soft px-3 py-2 text-sm font-semibold text-danger"
             role="alert"
         >
             {{ error }}

@@ -61,8 +61,8 @@ watch(
     },
 );
 
-const activeClasses = 'border-line-strong bg-navy text-cream';
-const idleClasses = 'border-line bg-surface-soft text-ink hover:border-line-strong';
+const activeClasses = 'border-primary bg-selected text-primary';
+const idleClasses = 'border-line bg-surface text-ink hover:bg-surface-soft';
 
 function selectPreset(value) {
     customActive.value = false;
@@ -109,7 +109,7 @@ function normalizeCustom() {
                 v-for="preset in presets"
                 :key="preset"
                 type="button"
-                class="inline-flex min-h-11 min-w-16 items-center justify-center rounded-control border-2 px-4 text-sm font-bold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                class="inline-flex min-h-11 min-w-16 items-center justify-center rounded-control border-2 px-4 text-sm font-bold tabular-nums transition-colors duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50"
                 :class="! customActive && modelValue === preset ? activeClasses : idleClasses"
                 :aria-pressed="! customActive && modelValue === preset"
                 :disabled="busy"
@@ -120,7 +120,7 @@ function normalizeCustom() {
 
             <button
                 type="button"
-                class="inline-flex min-h-11 items-center justify-center rounded-control border-2 px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                class="inline-flex min-h-11 items-center justify-center rounded-control border-2 px-4 text-sm font-semibold transition-colors duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50"
                 :class="customActive ? activeClasses : idleClasses"
                 :aria-pressed="customActive"
                 :disabled="busy"

@@ -51,18 +51,13 @@ const props = defineProps({
 });
 
 const VARIANTS = {
-    primary:
-        'bg-primary text-on-primary border-2 border-line-strong shadow-retro-sm hover:bg-primary-strong hover:shadow-retro active:translate-y-[2px] active:shadow-none',
-    secondary:
-        'bg-surface-soft text-ink border-2 border-line-strong shadow-retro-sm hover:bg-surface-muted active:translate-y-[2px] active:shadow-none',
-    powder:
-        'bg-powder text-powder-ink border-2 border-line-strong shadow-retro-sm hover:brightness-105 active:translate-y-[2px] active:shadow-none',
-    whatsapp:
-        'bg-whatsapp text-white border-2 border-line-strong shadow-retro-sm hover:brightness-110 active:translate-y-[2px] active:shadow-none',
+    primary: 'bg-primary text-on-primary hover:bg-primary-strong',
+    secondary: 'border-2 border-line-strong bg-surface text-primary hover:bg-primary-soft',
+    accent: 'border-2 border-primary/30 bg-primary-soft text-primary hover:bg-selected',
+    whatsapp: 'bg-external text-on-external hover:brightness-105',
     ghost:
-        'bg-transparent text-ink border-2 border-transparent hover:bg-surface-muted',
-    danger:
-        'bg-transparent text-danger border-2 border-danger hover:bg-danger-soft',
+        'bg-transparent text-ink shadow-none hover:bg-surface-muted hover:shadow-none',
+    danger: 'bg-danger text-on-danger hover:bg-danger-strong',
 };
 
 const SIZES = {
@@ -72,7 +67,7 @@ const SIZES = {
 };
 
 const classes = computed(() => [
-    'inline-flex select-none items-center justify-center rounded-control font-semibold transition-[transform,background-color,box-shadow,filter] duration-150 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none',
+    'inline-flex select-none items-center justify-center rounded-control font-semibold shadow-soft-sm transition-[transform,background-color,box-shadow,color,border-color] duration-200 ease-out hover:-translate-y-px hover:shadow-soft active:translate-y-0 active:shadow-soft-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0',
     VARIANTS[props.variant] ?? VARIANTS.primary,
     SIZES[props.size] ?? SIZES.md,
     props.block ? 'w-full' : '',

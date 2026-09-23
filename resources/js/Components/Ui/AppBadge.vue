@@ -10,21 +10,18 @@ const props = defineProps({
         type: String,
         default: 'md',
     },
-    tilt: {
-        type: Boolean,
-        default: false,
-    },
 });
 
 const TONES = {
     neutral: 'bg-surface-muted text-ink border-line',
-    primary: 'bg-primary text-on-primary border-line-strong',
-    'primary-soft': 'bg-primary-soft text-primary-strong border-primary/30',
-    powder: 'bg-powder text-powder-ink border-line-strong',
-    'powder-soft': 'bg-accent-soft text-accent border-powder/40',
-    success: 'bg-success-soft text-success border-success/30',
-    warning: 'bg-warning-soft text-warning border-warning/30',
-    danger: 'bg-danger-soft text-danger border-danger/30',
+    primary: 'bg-primary-soft text-primary border-primary/25',
+    success: 'bg-success-soft text-success border-success/25',
+    attention: 'bg-attention-soft text-attention border-attention/25',
+    progress: 'bg-progress-soft text-progress border-progress/25',
+    stopped: 'bg-stopped-soft text-stopped border-stopped/25',
+    danger: 'bg-danger-soft text-danger border-danger/25',
+    external: 'bg-external-soft text-external border-external/25',
+    data: 'bg-data-soft text-data border-data/25',
 };
 
 const SIZES = {
@@ -36,7 +33,6 @@ const classes = computed(() => [
     'inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border font-semibold',
     TONES[props.tone] ?? TONES.neutral,
     SIZES[props.size] ?? SIZES.md,
-    props.tilt ? '-rotate-2' : '',
 ]);
 </script>
 

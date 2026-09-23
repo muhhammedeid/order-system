@@ -21,7 +21,7 @@ defineProps({
             stroke="currentColor"
             stroke-width="7"
             stroke-linecap="round"
-            class="text-cream"
+            class="text-on-primary"
         >
             <line x1="32" y1="14" x2="32" y2="50" />
             <line x1="16.4" y1="23" x2="47.6" y2="41" />

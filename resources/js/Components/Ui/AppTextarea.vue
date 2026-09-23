@@ -50,10 +50,10 @@ const fieldId = `field-${uid}`;
 const describedById = `field-${uid}-description`;
 
 const textareaClasses = computed(() => [
-    'block w-full rounded-control border-2 bg-surface-soft px-3.5 py-2.5 text-base text-ink placeholder:text-ink-muted/60 transition-colors duration-150',
+    'block w-full rounded-control border-2 bg-surface-soft px-3.5 py-2.5 text-base text-ink placeholder:text-ink-muted transition-colors duration-200 ease-out',
     props.error
         ? 'border-danger'
-        : 'border-line hover:border-ink-muted focus:border-line-strong',
+        : 'border-line-strong hover:border-ink-muted',
 ]);
 </script>
 

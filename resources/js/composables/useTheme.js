@@ -6,6 +6,11 @@ const isDark = ref(
     typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
 );
 
+const THEME_COLOR = {
+    light: '#FFFFFF',
+    dark: '#16222C',
+};
+
 function syncBrowserChrome(dark) {
     if (typeof document === 'undefined') {
         return;
@@ -14,7 +19,7 @@ function syncBrowserChrome(dark) {
     const meta = document.querySelector('meta[name="theme-color"]');
 
     if (meta) {
-        meta.setAttribute('content', dark ? '#04222F' : '#C91424');
+        meta.setAttribute('content', dark ? THEME_COLOR.dark : THEME_COLOR.light);
     }
 }
 
