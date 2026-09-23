@@ -742,3 +742,32 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
   code/localization-driven and independent of marketing consent.
 - Automated coverage for consent, opt-out ingestion/normalization, renderer/variables,
   resource CRUD and preview; full suite green; live signed-webhook/DB QA passes.
+
+## P08-W05A — Consent Live Verification, Privacy Hardening & Staging Sync
+
+### Scope
+
+- Merge the latest stable `origin/staging` into `feature/p08-whatsapp-module` (direction
+  staging → feature only).
+- Real paired-account verification of the P08-W05 consent/opt-out rules and of operational
+  Order communication while unsubscribed.
+- Fix the P08-W03 webhook logging exposure where the logged provider message id embedded the
+  chat phone/LID; logging only, database correlation keys unchanged.
+- Owner-equivalent browser QA of the Customer and Templates admin surfaces.
+
+### Acceptance
+
+- Merge is conflict-free (or every conflict resolved on the feature branch with both sides'
+  behavior preserved); no feature commit reaches staging or main.
+- Real phone: `إلغاء الاشتراك` and `STOP` unsubscribe the linked customer, persist the inbound
+  message, leave the conversation unchanged and send no automatic reply; `إلغاء الطلب` and
+  bare `إلغاء` persist without opting out.
+- Operational Order WhatsApp still sends while the customer is unsubscribed, with the order
+  link recorded and no consent consultation.
+- Application logs never contain the customer phone, `@c.us`/`@lid` chat identity or the raw
+  compound provider id; a regression test proves a compound id containing a phone does not
+  leak it.
+- Browser QA passes in Arabic/RTL and English at desktop and mobile widths, including a
+  Preview with a real Customer, real Product and `{{business_name}}`; the Settings value
+  wins over `APP_NAME`.
+- WhatsApp suite, full suite and Pint pass after the merge.

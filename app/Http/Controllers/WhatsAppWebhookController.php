@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\WhatsApp\Inbox\InboxProcessor;
+use App\Support\WhatsApp\Inbox\ProviderMessageId;
 use App\Support\WhatsApp\WebhookEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,12 +55,13 @@ class WhatsAppWebhookController extends Controller
             return response()->json(['status' => 'failed'], 500);
         }
 
-        // Deliberately minimal, non-PII logging: no message bodies, no
+        // Deliberately minimal, non-PII logging: no message bodies, no raw
+        // compound provider ids (they embed the chat phone/LID), no
         // credentials, no session auth material.
         Log::info('WhatsApp webhook received', [
             'event' => $event->event,
             'session' => $event->session,
-            'message_id' => $event->messageId(),
+            'message_id' => ProviderMessageId::safeForLogging($event->messageId()),
             'ack' => $event->ackName(),
         ]);
 

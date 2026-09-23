@@ -37,4 +37,23 @@ class ProviderMessageIdTest extends TestCase
         $this->assertSame('3EB0ABC', ProviderMessageId::normalize('3EB0ABC'));
         $this->assertNull(ProviderMessageId::normalize(null));
     }
+
+    public function test_safe_for_logging_never_keeps_chat_identity(): void
+    {
+        $this->assertSame('3EB0ABC', ProviderMessageId::safeForLogging('false_201234567890@c.us_3EB0ABC'));
+        $this->assertSame('2AFF8BF6FC9E803B6057', ProviderMessageId::safeForLogging('false_214457011683409@lid_2AFF8BF6FC9E803B6057'));
+        $this->assertNull(ProviderMessageId::safeForLogging(null));
+        $this->assertNull(ProviderMessageId::safeForLogging(''));
+
+        $numericToken = ProviderMessageId::safeForLogging('false_201234567890@c.us_201234567890');
+
+        $this->assertStringStartsWith('sha256:', $numericToken);
+        $this->assertStringNotContainsString('201234567890', $numericToken);
+
+        $unparsedId = ProviderMessageId::safeForLogging('201234567890@c.us');
+
+        $this->assertStringStartsWith('sha256:', $unparsedId);
+        $this->assertStringNotContainsString('201234567890', $unparsedId);
+        $this->assertStringNotContainsString('@c.us', $unparsedId);
+    }
 }

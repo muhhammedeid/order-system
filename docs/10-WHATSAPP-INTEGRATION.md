@@ -84,8 +84,11 @@ Laravel always sends the plain key in the `X-Api-Key` header.
   falling back to a SHA-256 hash of the raw body, then to `X-Webhook-Request-Id`. Keys are
   stored for 24 h.
 - Route is stateless (no session, no CSRF), throttled, and fails closed when unconfigured.
-- Logging is minimal and non-PII: event name, session, message id, ack name. No message
-  bodies, credentials, or QR/auth material.
+- Logging is minimal and non-PII: event name, session, a privacy-safe message identifier,
+  ack name. The raw compound provider id (which embeds the chat phone/LID) is never logged:
+  the bare message token is logged only when it is provably identity-free, otherwise a
+  truncated one-way SHA-256 hash is logged. No message bodies, credentials, or QR/auth
+  material.
 - `createSession()` applies the configured webhook secret as the WAHA `hmac.key` unless the
   caller supplies an explicit override, so inbound webhooks are signed from the start.
 - Note for later packages: dedupe is recorded before event handling. When real handlers are
@@ -470,6 +473,43 @@ re-expanded. The 4096 limit is the existing provider-safe maximum.
 - Log scan: no message bodies, template bodies, API keys or HMAC secrets; the opt-out log
   contains only `customer_id` and `status`.
 
+## P08-W05A — Consent Live Verification & Privacy Hardening
+
+Closeout of the remaining P08-W05 actions on the feature branch. `origin/staging` (storefront
+Soft UI work) was merged into `feature/p08-whatsapp-module` with no conflicts; the feature
+branch was not merged into staging and `main` was untouched.
+
+### Live real-phone verification (WAHA 2026.9.1, NOWEB, paired account)
+
+- Arabic `إلغاء الاشتراك` from the linked customer phone: inbound message stored normally,
+  conversation stayed linked, customer moved to `unsubscribed` with the opt-in timestamp
+  preserved and a new opt-out timestamp, and no automatic reply was sent (outbound count
+  unchanged).
+- English `STOP`: same result after normalization.
+- `إلغاء الطلب` and bare `إلغاء` from a subscribed customer: both messages were stored, the
+  customer stayed `subscribed` and the opt-out timestamp did not change — no substring or
+  fuzzy behavior.
+- An unrelated inbound from an unlinked chat (`@lid`, no matching customer) created its own
+  conversation and mutated no customer.
+- Operational Order message sent through the Order panel while the customer was
+  `unsubscribed`: delivered through the live session (ACK received), stored with `order_id`,
+  and the customer stayed `unsubscribed` — consent is not consulted by operational
+  communication.
+- Browser QA at desktop and mobile widths in Arabic/RTL and English: Customer list badge,
+  Customer form marketing section, Templates list/form and the Preview modal with a real
+  Customer, a real Product and `{{business_name}}`. With `settings.business_name` set to a
+  distinct value, the preview rendered that value while `APP_NAME` stayed unchanged,
+  confirming settings-first resolution.
+
+### Webhook log privacy hardening
+
+The P08-W03 logging issue (the raw provider message id embeds the chat phone/LID) is fixed:
+`ProviderMessageId::safeForLogging()` logs the bare message token only when it is provably
+identity-free (no `@`/`+`, not purely numeric, token charset) and a truncated SHA-256 hash
+otherwise. Database correlation keys are unchanged. A regression test posts a compound id
+containing a phone and asserts the phone, the `@c.us` identity and the raw compound id never
+appear in any log context, while the safe token does.
+
 ## P08-W01 Spike Results
 
 Environment: WAHA `2026.9.1`, engine `NOWEB`, tier `CORE`, Docker on Windows.
@@ -586,7 +626,8 @@ Operational notes for later P08 packages:
   the gateway timeout converts this into a sanitized `WhatsAppException`.
 - `READ` acknowledgements were not produced on this engine/account; only `SERVER` and
   `DEVICE` were observed.
-- Application logs contain the event name, session name, provider message id (which embeds
-  the chat JID/LID) and ack name, but never QR data, message bodies, API keys or the HMAC
-  secret.
+- Application logs contain the event name, session name, a privacy-safe message identifier
+  and ack name, but never QR data, message bodies, API keys or the HMAC secret. Since
+  P08-W05A the raw compound provider id (which embeds the chat JID/LID) is never logged;
+  stored provider correlation keys in the database are unchanged.
 - Using an unofficial client carries account/session ban risk.

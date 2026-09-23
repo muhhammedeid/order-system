@@ -4,6 +4,7 @@ namespace Tests\Feature\WhatsApp;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class WhatsAppWebhookTest extends TestCase
@@ -126,6 +127,31 @@ class WhatsAppWebhookTest extends TestCase
         config()->set('whatsapp.webhook.secret', '');
 
         $this->sendSigned($this->messageEvent())->assertStatus(503);
+    }
+
+    public function test_compound_provider_id_never_leaks_the_chat_phone_into_logs(): void
+    {
+        Log::spy();
+
+        $event = $this->messageEvent();
+        $event['payload']['id'] = 'false_201234567890@c.us_3EB0LOGLEAK';
+        $event['payload']['from'] = '201234567890@c.us';
+
+        $this->sendSigned($event)->assertStatus(202);
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (string $message, array $context): bool {
+                $encoded = (string) json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+                return ! str_contains($encoded, '201234567890')
+                    && ! str_contains($encoded, '@c.us')
+                    && ! str_contains($encoded, 'false_201234567890@c.us_3EB0LOGLEAK');
+            })
+            ->atLeast()->once();
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(fn (string $message, array $context): bool => ($context['message_id'] ?? null) === '3EB0LOGLEAK')
+            ->atLeast()->once();
     }
 
     private function sendSigned(array $payload)
