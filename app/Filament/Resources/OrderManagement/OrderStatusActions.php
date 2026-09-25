@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemColorQuantity;
+use App\Support\WhatsApp\Order\OrderStatusNotifier;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Hidden;
@@ -14,6 +15,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
@@ -111,7 +113,7 @@ class OrderStatusActions
             ->action(function (Order $record, array $data): void {
                 $deliveries = self::normalizeDeliveries($data);
 
-                if (! self::run($record, fn () => $record->recordDeliveries($deliveries))) {
+                if (! self::run($record, fn () => $record->recordDeliveries($deliveries), deliveryEvent: true)) {
                     return;
                 }
 
@@ -363,9 +365,15 @@ class OrderStatusActions
      * state. Domain failures become a danger notification; unexpected
      * exceptions are reported and surfaced safely instead of breaking the
      * admin page.
+     *
+     * After a successful transition the automatic WhatsApp update runs in its
+     * own failure boundary: a WhatsApp outage never reports the completed
+     * transition as failed.
      */
-    private static function run(Order $record, callable $transition): bool
+    private static function run(Order $record, callable $transition, bool $deliveryEvent = false): bool
     {
+        $from = $record->status;
+
         try {
             $transition();
 
@@ -392,7 +400,39 @@ class OrderStatusActions
             return false;
         }
 
+        self::notifyStatusChange($record, $from, $deliveryEvent);
+
         return true;
+    }
+
+    /**
+     * Automatic operational WhatsApp update for the committed status change.
+     * Skipped sends (no number, inactive template, disabled integration) stay
+     * silent; only real send failures warn the operator.
+     */
+    private static function notifyStatusChange(Order $record, OrderStatus $from, bool $deliveryEvent): void
+    {
+        try {
+            $result = app(OrderStatusNotifier::class)->statusChanged($record, $from, $deliveryEvent);
+        } catch (Throwable $exception) {
+            Log::warning('WhatsApp order status notification failed', [
+                'order_id' => $record->id,
+                'exception' => $exception::class,
+            ]);
+
+            $result = null;
+        }
+
+        if ($result !== null && ! $result->hasFailures()) {
+            return;
+        }
+
+        Notification::make()
+            ->title(__('admin.whatsapp.notifications.status_update_failed'))
+            ->body(__('admin.whatsapp.notifications.status_update_failed_body'))
+            ->warning()
+            ->persistent()
+            ->send();
     }
 
     private static function failureBody(Throwable $exception): string

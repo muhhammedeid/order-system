@@ -34,6 +34,7 @@ class Settings extends Page
     {
         $this->form->fill([
             'whatsapp_number' => Setting::get('whatsapp_number'),
+            'owner_whatsapp_number' => Setting::get('owner_whatsapp_number'),
         ]);
     }
 
@@ -52,6 +53,12 @@ class Settings extends Page
                 ->maxLength(32)
                 ->regex('/^\+?[0-9\s\-]+$/')
                 ->columnSpanFull(),
+            TextInput::make('owner_whatsapp_number')
+                ->label(__('admin.settings.owner_whatsapp_number'))
+                ->hint(__('admin.settings.owner_whatsapp_hint'))
+                ->maxLength(32)
+                ->regex('/^\+?[0-9\s\-]+$/')
+                ->columnSpanFull(),
         ]);
     }
 
@@ -60,6 +67,9 @@ class Settings extends Page
         $data = $this->form->getState();
 
         Setting::set('whatsapp_number', trim($data['whatsapp_number']));
+
+        $owner = $data['owner_whatsapp_number'] ?? null;
+        Setting::set('owner_whatsapp_number', filled($owner) ? trim((string) $owner) : null);
 
         Notification::make()
             ->title(__('admin.settings.saved'))

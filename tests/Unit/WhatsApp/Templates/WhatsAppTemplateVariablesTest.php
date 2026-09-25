@@ -32,6 +32,20 @@ class WhatsAppTemplateVariablesTest extends TestCase
         $this->assertFalse(WhatsAppTemplateVariables::usesProductContext('{{ customer_name }} {{ business_name }}'));
     }
 
+    public function test_it_detects_order_context_usage(): void
+    {
+        $this->assertTrue(WhatsAppTemplateVariables::usesOrderContext('{{ order_number }}'));
+        $this->assertTrue(WhatsAppTemplateVariables::usesOrderContext('{{order_items}}'));
+        $this->assertFalse(WhatsAppTemplateVariables::usesOrderContext('{{ customer_name }} {{ product_name }}'));
+    }
+
+    public function test_order_variables_are_allowlisted(): void
+    {
+        $this->assertSame([], WhatsAppTemplateVariables::unknownTokens(
+            '{{order_number}} {{order_status}} {{order_items}} {{total_quantity}} {{delivered_quantity}} {{remaining_quantity}}'
+        ));
+    }
+
     public function test_canonicalize_normalizes_spacing_only(): void
     {
         $this->assertSame('{{customer_name}}', WhatsAppTemplateVariables::canonicalize('{{ customer_name }}'));

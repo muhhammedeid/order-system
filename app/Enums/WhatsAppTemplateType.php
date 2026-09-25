@@ -6,6 +6,7 @@ enum WhatsAppTemplateType: string
 {
     case Marketing = 'marketing';
     case General = 'general';
+    case Order = 'order';
 
     public function label(): string
     {

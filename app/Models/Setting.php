@@ -37,4 +37,19 @@ class Setting extends Model
 
         return preg_replace('/\D/', '', $number);
     }
+
+    /**
+     * Owner/operations number that receives new-order alerts. Null when not
+     * configured; callers skip the alert instead of guessing a recipient.
+     */
+    public static function ownerWhatsappNumber(): ?string
+    {
+        $number = static::get('owner_whatsapp_number');
+
+        if ($number === null || trim($number) === '') {
+            return null;
+        }
+
+        return preg_replace('/\D/', '', $number);
+    }
 }

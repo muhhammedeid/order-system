@@ -7,11 +7,14 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Support\Cart;
+use App\Support\WhatsApp\Order\OrderStatusNotifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -33,6 +36,8 @@ class OrderController extends Controller
         $order = $this->createOrderWithRetry($customerData);
 
         Cart::clear();
+
+        $this->notifyOrderPlaced($order);
 
         return redirect()->route('order.success', ['order_number' => $order->order_number]);
     }
@@ -202,6 +207,24 @@ class OrderController extends Controller
                     'cart' => "يجب أن تقبل كمية المنتج القسمة على عدد المقاسات المتاحة ({$sizeCount}).",
                 ]);
             }
+        }
+    }
+
+    /**
+     * Operational order-placed WhatsApp update. Runs after the order was
+     * committed and must never affect the customer response.
+     */
+    private function notifyOrderPlaced(Order $order): void
+    {
+        try {
+            $order->refresh();
+
+            app(OrderStatusNotifier::class)->orderPlaced($order);
+        } catch (Throwable $exception) {
+            Log::warning('WhatsApp order placed notification failed', [
+                'order_id' => $order->id,
+                'exception' => $exception::class,
+            ]);
         }
     }
 }

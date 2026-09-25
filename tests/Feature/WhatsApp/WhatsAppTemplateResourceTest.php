@@ -6,6 +6,7 @@ use App\Filament\Resources\WhatsAppTemplates\Pages\CreateWhatsAppTemplate;
 use App\Filament\Resources\WhatsAppTemplates\Pages\EditWhatsAppTemplate;
 use App\Filament\Resources\WhatsAppTemplates\Pages\ListWhatsAppTemplates;
 use App\Models\Customer;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\User;
@@ -13,6 +14,7 @@ use App\Models\WhatsAppTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\TestCase;
 
 class WhatsAppTemplateResourceTest extends TestCase
@@ -226,6 +228,109 @@ class WhatsAppTemplateResourceTest extends TestCase
     private function previewHtml(Testable $component): string
     {
         return implode('', $component->effects['partials'] ?? []);
+    }
+
+    public function test_order_template_preview_renders_with_a_selected_order(): void
+    {
+        $template = $this->template([
+            'name' => 'Order update',
+            'type' => 'order',
+            'body' => 'Order {{order_number}} for {{customer_name}}',
+        ]);
+
+        $customer = Customer::factory()->create(['name' => 'Acme Store']);
+        $order = Order::create([
+            'order_number' => 'ORD-2026-00042',
+            'customer_id' => $customer->id,
+            'total_quantity' => 0,
+        ]);
+
+        $component = Livewire::actingAs(User::factory()->create())
+            ->test(ListWhatsAppTemplates::class)
+            ->mountTableAction('preview', $template)
+            ->setTableActionData(['order_id' => $order->id]);
+
+        $this->assertStringContainsString(
+            'Order ORD-2026-00042 for Acme Store',
+            $this->previewHtml($component),
+        );
+    }
+
+    public function test_system_template_key_is_read_only_and_delete_is_hidden(): void
+    {
+        $admin = User::factory()->create();
+        $template = $this->template(['key' => 'order_delivered_customer', 'type' => 'order']);
+
+        Livewire::actingAs($admin)
+            ->test(ListWhatsAppTemplates::class)
+            ->assertTableActionHidden('delete', $template);
+
+        Livewire::actingAs($admin)
+            ->test(EditWhatsAppTemplate::class, ['record' => $template->getKey()])
+            ->assertFormFieldDisabled('key')
+            ->assertFormFieldDisabled('type')
+            ->assertActionHidden('delete');
+    }
+
+    public function test_system_template_model_refuses_deletion(): void
+    {
+        $template = $this->template(['key' => 'order_delivered_customer', 'type' => 'order']);
+
+        $this->expectException(RuntimeException::class);
+
+        $template->delete();
+    }
+
+    public function test_system_template_body_is_editable_while_key_and_type_stay_locked(): void
+    {
+        $admin = User::factory()->create();
+        $template = $this->template([
+            'key' => 'order_confirmed_customer',
+            'type' => 'order',
+            'body' => 'OLD BODY',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(EditWhatsAppTemplate::class, ['record' => $template->getKey()])
+            ->fillForm(['body' => 'NEW BODY {{customer_name}}'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $template->refresh();
+
+        $this->assertSame('NEW BODY {{customer_name}}', $template->body);
+        $this->assertSame('order_confirmed_customer', $template->key);
+        $this->assertSame('order', $template->type->value);
+    }
+
+    public function test_order_templates_reject_product_variables_at_save(): void
+    {
+        Livewire::actingAs(User::factory()->create())
+            ->test(CreateWhatsAppTemplate::class)
+            ->fillForm([
+                'name' => 'Bad order template',
+                'type' => 'order',
+                'body' => '{{product_name}}',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['body']);
+
+        $this->assertDatabaseCount('whatsapp_templates', 0);
+    }
+
+    public function test_non_order_templates_reject_order_variables_at_save(): void
+    {
+        Livewire::actingAs(User::factory()->create())
+            ->test(CreateWhatsAppTemplate::class)
+            ->fillForm([
+                'name' => 'Bad marketing template',
+                'type' => 'marketing',
+                'body' => '{{order_number}}',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['body']);
+
+        $this->assertDatabaseCount('whatsapp_templates', 0);
     }
 
     public function test_templates_list_body_column_is_toggleable_and_hidden_by_default(): void

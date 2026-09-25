@@ -801,3 +801,44 @@ observed payload shapes are recorded in `10-WHATSAPP-INTEGRATION.md`.
   surface; the Customer marketing section keeps only status + timestamps.
 - No business logic changes: consent, opt-out, matching, ACK mapping, order semantics and
   template rules are untouched; all existing tests stay green.
+
+## P08-W05C — Automatic Order Status Notifications
+
+### Scope
+
+- Explicit user instruction supersedes the P08-W04 "no automatic sending on status changes"
+  rule for operational order updates.
+- System-keyed templates in `whatsapp_templates` (nullable unique `key`, type `order`), seeded
+  by `WhatsAppOrderTemplatesSeeder`: `order_placed_customer`, `order_placed_owner`,
+  `order_confirmed_customer`, `order_partially_delivered_customer`,
+  `order_delivered_customer`.
+- Order variables: `customer_name`, `business_name`, `order_number`, `order_status`,
+  `order_items`, `total_quantity`, `delivered_quantity`, `remaining_quantity`; rendered from
+  order snapshots only, never prices, notes or production aggregates.
+- `OrderStatusNotifier` called after commit from `OrderController::store()` (placed) and
+  `OrderStatusActions::run()` (confirmed, every partial delivery, delivered). Customer
+  messages are order-linked; owner alerts are unlinked. Owner number from the new
+  `owner_whatsapp_number` setting.
+- Failure isolation: disabled integration, missing/inactive template, missing/invalid number,
+  provider failure and over-length bodies never fail the order or the admin transition; real
+  send failures on admin actions surface a warning notification.
+
+### Acceptance
+
+- Placing an order sends the customer the order details and the owner a new-order alert when
+  the integration is enabled and the numbers are on WhatsApp; nothing is sent when the
+  integration is disabled.
+- Confirming sends one confirmed update; every recorded partial delivery sends an updated
+  delivered/remaining message; deliver-all sends the delivered message once; reconciliation
+  without a status change and cancellation send nothing.
+- Marketing-unsubscribed customers still receive operational updates; no automatic message
+  ever contains prices, internal notes, production aggregates or phone/chat identifiers in
+  logs.
+- Missing or inactive system templates skip silently; provider failures never block checkout
+  or admin actions.
+- System templates cannot be deleted or retyped from Admin; bodies stay editable and survive
+  re-seeding.
+- Automated coverage for placement, disabled integration, unreachable customer, provider
+  failure, confirmation, repeated partial deliveries, deliver-all, reconciliation silence,
+  cancellation, consent bypass, inactive template, seeding idempotency, renderer context
+  rules and privacy; full suite green.

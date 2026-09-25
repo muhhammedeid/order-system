@@ -4,6 +4,7 @@ namespace App\Filament\Resources\WhatsAppTemplates\Tables;
 
 use App\Enums\WhatsAppTemplateType;
 use App\Models\Customer;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\WhatsAppTemplate;
 use App\Support\WhatsApp\Templates\WhatsAppTemplateException;
@@ -30,13 +31,19 @@ class WhatsAppTemplatesTable
                     ->label(__('admin.whatsapp.templates.fields.name'))
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('key')
+                    ->label(__('admin.whatsapp.templates.fields.key'))
+                    ->badge()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('type')
                     ->label(__('admin.whatsapp.templates.fields.type'))
                     ->badge()
                     ->formatStateUsing(fn (?WhatsAppTemplateType $state): string => $state?->label() ?? '')
-                    ->color(fn (?WhatsAppTemplateType $state): string => $state === WhatsAppTemplateType::Marketing
-                        ? 'info'
-                        : 'gray'),
+                    ->color(fn (?WhatsAppTemplateType $state): string => match ($state) {
+                        WhatsAppTemplateType::Marketing => 'info',
+                        WhatsAppTemplateType::Order => 'warning',
+                        default => 'gray',
+                    }),
                 TextColumn::make('body')
                     ->label(__('admin.whatsapp.templates.fields.body'))
                     ->limit(80)
@@ -53,7 +60,8 @@ class WhatsAppTemplatesTable
             ->recordActions([
                 EditAction::make(),
                 self::previewAction(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->visible(fn (WhatsAppTemplate $record): bool => $record->key === null),
             ])
             ->defaultSort('name');
     }
@@ -74,11 +82,25 @@ class WhatsAppTemplatesTable
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(__('admin.whatsapp.templates.actions.close'))
             ->form([
+                Select::make('order_id')
+                    ->label(__('admin.whatsapp.templates.preview.order'))
+                    ->searchable()
+                    ->live()
+                    ->visible(fn (WhatsAppTemplate $record): bool => WhatsAppTemplateVariables::usesOrderContext($record->body))
+                    ->required(fn (WhatsAppTemplate $record): bool => WhatsAppTemplateVariables::usesOrderContext($record->body))
+                    ->getSearchResultsUsing(fn (string $search): array => Order::query()
+                        ->where('order_number', 'like', "%{$search}%")
+                        ->orderByDesc('id')
+                        ->limit(20)
+                        ->pluck('order_number', 'id')
+                        ->all())
+                    ->getOptionLabelUsing(fn ($value): ?string => Order::query()->whereKey($value)->value('order_number')),
                 Select::make('customer_id')
                     ->label(__('admin.whatsapp.templates.preview.customer'))
                     ->searchable()
-                    ->required()
                     ->live()
+                    ->visible(fn (WhatsAppTemplate $record): bool => ! WhatsAppTemplateVariables::usesOrderContext($record->body))
+                    ->required(fn (WhatsAppTemplate $record): bool => ! WhatsAppTemplateVariables::usesOrderContext($record->body))
                     ->getSearchResultsUsing(fn (string $search): array => Customer::query()
                         ->where(function (Builder $query) use ($search): void {
                             $query->where('name', 'like', "%{$search}%")
@@ -115,6 +137,24 @@ class WhatsAppTemplatesTable
                     ->bulleted(false)
                     ->helperText(__('admin.whatsapp.templates.preview.hint'))
                     ->content(function (Get $get, WhatsAppTemplate $record): array {
+                        if (WhatsAppTemplateVariables::usesOrderContext($record->body)) {
+                            $order = filled($get('order_id'))
+                                ? Order::query()->with(['customer', 'items'])->find($get('order_id'))
+                                : null;
+
+                            if ($order === null) {
+                                return [__('admin.whatsapp.templates.preview.choose_order')];
+                            }
+
+                            try {
+                                $rendered = app(WhatsAppTemplateRenderer::class)->renderForOrder($record, $order);
+                            } catch (WhatsAppTemplateException $exception) {
+                                return [$exception->getMessage()];
+                            }
+
+                            return explode("\n", $rendered);
+                        }
+
                         $customer = Customer::query()->find($get('customer_id'));
 
                         if ($customer === null) {

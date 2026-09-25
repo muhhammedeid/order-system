@@ -15,8 +15,9 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 /**
- * Reusable marketing/general message templates. No send action exists in this
- * resource; operational order messages stay code/localization-driven.
+ * Reusable marketing/general/order message templates. Order templates carry a
+ * fixed system key and drive the automatic status notifications; the manual
+ * order panel stays code/localization-driven. No send action exists here.
  */
 class WhatsAppTemplateResource extends Resource
 {

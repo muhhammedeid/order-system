@@ -85,6 +85,8 @@ return [
     'settings' => [
         'whatsapp_number' => 'WhatsApp Number',
         'whatsapp_hint' => 'International format, e.g. 201234567890 — digits only',
+        'owner_whatsapp_number' => 'Owner WhatsApp Number',
+        'owner_whatsapp_hint' => 'Receives new-order alerts. International format, e.g. 201234567890 — digits only',
         'saved' => 'Settings saved',
         'save' => 'Save',
     ],
@@ -106,6 +108,7 @@ return [
             'models' => 'Templates',
             'fields' => [
                 'name' => 'Name',
+                'key' => 'System key',
                 'type' => 'Type',
                 'body' => 'Message body',
                 'active' => 'Active',
@@ -114,7 +117,9 @@ return [
             'types' => [
                 'marketing' => 'Marketing',
                 'general' => 'General',
+                'order' => 'Order update',
             ],
+            'key_hint' => 'System templates are sent automatically on order status changes; the key and type are fixed. You can edit the body or deactivate the template.',
             'variables_hint' => 'Approved variables: :variables',
             'actions' => [
                 'preview' => 'Preview',
@@ -123,14 +128,17 @@ return [
             'preview' => [
                 'heading' => 'Preview: :name',
                 'customer' => 'Customer',
+                'order' => 'Order',
                 'product' => 'Product (optional)',
                 'product_required' => 'This template uses product variables — select a product.',
                 'choose_customer' => 'Select a customer to render the preview.',
+                'choose_order' => 'Select an order to render the preview.',
                 'hint' => 'Preview only — nothing is sent.',
             ],
             'errors' => [
                 'unknown_tokens' => 'Unknown template variable(s): :tokens',
                 'missing_product' => 'This template requires a product, but no product was provided.',
+                'missing_order' => 'This template requires order data, but no order was provided.',
             ],
         ],
         'service' => [
@@ -197,6 +205,8 @@ return [
             'action_failed_body' => 'The action could not be completed. Check the service status and try again.',
             'state_changed' => 'The session state changed before the action ran. Refresh the status and try again.',
             'disabled' => 'WhatsApp integration is not enabled.',
+            'status_update_failed' => 'Order updated, but the WhatsApp update was not sent',
+            'status_update_failed_body' => 'The order status changed successfully, but the automatic WhatsApp message failed. Check the WhatsApp service and the order communication panel.',
         ],
         'directions' => [
             'inbound' => 'Inbound',

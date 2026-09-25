@@ -33,6 +33,19 @@ return [
 
     'session' => env('WHATSAPP_SESSION', 'default'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Customer-Facing Locale
+    |--------------------------------------------------------------------------
+    |
+    | Locale used for customer-facing values such as the order status label in
+    | automatic notifications. Kept separate from the session locale so an
+    | admin working in English never changes the language of customer texts.
+    |
+    */
+
+    'order_locale' => env('WHATSAPP_ORDER_LOCALE', 'ar'),
+
     'timeout' => (int) env('WHATSAPP_TIMEOUT', 10),
 
     'verify_ssl' => (bool) env('WHATSAPP_VERIFY_SSL', true),

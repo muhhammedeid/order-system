@@ -24,4 +24,9 @@ class WhatsAppTemplateException extends RuntimeException
     {
         return new self(__('admin.whatsapp.templates.errors.missing_product'));
     }
+
+    public static function missingOrderContext(): self
+    {
+        return new self(__('admin.whatsapp.templates.errors.missing_order'));
+    }
 }

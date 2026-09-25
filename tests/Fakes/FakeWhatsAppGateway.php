@@ -31,9 +31,22 @@ class FakeWhatsAppGateway implements WhatsAppGateway
     public ?NumberCheck $numberCheck = null;
 
     /**
+     * Per-number check results, keyed by the raw submitted number. Takes
+     * precedence over `$numberCheck`.
+     *
+     * @var array<string, NumberCheck>
+     */
+    public array $numberChecks = [];
+
+    /**
      * @var array<int, string>
      */
     public array $checkedNumbers = [];
+
+    /**
+     * @var array<int, array{chat_id: string, text: string}>
+     */
+    public array $sentTexts = [];
 
     public string $sentProviderId = 'SENT-1';
 
@@ -127,12 +140,17 @@ class FakeWhatsAppGateway implements WhatsAppGateway
             throw $this->throwOnCheckNumber;
         }
 
+        if (isset($this->numberChecks[$phone])) {
+            return $this->numberChecks[$phone];
+        }
+
         return $this->numberCheck ?? NumberCheck::notExists();
     }
 
     public function sendText(string $chatId, string $text, array $options = []): SentMessage
     {
         $this->calls[] = 'send_text';
+        $this->sentTexts[] = ['chat_id' => $chatId, 'text' => $text];
         $this->guardAction();
 
         return new SentMessage($this->sentProviderId);

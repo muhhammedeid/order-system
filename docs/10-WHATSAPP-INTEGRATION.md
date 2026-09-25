@@ -353,7 +353,8 @@ template table or editor. Only the current status has a template:
 There is no "Production Update" template: no production lifecycle status exists, and R03's
 outstanding-production aggregate is internal. `admin_notes`, `customer_notes`, prices and
 production aggregates are never included (covered by tests). Status changes never send
-anything automatically.
+anything automatically through this manual panel; P08-W05C later added separate automatic
+operational templates for the approved status transitions.
 
 ### Outbound architecture
 
@@ -509,6 +510,70 @@ identity-free (no `@`/`+`, not purely numeric, token charset) and a truncated SH
 otherwise. Database correlation keys are unchanged. A regression test posts a compound id
 containing a phone and asserts the phone, the `@c.us` identity and the raw compound id never
 appear in any log context, while the safe token does.
+
+## P08-W05C — Automatic Order Status Notifications
+
+Approved change of the P08-W04 rule: operational order updates are now sent automatically on
+the committed status transitions the user specified (placed, confirmed, partially delivered,
+delivered). Manual panel behavior, inbox, ACKs, consent and matching are untouched.
+
+### System templates
+
+`whatsapp_templates` gains a nullable unique `key`; system templates use type `order` and are
+seeded by `WhatsAppOrderTemplatesSeeder` (idempotent `firstOrCreate`, so admin edits survive
+re-seeding):
+
+| Key | Recipient | Sent when |
+|---|---|---|
+| `order_placed_customer` | customer | order placed — details plus "wait for operations team confirmation" |
+| `order_placed_owner` | owner | order placed |
+| `order_confirmed_customer` | customer | new → confirmed |
+| `order_partially_delivered_customer` | customer | every recorded partial delivery |
+| `order_delivered_customer` | customer | final delivery |
+
+Keys and types are read-only in Admin; bodies stay editable, templates can be deactivated
+(deactivation skips the send silently), and system templates cannot be deleted. The preview
+modal renders order templates against a selected real order.
+
+### Order variables
+
+`customer_name`, `business_name`, `order_number`, `order_status`, `order_items`,
+`total_quantity`, `delivered_quantity`, `remaining_quantity`. `order_items` is one bullet per
+ordered variant built from the accepted snapshots (product name, code, color/size, physical
+quantity); prices, notes and production aggregates are never available. Product variables
+fail closed inside order templates and order variables fail closed in the manual `render()`
+path. Rendered bodies over 4096 characters are skipped. `order_status` resolves in the
+dedicated `whatsapp.order_locale` (default `ar`), so the admin session locale never changes
+customer-facing text.
+
+### Sending rules
+
+- `OrderStatusNotifier` runs after the order transaction commits: from
+  `OrderController::store()` (placement) and `OrderStatusActions::run()` (confirm, partial
+  delivery, deliver-all, reconcile).
+- Customer conversation: newest linked conversation, otherwise first contact through
+  `check-exists`. Owner conversation: `owner_whatsapp_number` setting, verified with
+  `check-exists`, created unlinked; an existing owner chat is reused only while it is not
+  linked to a customer, otherwise the alert fails closed (`owner_chat_linked`).
+- Customer messages carry `order_id`; owner alerts stay unlinked so the customer order panel
+  shows only customer communication.
+- Marketing consent is never consulted (operational messages); cancellation sends nothing;
+  reconciliation without a status change stays silent; a recorded partial delivery always
+  notifies with the updated delivered/remaining totals.
+- Failure isolation: disabled integration, missing/inactive template, missing/invalid number,
+  provider failure, invalid template context and over-length bodies never fail the order or
+  the admin transition. Real send failures on admin actions surface a warning notification;
+  logs contain only the order id, template key, exception class and controlled reason (no
+  numbers, bodies or chat ids).
+- Sends are synchronous (no queue is permitted by the guardrails); each provider call is
+  bounded by the WAHA timeout and failures are isolated from the order flow. Scalar values
+  (names, codes, statuses) are collapsed to one line and Unicode format/bidi controls are
+  stripped before substitution.
+
+### Settings
+
+`owner_whatsapp_number` (optional, digits-international format) is stored in `settings` and
+edited on the General Settings page. Empty means owner alerts are skipped.
 
 ## P08-W01 Spike Results
 
