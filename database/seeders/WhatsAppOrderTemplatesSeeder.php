@@ -50,7 +50,9 @@ class WhatsAppOrderTemplatesSeeder extends Seeder
                 'active' => true,
                 'body' => implode("\n", [
                     'طلب جديد رقم {{order_number}} من {{customer_name}}.',
+                    'هاتف العميل: {{customer_phone}}',
                     'إجمالي القطع: {{total_quantity}}',
+                    'رابط الطلب: {{admin_order_url}}',
                     '',
                     'تفاصيل الطلب:',
                     '{{order_items}}',

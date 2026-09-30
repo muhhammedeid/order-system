@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\WhatsAppGateway;
+use App\Services\WhatsApp\UnavailableGateway;
 use App\Services\WhatsApp\WahaGateway;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -15,7 +16,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(WhatsAppGateway::class, WahaGateway::class);
+        $this->app->bind(WhatsAppGateway::class, function ($app): WhatsAppGateway {
+            $driver = config('whatsapp.driver') ?? config('whatsapp.provider', 'waha');
+
+            return $app->make($driver === 'waha' ? WahaGateway::class : UnavailableGateway::class);
+        });
     }
 
     /**

@@ -147,7 +147,10 @@ class WhatsAppTemplatesTable
                             }
 
                             try {
-                                $rendered = app(WhatsAppTemplateRenderer::class)->renderForOrder($record, $order);
+                                $renderer = app(WhatsAppTemplateRenderer::class);
+                                $rendered = $record->key === 'order_placed_owner'
+                                    ? $renderer->renderForOwner($record, $order)
+                                    : $renderer->renderForOrder($record, $order);
                             } catch (WhatsAppTemplateException $exception) {
                                 return [$exception->getMessage()];
                             }

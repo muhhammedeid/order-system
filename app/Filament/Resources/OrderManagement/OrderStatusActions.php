@@ -15,6 +15,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -375,9 +376,11 @@ class OrderStatusActions
         $from = $record->status;
 
         try {
-            $transition();
-
-            $record->refresh();
+            DB::transaction(function () use ($transition, $record, $from, $deliveryEvent): void {
+                $transition();
+                $record->refresh();
+                self::notifyStatusChange($record, $from, $deliveryEvent);
+            });
         } catch (RuntimeException|ValidationException $exception) {
             Notification::make()
                 ->title(__('filament.orders.actions.failed'))
@@ -399,8 +402,6 @@ class OrderStatusActions
 
             return false;
         }
-
-        self::notifyStatusChange($record, $from, $deliveryEvent);
 
         return true;
     }

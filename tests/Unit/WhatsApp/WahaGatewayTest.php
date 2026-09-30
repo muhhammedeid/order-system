@@ -46,13 +46,50 @@ class WahaGatewayTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_redirect_is_rejected_without_following_or_accepting_its_payload(): void
+    {
+        Http::fake(function ($request, array $options) {
+            $this->assertFalse($options['allow_redirects']);
+
+            return Http::response(['id' => 'DO-NOT-ACCEPT'], 302, ['Location' => 'https://other-host.test/collect']);
+        });
+        try {
+            app(WhatsAppGateway::class)->sendText('111@c.us', 'private message');
+            $this->fail('A redirect must not be accepted as a successful send.');
+        } catch (WhatsAppException $exception) {
+            $this->assertStringContainsString('HTTP 302', $exception->getMessage());
+            $this->assertStringNotContainsString('test-api-key', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+    }
+
+    public function test_transport_deadlines_are_bounded_and_send_is_not_retried(): void
+    {
+        config(['whatsapp.timeout' => 90, 'whatsapp.connect_timeout' => 60]);
+        $attempts = 0;
+        Http::fake(function ($request, array $options) use (&$attempts) {
+            $attempts++;
+            $this->assertSame(10, $options['timeout']);
+            $this->assertSame(3, $options['connect_timeout']);
+
+            throw new ConnectionException('contains private credentials');
+        });
+        try {
+            app(WhatsAppGateway::class)->sendText('111@c.us', 'message');
+            $this->fail('Timeout must surface safely.');
+        } catch (WhatsAppException $exception) {
+            $this->assertStringNotContainsString('private credentials', $exception->getMessage());
+        }
+        $this->assertSame(1, $attempts);
+    }
+
     public function test_send_text_posts_session_chat_and_text_with_api_key(): void
     {
         Http::fake(['*' => Http::response(['id' => 'true_111@c.us_ABC', 'timestamp' => 1700000000], 201)]);
 
         $message = app(WhatsAppGateway::class)->sendText('111@c.us', 'مرحبا');
 
-        $this->assertSame('true_111@c.us_ABC', $message->providerId);
+        $this->assertSame('ABC', $message->providerId);
         $this->assertSame(1700000000, $message->timestamp);
 
         Http::assertSent(fn ($request) => $request->url() === 'http://waha.test/api/sendText'

@@ -18,6 +18,9 @@ class VerifyWhatsAppWebhookSignature
 
     public function handle(Request $request, Closure $next): Response
     {
+        if ((config('whatsapp.driver') ?? config('whatsapp.provider', 'waha')) !== 'waha') {
+            abort(503, 'Webhook provider is not available.');
+        }
         $secret = (string) config('whatsapp.webhook.secret');
 
         if ($secret === '') {
@@ -50,19 +53,21 @@ class VerifyWhatsAppWebhookSignature
 
         // WAHA always sends this header; fail closed when it is missing or
         // malformed instead of silently accepting a potentially replayed body.
-        if (! is_numeric($header)) {
+        $signedTimestamp = $request->json('timestamp');
+        if (! is_numeric($header) || ! is_numeric($signedTimestamp)) {
             return false;
         }
 
         $tolerance = (int) config('whatsapp.webhook.tolerance', 300);
 
         if ($tolerance <= 0) {
-            return true;
+            return false;
         }
 
         // WAHA sends the header in milliseconds.
         $seconds = (int) floor(((int) $header) / 1000);
+        $signedSeconds = (int) floor(((int) $signedTimestamp) / 1000);
 
-        return abs(time() - $seconds) <= $tolerance;
+        return abs(time() - $seconds) <= $tolerance && abs(time() - $signedSeconds) <= $tolerance;
     }
 }

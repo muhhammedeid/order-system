@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class Customer extends Model
@@ -43,6 +44,8 @@ class Customer extends Model
     protected static function booted(): void
     {
         static::saving(function (self $customer): void {
+            $customer->phone_normalized = PhoneNumber::normalize($customer->phone);
+            $customer->whatsapp_normalized = PhoneNumber::normalize($customer->whatsapp);
             $customer->applyMarketingStatusTransition();
         });
     }
@@ -137,14 +140,27 @@ class Customer extends Model
     {
         $data = self::validate($data);
 
+        return DB::transaction(function () use ($data): self {
+            $normalized = PhoneNumber::normalize($data['phone']);
+            $lockKey = hash('sha256', $normalized);
+            DB::table('customer_phone_locks')->insertOrIgnore(['phone_key' => $lockKey]);
+            DB::table('customer_phone_locks')->where('phone_key', $lockKey)->lockForUpdate()->first();
+
+            return self::matchUnderLock($data, $normalized);
+        });
+    }
+
+    private static function matchUnderLock(array $data, string $normalized): self
+    {
+
         $customer = static::query()
-            ->where('phone', $data['phone'])
+            ->where('phone_normalized', $normalized)
             ->orderBy('id')
             ->first();
 
         if ($customer) {
             $customer->fill(collect($data)
-                ->only(['customer_code', 'name', 'company_name', 'whatsapp', 'governorate', 'city', 'address'])
+                ->only(['name', 'company_name', 'governorate', 'city', 'address'])
                 ->filter(fn ($value) => filled($value))
                 ->all());
             $customer->save();

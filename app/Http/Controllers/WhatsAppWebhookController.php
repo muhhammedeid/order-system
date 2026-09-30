@@ -34,6 +34,10 @@ class WhatsAppWebhookController extends Controller
                 : null,
         );
 
+        if ($event->session !== (string) config('whatsapp.session', 'default')) {
+            abort(422, 'Webhook session does not match.');
+        }
+
         $dedupeKey = $this->dedupeKey($event);
 
         if (! $this->firstDelivery($dedupeKey)) {

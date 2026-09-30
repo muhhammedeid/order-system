@@ -51,7 +51,7 @@ class ImportResult
             $lines = array_merge($lines, array_slice($invalid, 0, 15));
 
             if (count($invalid) > 15) {
-                $lines[] = '... و' . (count($invalid) - 15) . ' صفوف أخرى';
+                $lines[] = '... و'.(count($invalid) - 15).' صفوف أخرى';
             }
         }
 

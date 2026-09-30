@@ -87,7 +87,8 @@ class ProductForm
                         FileUpload::make('image_path')
                             ->label(__('filament.fields.image'))
                             ->image()
-                            ->acceptedFileTypes(['image/*'])
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
+                            ->maxSize(5120)
                             ->disk(config('filesystems.product_images_disk'))
                             ->directory('products/images')
                             ->required(),

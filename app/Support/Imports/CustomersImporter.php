@@ -20,7 +20,7 @@ class CustomersImporter
 
     public function process(array $keyedRows): ImportResult
     {
-        $result = new ImportResult();
+        $result = new ImportResult;
         $seenCodes = [];
 
         foreach ($keyedRows as $rowNumber => $row) {

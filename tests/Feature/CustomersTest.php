@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\Customers\Pages\ListCustomers;
 use App\Models\Customer;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -87,7 +88,7 @@ class CustomersTest extends TestCase
         Customer::factory()->create(['name' => 'Zahra Store', 'phone' => '01001111111']);
         Customer::factory()->create(['name' => 'Alpha Store', 'phone' => '01002222222']);
 
-        Livewire::test(\App\Filament\Resources\Customers\Pages\ListCustomers::class)
+        Livewire::test(ListCustomers::class)
             ->searchTable('Zahra')
             ->assertSee('Zahra Store')
             ->assertDontSee('Alpha Store');
@@ -98,7 +99,7 @@ class CustomersTest extends TestCase
         Customer::factory()->create(['name' => 'Store One', 'phone' => '01001111111']);
         Customer::factory()->create(['name' => 'Store Two', 'phone' => '01002222222']);
 
-        Livewire::test(\App\Filament\Resources\Customers\Pages\ListCustomers::class)
+        Livewire::test(ListCustomers::class)
             ->searchTable('01002222222')
             ->assertSee('Store Two')
             ->assertDontSee('Store One');
@@ -109,7 +110,7 @@ class CustomersTest extends TestCase
         Customer::factory()->create(['name' => 'Store One', 'customer_code' => 'C100']);
         Customer::factory()->create(['name' => 'Store Two', 'customer_code' => 'C200']);
 
-        Livewire::test(\App\Filament\Resources\Customers\Pages\ListCustomers::class)
+        Livewire::test(ListCustomers::class)
             ->searchTable('C200')
             ->assertSee('Store Two')
             ->assertDontSee('Store One');

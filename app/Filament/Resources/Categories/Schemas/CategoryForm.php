@@ -32,7 +32,8 @@ class CategoryForm
                 FileUpload::make('image_path')
                     ->label(__('filament.fields.category_image'))
                     ->image()
-                    ->acceptedFileTypes(['image/*'])
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
+                    ->maxSize(5120)
                     ->disk(config('filesystems.product_images_disk'))
                     ->directory('categories/images')
                     ->columnSpanFull(),

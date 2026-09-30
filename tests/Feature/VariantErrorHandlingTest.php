@@ -20,4 +20,3 @@ class VariantErrorHandlingTest extends TestCase
         $this->assertFalse(ProductVariant::existsFor($product, 'Black', '41'));
     }
 }
-

@@ -89,6 +89,8 @@ class OrderConversationsTest extends TestCase
             'phone' => '01000000000',
         ]);
 
+        $this->gateway->numberCheck = NumberCheck::exists('201000000000@c.us', '201000000000');
+
         app(OrderConversations::class)->firstContact($fallback);
 
         $this->assertSame(['01000000000'], $this->gateway->checkedNumbers);
@@ -164,10 +166,14 @@ class OrderConversationsTest extends TestCase
         ]);
         $this->gateway->numberCheck = NumberCheck::exists('20112347663@c.us', '20112347663');
 
-        $conversation = app(OrderConversations::class)->firstContact($order);
+        try {
+            app(OrderConversations::class)->firstContact($order);
+            $this->fail('A conversation owned by another customer must be rejected.');
+        } catch (WhatsAppException $exception) {
+            $this->assertSame('WhatsApp conversation belongs to another customer.', $exception->getMessage());
+        }
 
-        $this->assertTrue($conversation->is($existing));
-        $this->assertSame($otherCustomer->id, $conversation->customer_id);
+        $this->assertSame($otherCustomer->id, $existing->fresh()->customer_id);
     }
 
     public function test_an_existing_resolved_phone_is_not_overwritten(): void

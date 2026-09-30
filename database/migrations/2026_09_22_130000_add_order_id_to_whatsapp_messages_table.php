@@ -25,8 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('whatsapp_messages', function (Blueprint $table) {
+            $table->dropForeign(['order_id']);
             $table->dropIndex(['order_id', 'occurred_at']);
-            $table->dropConstrainedForeignId('order_id');
+            $table->dropColumn('order_id');
         });
     }
 };

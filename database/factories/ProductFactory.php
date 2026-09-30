@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\PriceVisibility;
-use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ProductFactory extends Factory

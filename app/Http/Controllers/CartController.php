@@ -104,7 +104,7 @@ class CartController extends Controller
     }
 
     /** @param array<int, mixed> $requestedIds
-     *  @return array<int, int>
+     * @return array<int, int>
      */
     private function canonicalVariantIds(array $requestedIds): array
     {

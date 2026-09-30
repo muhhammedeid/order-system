@@ -1,0 +1,24 @@
+# Draft only: replace domain and install TLS before enabling public access.
+server {
+    listen 80;
+    server_name __PRODUCTION_DOMAIN__;
+    root /var/www/wholesale-order-system/current/public;
+    index index.php;
+    charset utf-8;
+    client_max_body_size 8m;
+
+    location / { try_files $uri $uri/ /index.php?$query_string; }
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt { access_log off; log_not_found off; }
+    location ~ /\.(?!well-known).* { deny all; }
+    # Uploaded files must never execute as PHP.
+    location ~* ^/storage/.*\.(php|phtml|phar)(/|$) { deny all; }
+    location ~ \.php$ { return 404; }
+    location = /index.php {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_hide_header X-Powered-By;
+    }
+}

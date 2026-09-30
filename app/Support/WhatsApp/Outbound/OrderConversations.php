@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\WhatsAppConversation;
 use App\Support\WhatsApp\WhatsAppException;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Resolves the WhatsApp conversation for an order's customer.
@@ -76,19 +77,27 @@ class OrderConversations
             return null;
         }
 
-        $conversation = WhatsAppConversation::query()->firstOrCreate(
-            ['provider_chat_id' => $check->chatId],
-            ['unread_count' => 0],
-        );
+        return DB::transaction(function () use ($order, $check): WhatsAppConversation {
+            $conversation = WhatsAppConversation::query()->firstOrCreate(
+                ['provider_chat_id' => $check->chatId],
+                ['unread_count' => 0],
+            );
 
-        if ($conversation->resolved_phone === null && $check->phone !== null) {
-            $conversation->forceFill(['resolved_phone' => $check->phone])->save();
-        }
+            $conversation = WhatsAppConversation::query()->lockForUpdate()->findOrFail($conversation->id);
 
-        if ($conversation->customer_id === null && $order->customer_id !== null) {
-            $conversation->forceFill(['customer_id' => $order->customer_id])->save();
-        }
+            if ($conversation->customer_id !== null && $conversation->customer_id !== $order->customer_id) {
+                throw new WhatsAppException('WhatsApp conversation belongs to another customer.');
+            }
 
-        return $conversation;
+            if ($conversation->resolved_phone === null && $check->phone !== null) {
+                $conversation->forceFill(['resolved_phone' => $check->phone])->save();
+            }
+
+            if ($conversation->customer_id === null && $order->customer_id !== null) {
+                $conversation->forceFill(['customer_id' => $order->customer_id])->save();
+            }
+
+            return $conversation;
+        });
     }
 }

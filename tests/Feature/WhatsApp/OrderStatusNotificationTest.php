@@ -6,6 +6,7 @@ use App\Contracts\WhatsAppGateway;
 use App\Enums\OrderStatus;
 use App\Enums\WhatsAppMessageStatus;
 use App\Filament\Resources\OrderManagement\Pages\ViewOrder;
+use App\Jobs\SendWhatsAppDispatch;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItemColorQuantity;
@@ -14,6 +15,7 @@ use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\WhatsAppConversation;
+use App\Models\WhatsAppDispatch;
 use App\Models\WhatsAppMessage;
 use App\Models\WhatsAppTemplate;
 use App\Support\WhatsApp\NumberCheck;
@@ -50,7 +52,7 @@ class OrderStatusNotificationTest extends TestCase
         Setting::set('owner_whatsapp_number', '201555555555');
 
         $this->gateway->numberChecks = [
-            '01001234567' => NumberCheck::exists('201001234567@c.us', '201001234567'),
+            '201001234567' => NumberCheck::exists('201001234567@c.us', '201001234567'),
             '201555555555' => NumberCheck::exists('201555555555@c.us', '201555555555'),
         ];
 
@@ -83,6 +85,8 @@ class OrderStatusNotificationTest extends TestCase
         $this->assertNull($ownerMessage->order_id);
         $this->assertStringContainsString($order->order_number, $ownerMessage->body);
         $this->assertStringContainsString('Test Store', $ownerMessage->body);
+        $this->assertStringContainsString('01001234567', $ownerMessage->body);
+        $this->assertStringContainsString('/admin/', $ownerMessage->body);
     }
 
     public function test_placed_order_is_silent_when_the_integration_is_disabled(): void
@@ -102,7 +106,7 @@ class OrderStatusNotificationTest extends TestCase
         Setting::set('owner_whatsapp_number', '201555555555');
 
         $this->gateway->numberChecks = [
-            '01001234567' => NumberCheck::notExists(),
+            '201001234567' => NumberCheck::notExists(),
             '201555555555' => NumberCheck::exists('201555555555@c.us', '201555555555'),
         ];
 
@@ -132,7 +136,7 @@ class OrderStatusNotificationTest extends TestCase
     public function test_owner_alert_is_skipped_without_a_configured_owner_number(): void
     {
         $this->gateway->numberChecks = [
-            '01001234567' => NumberCheck::exists('201001234567@c.us', '201001234567'),
+            '201001234567' => NumberCheck::exists('201001234567@c.us', '201001234567'),
         ];
 
         $order = $this->checkoutOrder();
@@ -159,13 +163,14 @@ class OrderStatusNotificationTest extends TestCase
         ];
 
         $result = app(OrderStatusNotifier::class)->orderPlaced($order);
+        $this->runPending();
 
-        $this->assertSame([OrderStatusNotifier::PLACED_CUSTOMER], $result->sent);
-        $this->assertContains(OrderStatusNotifier::PLACED_OWNER.':owner_chat_linked', $result->skipped);
+        $this->assertSame([OrderStatusNotifier::PLACED_CUSTOMER, OrderStatusNotifier::PLACED_OWNER], $result->queued);
+        $this->assertDatabaseHas('whatsapp_dispatches', ['kind' => 'order_owner', 'status' => 'failed', 'failure_reason' => 'conversation_customer_mismatch']);
         $this->assertSame(1, WhatsAppMessage::count());
     }
 
-    public function test_admin_action_warns_when_the_whatsapp_send_fails(): void
+    public function test_admin_action_succeeds_and_worker_tracks_ambiguous_send(): void
     {
         $order = $this->createOrderWithCustomer(['whatsapp' => '0112347663'], quantity: 10);
         $this->linkedConversation($order);
@@ -176,12 +181,14 @@ class OrderStatusNotificationTest extends TestCase
             ->callAction('confirm', data: ['admin_notes' => null])
             ->assertHasNoActionErrors();
 
+        $this->runPending();
+
         $this->assertSame(OrderStatus::Confirmed, $order->refresh()->status);
-        $component->assertNotified(__('admin.whatsapp.notifications.status_update_failed'));
+        $this->assertDatabaseHas('whatsapp_dispatches', ['order_id' => $order->id, 'status' => 'unknown']);
 
         $message = WhatsAppMessage::query()->where('order_id', $order->id)->firstOrFail();
 
-        $this->assertSame(WhatsAppMessageStatus::Failed, $message->status);
+        $this->assertSame(WhatsAppMessageStatus::Unknown, $message->status);
     }
 
     public function test_confirm_action_sends_the_confirmed_update(): void
@@ -193,6 +200,8 @@ class OrderStatusNotificationTest extends TestCase
             ->test(ViewOrder::class, ['record' => $order->getKey()])
             ->callAction('confirm', data: ['admin_notes' => null])
             ->assertHasNoActionErrors();
+
+        $this->runPending();
 
         $order->refresh();
 
@@ -221,6 +230,8 @@ class OrderStatusNotificationTest extends TestCase
             ])
             ->assertHasNoActionErrors();
 
+        $this->runPending();
+
         $this->assertSame(OrderStatus::PartiallyDelivered, $order->refresh()->status);
 
         $first = WhatsAppMessage::query()->where('order_id', $order->id)->firstOrFail();
@@ -237,6 +248,8 @@ class OrderStatusNotificationTest extends TestCase
                 'expected' => [$colorRow->id => 2],
             ])
             ->assertHasNoActionErrors();
+
+        $this->runPending();
 
         $this->assertSame(2, WhatsAppMessage::query()->where('order_id', $order->id)->count());
 
@@ -259,6 +272,8 @@ class OrderStatusNotificationTest extends TestCase
             ->callAction('deliverAll')
             ->assertHasNoActionErrors();
 
+        $this->runPending();
+
         $this->assertSame(OrderStatus::Delivered, $order->refresh()->status);
 
         $message = WhatsAppMessage::query()->where('order_id', $order->id)->firstOrFail();
@@ -280,12 +295,13 @@ class OrderStatusNotificationTest extends TestCase
 
         $result = $notifier->statusChanged($order, OrderStatus::PartiallyDelivered);
 
-        $this->assertSame([], $result->sent);
+        $this->assertSame([], $result->queued);
         $this->assertSame(0, WhatsAppMessage::count());
 
         $result = $notifier->statusChanged($order, OrderStatus::PartiallyDelivered, deliveryEvent: true);
+        $this->runPending();
 
-        $this->assertSame([OrderStatusNotifier::PARTIALLY_DELIVERED_CUSTOMER], $result->sent);
+        $this->assertSame([OrderStatusNotifier::PARTIALLY_DELIVERED_CUSTOMER], $result->queued);
         $this->assertSame(1, WhatsAppMessage::count());
     }
 
@@ -299,7 +315,7 @@ class OrderStatusNotificationTest extends TestCase
 
         $result = app(OrderStatusNotifier::class)->statusChanged($order, OrderStatus::New);
 
-        $this->assertSame([], $result->sent);
+        $this->assertSame([], $result->queued);
         $this->assertSame(0, WhatsAppMessage::count());
     }
 
@@ -315,6 +331,8 @@ class OrderStatusNotificationTest extends TestCase
             ->test(ViewOrder::class, ['record' => $order->getKey()])
             ->callAction('confirm', data: ['admin_notes' => null])
             ->assertHasNoActionErrors();
+
+        $this->runPending();
 
         $this->assertSame(1, WhatsAppMessage::query()->where('order_id', $order->id)->count());
     }
@@ -332,6 +350,8 @@ class OrderStatusNotificationTest extends TestCase
             ->test(ViewOrder::class, ['record' => $order->getKey()])
             ->callAction('confirm', data: ['admin_notes' => null])
             ->assertHasNoActionErrors();
+
+        $this->runPending();
 
         $this->assertSame(OrderStatus::Confirmed, $order->refresh()->status);
         $this->assertSame(0, WhatsAppMessage::count());
@@ -352,7 +372,7 @@ class OrderStatusNotificationTest extends TestCase
 
         $result = app(OrderStatusNotifier::class)->statusChanged($order, OrderStatus::New);
 
-        $this->assertSame([], $result->sent);
+        $this->assertSame([], $result->queued);
         $this->assertSame([], $result->failed);
         $this->assertContains(OrderStatusNotifier::CONFIRMED_CUSTOMER.':template_invalid', $result->skipped);
         $this->assertSame(0, WhatsAppMessage::count());
@@ -374,6 +394,7 @@ class OrderStatusNotificationTest extends TestCase
         );
 
         app(OrderStatusNotifier::class)->orderPlaced($order);
+        $this->runPending();
 
         $this->assertSame(2, WhatsAppMessage::count());
 
@@ -432,6 +453,13 @@ class OrderStatusNotificationTest extends TestCase
         $this->assertSame(OrderStatusNotifier::DELIVERED_CUSTOMER, $recreated->key);
     }
 
+    private function runPending(): void
+    {
+        foreach (WhatsAppDispatch::query()->where('status', 'pending')->get() as $dispatch) {
+            (new SendWhatsAppDispatch($dispatch->id))->handle($this->gateway);
+        }
+    }
+
     private function checkoutOrder(): Order
     {
         $variant = ProductVariant::factory()
@@ -445,6 +473,9 @@ class OrderStatusNotificationTest extends TestCase
         $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 3]);
         $this->post('/checkout', ['name' => 'Test Store', 'phone' => '01001234567'])
             ->assertRedirect();
+
+        $this->assertSame([], $this->gateway->calls);
+        $this->runPending();
 
         return Order::query()->firstOrFail();
     }

@@ -1,0 +1,9 @@
+; Apply to the production PHP8.3 CLI/FPM configs after reviewed activation.
+; Install required extensions through Ubuntu packages, including php8.3-gd.
+expose_php=Off
+display_errors=Off
+log_errors=On
+memory_limit=256M
+upload_max_filesize=5M
+post_max_size=8M
+opcache.enable=1

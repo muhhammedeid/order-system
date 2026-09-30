@@ -20,13 +20,14 @@
 
 services:
   waha:
-    image: devlikeapro/waha:${WAHA_IMAGE_TAG:-2026.9.1}
+    image: devlikeapro/waha:${WAHA_IMAGE_TAG:-noweb-2026.9.1}
     container_name: waha-local
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
     environment:
       WAHA_API_KEY: ${WAHA_API_KEY:?set WAHA_API_KEY before starting}
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
       WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USERNAME:-admin}
       WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:?set WAHA_DASHBOARD_PASSWORD}
       WHATSAPP_SWAGGER_USERNAME: ${WHATSAPP_SWAGGER_USERNAME:-admin}

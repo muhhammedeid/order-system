@@ -1,0 +1,39 @@
+# REL-W02 candidate integration ledger
+
+State: one release-candidate commit explicitly authorized on 2026-09-30; resulting SHA is provided in the commit handoff. No merge, tag, push or deployment is authorized.
+Candidate branch: codex/rel-w02-waha-rc
+Current base: f45089929c0b07a9e6c74534bc648b553ea919c7
+Common main/feature base: 51670630401bbe08b615cec7fa6f63dd9a138c7b
+Main-only commit to preserve: b695e3d7821e5abcfae0291bbef9c470836618e0
+
+Feature commits beyond main (existing accepted source history):
+d5f64e7df89bf59d380d0e5203ee40165d7b3548 small changes (1)
+5a82fa15d7982cf44cc290ae9a7cb3da13d168f7 feat: redesign admin and add bilingual interface
+2e12d8eeef3574a472f8d6c483ff3b321c52f88f fix(deploy): provide Filament vendor assets to Vite build
+039056bbf26f4b1ceaa69ee34be9906ee0bfd839 fix(deploy): allow frontend vendor stage without PHP extensions
+4037cb00612ea76098d2ee89809ee415685a202c fix(deploy): align frontend Composer stage with PHP 8.2
+a3e39fdffdb0b0c85af8f1e43b73fcce3681b061 feat(production): per-color requirement quantities, unified cards, dense admin UI
+b1a3aa8a3e10359135143e981920d9ecb7d2a289 feat(delivery): color-level partial delivery and outstanding production requirements
+e4af0d3fa85d5ec08dd3e384d8230d331a376e24 fix(delivery): deliverable-only partial delivery options and per-color remaining display
+6d573907a82c42a7c9e607908bd81545eeb9b694 feat(whatsapp): P08-W01 WAHA provider spike and integration foundation
+f8c5ffb1d1a870fa8ed2f1659d5e6567d4c13294 Merge remote-tracking branch 'origin/staging' into feature/p08-whatsapp-module
+4f7537ec288cf09fdba64723375cfc8dae9f1c76 fix(whatsapp): harden P08-W01 webhook verification and provider errors
+b671d491e87bc443daf24cd78738c7c10a4e407f fix(whatsapp): handle NOWEB send response shape; record P08-W01A live verification
+a9659b27cfc77201697aff2bf413e85fa0cc8f39 chore: stabilize npm package identity across worktrees
+1b1838d74c7672d84c14a7f2aa779ba4c7d4e36e feat(whatsapp): P08-W02 account and session operations in Filament admin
+aa7fb6e6731509d4d03bc5f5b1f9e5c4e7674f6d feat(design): adopt Soft UI Evolution token foundation
+979f8a83b7f9e2d051eca5d920ac0e36d62f6d8d refactor(ui): apply Soft UI Evolution to UI primitives
+84b26fa12069c22b58c8e0ee7498224d2cd7c4ec refactor(storefront): restyle shell, brand and pages
+0d6560b2b6cb604b7f47d88b583868b426dfe4f0 fix(storefront): repair audited focus defect and remove migration aliases
+d68246271d0214744d0a1d70329a9bd180db45e6 feat(whatsapp): P08-W03 inbox, conversations and message history
+4d32399bf122ff16399e69973b89454357704438 feat(whatsapp): P08-W04 order communication integration
+0629146bb214b62d2a77e1bccdca6c2a657fdde1 fix(storefront): stop the footer leaking the request-price payload
+78da2f9dc833a935e56e18e8d2dd4b8d89b37c55 feat(whatsapp): P08-W05 marketing consent and message templates
+fb42cacf0faff5bfa29cb9d60261fd1a854f7d10 fix(whatsapp): harden P08-W05 opt-out matching and consent edge handling
+3dfa9586b89604e81580e11f901832b9127d39b0 Merge remote-tracking branch 'origin/staging' into feature/p08-whatsapp-module
+64d71a796e99bab37f439be0e8ed6bc2260c0b0b fix(whatsapp): stop webhook logs leaking chat identity
+6fbae80afd2db5359fd76cbc82a0d891882f090b feat(whatsapp): align admin UI with the current Filament design language
+f45089929c0b07a9e6c74534bc648b553ea919c7 feat(whatsapp): add automatic order status notifications
+
+Main-only source intent already present in translated current Home: Arabic badge, heading and quantity/color step.
+No push, tag publication, force push or deployment has occurred.

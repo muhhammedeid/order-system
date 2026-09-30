@@ -37,8 +37,6 @@ class OrderController extends Controller
 
         Cart::clear();
 
-        $this->notifyOrderPlaced($order);
-
         return redirect()->route('order.success', ['order_number' => $order->order_number]);
     }
 
@@ -158,6 +156,9 @@ class OrderController extends Controller
                     ]
                 );
             }
+
+            // Persist the communication snapshot atomically; queue publication waits for commit.
+            $this->notifyOrderPlaced($order);
 
             return $order;
         });

@@ -20,15 +20,18 @@ class CustomerMatcher
         }
 
         $candidates = PhoneNumber::candidates((string) $phone);
+        $normalized = PhoneNumber::normalize($phone);
 
         if ($candidates === []) {
             return null;
         }
 
         $matches = Customer::query()
-            ->where(function (Builder $query) use ($candidates): void {
+            ->where(function (Builder $query) use ($candidates, $normalized): void {
                 $query->whereIn('phone', $candidates)
-                    ->orWhereIn('whatsapp', $candidates);
+                    ->orWhereIn('whatsapp', $candidates)
+                    ->orWhere('phone_normalized', $normalized)
+                    ->orWhere('whatsapp_normalized', $normalized);
             })
             ->limit(2)
             ->get(['id']);

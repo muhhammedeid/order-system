@@ -125,7 +125,7 @@ class WhatsAppConversationPageTest extends TestCase
             ->where('direction', WhatsAppMessageDirection::Outbound)
             ->firstOrFail();
 
-        $this->assertSame(WhatsAppMessageStatus::Failed, $message->status);
+        $this->assertSame(WhatsAppMessageStatus::Unknown, $message->status);
         $this->assertNull($message->provider_message_id);
         $component->assertNotified(__('admin.whatsapp.notifications.action_failed'));
     }

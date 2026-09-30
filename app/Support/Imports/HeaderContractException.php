@@ -2,6 +2,4 @@
 
 namespace App\Support\Imports;
 
-class HeaderContractException extends \RuntimeException
-{
-}
+class HeaderContractException extends \RuntimeException {}

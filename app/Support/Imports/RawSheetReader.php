@@ -33,7 +33,7 @@ class RawSheetReader implements ToArray
         foreach ($requiredHeaders as $required) {
             if (! in_array($required, $headers, true)) {
                 throw new HeaderContractException(
-                    'ملف الاستيراد يجب أن يحتوي على الأعمدة: ' . implode('، ', $requiredHeaders)
+                    'ملف الاستيراد يجب أن يحتوي على الأعمدة: '.implode('، ', $requiredHeaders)
                 );
             }
         }

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,4 +25,3 @@ class VariantManagementPageTest extends TestCase
         $this->assertSame('42', $variant->size);
     }
 }
-

@@ -2,6 +2,7 @@
 
 namespace App\Support\WhatsApp\Templates;
 
+use App\Filament\Resources\OrderManagement\OrderManagementResource;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
@@ -35,9 +36,15 @@ class WhatsAppTemplateRenderer
         if ($product !== null) {
             $replacements['{{'.WhatsAppTemplateVariables::PRODUCT_NAME.'}}'] = $this->sanitizeLine((string) $product->name);
             $replacements['{{'.WhatsAppTemplateVariables::PRODUCT_CODE.'}}'] = $this->sanitizeLine((string) $product->product_code);
+            $replacements['{{'.WhatsAppTemplateVariables::PRODUCT_URL.'}}'] = route('product.show', $product);
         }
 
-        return $this->substitute($template->body, $replacements);
+        $rendered = $this->substitute($template->body, $replacements);
+        if (mb_strlen($rendered) > 4096) {
+            throw new WhatsAppTemplateException('Rendered WhatsApp message exceeds 4096 characters.');
+        }
+
+        return $rendered;
     }
 
     /**
@@ -46,6 +53,44 @@ class WhatsAppTemplateRenderer
      * are never available to the template.
      */
     public function renderForOrder(WhatsAppTemplate $template, Order $order): string
+    {
+        $ownerOnly = array_intersect(WhatsAppTemplateVariables::tokens($template->body), [
+            WhatsAppTemplateVariables::CUSTOMER_PHONE,
+            WhatsAppTemplateVariables::ADMIN_ORDER_URL,
+        ]);
+        if ($ownerOnly !== []) {
+            throw WhatsAppTemplateException::unknownTokens(array_values($ownerOnly));
+        }
+
+        return $this->renderOrder($template, $order, []);
+    }
+
+    public function renderForOwner(WhatsAppTemplate $template, Order $order): string
+    {
+        $order->loadMissing('customer');
+        $ownerValues = [
+            '{{customer_phone}}' => $this->sanitizeLine((string) $order->customer?->phone),
+            '{{admin_order_url}}' => OrderManagementResource::getUrl('view', ['record' => $order], panel: 'admin'),
+        ];
+        $body = $this->renderOrder($template, $order, $ownerValues);
+        $required = [
+            'order_number' => 'رقم الطلب: '.$this->sanitizeLine((string) $order->order_number),
+            'customer_name' => 'العميل: '.$this->sanitizeLine((string) $order->customer?->name),
+            'customer_phone' => 'هاتف العميل: '.$ownerValues['{{customer_phone}}'],
+            'total_quantity' => 'إجمالي القطع: '.number_format((int) $order->total_quantity),
+            'admin_order_url' => 'رابط الإدارة: '.$ownerValues['{{admin_order_url}}'],
+        ];
+        $tokens = WhatsAppTemplateVariables::tokens($template->body);
+        foreach ($required as $token => $line) {
+            if (! in_array($token, $tokens, true)) {
+                $body .= "\n".$line;
+            }
+        }
+
+        return $body;
+    }
+
+    private function renderOrder(WhatsAppTemplate $template, Order $order, array $ownerReplacements): string
     {
         $this->assertKnownTokens($template->body);
 
@@ -69,7 +114,7 @@ class WhatsAppTemplateRenderer
             '{{'.WhatsAppTemplateVariables::REMAINING_QUANTITY.'}}' => number_format(max(0, $total - $delivered)),
         ];
 
-        return $this->substitute($template->body, $replacements);
+        return $this->substitute($template->body, array_merge($replacements, $ownerReplacements));
     }
 
     /**

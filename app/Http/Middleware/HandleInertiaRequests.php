@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Support\Cart;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -32,7 +33,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'cartCount' => \App\Support\Cart::count(),
+            'cartCount' => Cart::count(),
             'appName' => config('app.name'),
             'locale' => app()->getLocale(),
             'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',

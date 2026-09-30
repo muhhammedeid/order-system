@@ -14,6 +14,12 @@ class WhatsAppTemplateVariables
 
     public const PRODUCT_CODE = 'product_code';
 
+    public const PRODUCT_URL = 'product_url';
+
+    public const CUSTOMER_PHONE = 'customer_phone';
+
+    public const ADMIN_ORDER_URL = 'admin_order_url';
+
     public const BUSINESS_NAME = 'business_name';
 
     public const ORDER_NUMBER = 'order_number';
@@ -36,6 +42,7 @@ class WhatsAppTemplateVariables
         return array_merge(
             self::customerContext(),
             self::orderContext(),
+            self::ownerContext(),
         );
     }
 
@@ -50,6 +57,7 @@ class WhatsAppTemplateVariables
             self::CUSTOMER_NAME,
             self::PRODUCT_NAME,
             self::PRODUCT_CODE,
+            self::PRODUCT_URL,
             self::BUSINESS_NAME,
         ];
     }
@@ -73,6 +81,11 @@ class WhatsAppTemplateVariables
         ];
     }
 
+    public static function ownerContext(): array
+    {
+        return array_merge(self::orderContext(), [self::CUSTOMER_PHONE, self::ADMIN_ORDER_URL]);
+    }
+
     /**
      * @return array<int, string>
      */
@@ -81,6 +94,7 @@ class WhatsAppTemplateVariables
         return [
             self::PRODUCT_NAME,
             self::PRODUCT_CODE,
+            self::PRODUCT_URL,
         ];
     }
 
@@ -96,6 +110,8 @@ class WhatsAppTemplateVariables
             self::TOTAL_QUANTITY,
             self::DELIVERED_QUANTITY,
             self::REMAINING_QUANTITY,
+            self::CUSTOMER_PHONE,
+            self::ADMIN_ORDER_URL,
         ];
     }
 

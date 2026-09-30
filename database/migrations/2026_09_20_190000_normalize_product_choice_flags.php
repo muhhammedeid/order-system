@@ -18,4 +18,3 @@ return new class extends Migration
         // The previous invalid combination cannot be reconstructed safely.
     }
 };
-

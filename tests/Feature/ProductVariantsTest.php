@@ -51,4 +51,3 @@ class ProductVariantsTest extends TestCase
         ProductVariant::validate(['color' => 'Black', 'size' => '40', 'available_quantity' => -1], $product);
     }
 }
-

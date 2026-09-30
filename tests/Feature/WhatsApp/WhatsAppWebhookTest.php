@@ -72,6 +72,30 @@ class WhatsAppWebhookTest extends TestCase
         $this->call('POST', self::URI, [], [], [], $headers, $body)->assertStatus(401);
     }
 
+    public function test_a_fresh_unsigned_header_cannot_replay_a_stale_signed_body(): void
+    {
+        $event = $this->messageEvent();
+        $event['timestamp'] = (time() - 10000) * 1000;
+        $this->sendSigned($event)->assertStatus(401);
+    }
+
+    public function test_another_session_is_rejected_without_persisting_messages(): void
+    {
+        $event = $this->messageEvent();
+        $event['session'] = 'other-account';
+        $this->sendSigned($event)->assertStatus(422);
+        $this->assertDatabaseCount('whatsapp_messages', 0);
+    }
+
+    public function test_nonpositive_tolerance_cannot_disable_replay_protection(): void
+    {
+        foreach ([0, -1] as $tolerance) {
+            config(['whatsapp.webhook.tolerance' => $tolerance]);
+            $this->sendSigned($this->messageEvent())->assertStatus(401);
+        }
+        $this->assertDatabaseCount('whatsapp_messages', 0);
+    }
+
     public function test_missing_timestamp_is_rejected(): void
     {
         $body = json_encode($this->messageEvent());
@@ -99,6 +123,7 @@ class WhatsAppWebhookTest extends TestCase
     {
         $this->sendSigned([
             'id' => 'evt_ack',
+            'timestamp' => time() * 1000,
             'event' => 'message.ack',
             'session' => 'default',
             'payload' => ['id' => 'true_111@c.us_ABC', 'ackName' => 'READ', 'ack' => 3],
@@ -106,6 +131,7 @@ class WhatsAppWebhookTest extends TestCase
 
         $this->sendSigned([
             'id' => 'evt_status',
+            'timestamp' => time() * 1000,
             'event' => 'session.status',
             'session' => 'default',
             'payload' => ['status' => 'WORKING'],
@@ -116,6 +142,7 @@ class WhatsAppWebhookTest extends TestCase
     {
         $this->sendSigned([
             'id' => 'evt_unknown',
+            'timestamp' => time() * 1000,
             'event' => 'something.new',
             'session' => 'default',
             'payload' => ['weird' => true],

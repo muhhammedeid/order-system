@@ -8,6 +8,31 @@ namespace App\Support\WhatsApp;
  */
 class PhoneNumber
 {
+    /** Egyptian mobiles use country-code digits; legacy values are not guessed. */
+    public static function normalize(?string $number): ?string
+    {
+        if ($number === null || trim($number) === '') {
+            return null;
+        }
+
+        $ascii = strtr(trim($number), array_combine(
+            preg_split('//u', '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', -1, PREG_SPLIT_NO_EMPTY),
+            str_split('01234567890123456789'),
+        ));
+        $digits = preg_replace('/[\s()+.\-]+/u', '', $ascii);
+        if (str_starts_with($digits, '0020')) {
+            $digits = substr($digits, 2);
+        }
+        if (preg_match('/^01[0125][0-9]{8}$/', $digits)) {
+            return '20'.substr($digits, 1);
+        }
+        if (preg_match('/^201[0125][0-9]{8}$/', $digits)) {
+            return $digits;
+        }
+
+        return trim($number);
+    }
+
     public static function fromChatId(?string $chatId): ?string
     {
         if (! is_string($chatId)) {
@@ -29,7 +54,7 @@ class PhoneNumber
             return false;
         }
 
-        $digits = preg_replace('/\D+/', '', $number) ?? '';
+        $digits = preg_replace('/\D+/', '', self::normalize($number)) ?? '';
 
         return strlen($digits) >= 6 && strlen($digits) <= 15;
     }
@@ -42,6 +67,7 @@ class PhoneNumber
      */
     public static function candidates(string $phone): array
     {
+        $phone = self::normalize($phone) ?? '';
         $digits = preg_replace('/\D+/', '', $phone) ?? '';
 
         if ($digits === '') {

@@ -7,15 +7,16 @@ return [
     | WhatsApp Provider
     |--------------------------------------------------------------------------
     |
-    | Phase 08 uses WAHA as the WhatsApp provider. The provider is accessed
-    | only through App\Contracts\WhatsAppGateway so business logic never
-    | depends on vendor-specific APIs. Only one provider is supported.
+    | WHATSAPP_DRIVER overrides the legacy WHATSAPP_PROVIDER setting.
+    | WAHA is implemented; any other driver fails closed until its messaging
+    | contract is approved and implemented behind WhatsAppGateway.
     |
     */
 
     'enabled' => (bool) env('WHATSAPP_ENABLED', false),
 
     'provider' => env('WHATSAPP_PROVIDER', 'waha'),
+    'driver' => env('WHATSAPP_DRIVER'),
 
     /*
     |--------------------------------------------------------------------------
@@ -47,6 +48,7 @@ return [
     'order_locale' => env('WHATSAPP_ORDER_LOCALE', 'ar'),
 
     'timeout' => (int) env('WHATSAPP_TIMEOUT', 10),
+    'connect_timeout' => (int) env('WHATSAPP_CONNECT_TIMEOUT', 3),
 
     'verify_ssl' => (bool) env('WHATSAPP_VERIFY_SSL', true),
 

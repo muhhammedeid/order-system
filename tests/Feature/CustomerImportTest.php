@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Customer;
 use App\Support\Imports\CustomersImporter;
 use App\Support\Imports\HeaderContractException;
+use App\Support\Imports\ImportResult;
 use App\Support\Imports\RawSheetReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,7 +25,7 @@ class CustomerImportTest extends TestCase
         'Address' => '',
     ];
 
-    private function import(array $rows): \App\Support\Imports\ImportResult
+    private function import(array $rows): ImportResult
     {
         $keyed = [];
         $rowNumber = 1;
@@ -48,7 +49,7 @@ class CustomerImportTest extends TestCase
         $this->expectException(HeaderContractException::class);
         $this->expectExceptionMessage('Customer Code');
 
-        $reader->keyedRows(\App\Support\Imports\CustomersImporter::HEADERS);
+        $reader->keyedRows(CustomersImporter::HEADERS);
     }
 
     public function test_creates_customer_with_code(): void

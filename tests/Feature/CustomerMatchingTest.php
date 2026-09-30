@@ -3,9 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
-use App\Models\Product;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class CustomerMatchingTest extends TestCase
@@ -63,7 +62,7 @@ class CustomerMatchingTest extends TestCase
 
     public function test_matching_requires_name_and_phone(): void
     {
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         Customer::matchOrCreate(['name' => '', 'phone' => '']);
     }

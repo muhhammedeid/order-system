@@ -17,6 +17,7 @@ enum WhatsAppMessageStatus: string
     case Delivered = 'delivered';
     case Read = 'read';
     case Failed = 'failed';
+    case Unknown = 'unknown';
 
     public function label(): string
     {
@@ -31,6 +32,7 @@ enum WhatsAppMessageStatus: string
             self::Delivered => 3,
             self::Read => 4,
             self::Failed => 5,
+            self::Unknown => 1,
         };
     }
 

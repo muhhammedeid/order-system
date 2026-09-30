@@ -22,6 +22,8 @@ trait HasImportAction
                         'application/vnd.ms-excel',
                         'text/csv',
                     ])
+                    ->disk('local')
+                    ->maxSize(5120)
                     ->required(),
             ])
             ->action(function (array $data) use ($label, $import) {

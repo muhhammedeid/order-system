@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\PriceVisibility;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -22,8 +22,8 @@ interface WhatsAppGateway
     public function health(): bool;
 
     /**
-     * @param  array<int, array{url: string, events: array<int, string>, hmac?: array{key: string}}>  $webhooks
-     *                                                                                                           When `hmac` is omitted the configured webhook secret is applied.
+     * Provider account administration for drivers supporting local sessions.
+     * Webhook configuration is interpreted only by that driver's adapter.
      */
     public function createSession(string $name, array $webhooks = []): SessionState;
 
@@ -64,7 +64,7 @@ interface WhatsAppGateway
     public function checkNumber(string $phone): NumberCheck;
 
     /**
-     * @param  array<string, mixed>  $options  e.g. ['reply_to' => '...', 'linkPreview' => false]
+     * @param  array<string, mixed>  $options
      */
     public function sendText(string $chatId, string $text, array $options = []): SentMessage;
 

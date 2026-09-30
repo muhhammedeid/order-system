@@ -1,5 +1,9 @@
 # Wholesale Order System — WhatsApp Integration (Phase 08)
 
+## REL-W02 Gate B1 update
+
+The explicitly approved Gate B1 supersedes the historical synchronous/no-queue delivery descriptions below for automatic order notifications and new product campaigns. See [the current production runbook](REL-W02-PRODUCTION-RUNBOOK.md) for database queues, scheduler, interruption/retry semantics, selectable driver and release preparation. Historical P08 sections remain as implementation history; manual Inbox sending remains synchronous and now records ambiguous sends as unknown. WAHA is the sole approved initial production provider. Vrobo is excluded from this release and its contract is not a production dependency.
+
 This document owns the WhatsApp module boundary. P08-W01 is a provider spike and
 foundation only; inbox, conversations, customer linking, order communication, templates,
 marketing consent, campaigns, scheduling, throttling and campaign safety are later

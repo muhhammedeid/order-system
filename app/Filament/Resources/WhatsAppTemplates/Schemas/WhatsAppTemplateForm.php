@@ -51,8 +51,9 @@ class WhatsAppTemplateForm
                             ->implode(', '),
                     ]))
                     ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
-                        $allowed = WhatsAppTemplateType::tryFrom((string) $get('type')) === WhatsAppTemplateType::Order
-                            ? WhatsAppTemplateVariables::orderContext()
+                        $type = WhatsAppTemplateType::tryFrom((string) $get('type'));
+                        $allowed = in_array($type, [WhatsAppTemplateType::Order, WhatsAppTemplateType::OrderUpdate], true)
+                            ? ($get('key') === 'order_placed_owner' ? WhatsAppTemplateVariables::ownerContext() : WhatsAppTemplateVariables::orderContext())
                             : WhatsAppTemplateVariables::customerContext();
 
                         $unknown = WhatsAppTemplateVariables::unknownTokens((string) $value, $allowed);

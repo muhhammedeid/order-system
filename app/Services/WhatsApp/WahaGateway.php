@@ -22,7 +22,7 @@ class WahaGateway implements WhatsAppGateway
 {
     public function enabled(): bool
     {
-        return config('whatsapp.provider') === 'waha'
+        return (config('whatsapp.driver') ?? config('whatsapp.provider')) === 'waha'
             && (bool) config('whatsapp.enabled')
             && filled(config('whatsapp.base_url'))
             && filled(config('whatsapp.api_key'));
@@ -78,7 +78,7 @@ class WahaGateway implements WhatsAppGateway
             return null;
         }
 
-        if ($response->failed()) {
+        if (! $response->successful()) {
             throw WhatsAppException::requestFailed('session', $response->status());
         }
 
@@ -120,7 +120,7 @@ class WahaGateway implements WhatsAppGateway
             return null;
         }
 
-        if ($response->failed()) {
+        if (! $response->successful()) {
             throw WhatsAppException::requestFailed('qr', $response->status());
         }
 
@@ -148,7 +148,7 @@ class WahaGateway implements WhatsAppGateway
             return null;
         }
 
-        if ($response->failed()) {
+        if (! $response->successful()) {
             // The lookup is best-effort: a disabled NOWEB store or a missing
             // mapping (400/404) simply leaves the conversation unlinked.
             return null;
@@ -176,7 +176,7 @@ class WahaGateway implements WhatsAppGateway
             throw WhatsAppException::unreachable('check number');
         }
 
-        if ($response->failed()) {
+        if (! $response->successful()) {
             throw WhatsAppException::requestFailed('check number', $response->status());
         }
 
@@ -214,7 +214,7 @@ class WahaGateway implements WhatsAppGateway
 
         $data = $this->json('send text', 'post', '/api/sendText', $payload);
 
-        return SentMessage::fromArray($data);
+        return WahaSentMessage::fromArray($data);
     }
 
     public function sendMedia(string $chatId, array $file, ?string $caption = null): SentMessage
@@ -235,7 +235,7 @@ class WahaGateway implements WhatsAppGateway
 
         $data = $this->json('send media', 'post', $endpoint, $payload);
 
-        return SentMessage::fromArray($data);
+        return WahaSentMessage::fromArray($data);
     }
 
     private function sessionName(): string
@@ -253,7 +253,9 @@ class WahaGateway implements WhatsAppGateway
             ->withHeaders(['X-Api-Key' => (string) config('whatsapp.api_key')])
             ->acceptJson()
             ->asJson()
-            ->timeout((int) config('whatsapp.timeout', 10))
+            ->withoutRedirecting()
+            ->timeout(max(1, min(10, (int) config('whatsapp.timeout', 10))))
+            ->connectTimeout(max(1, min(3, (int) config('whatsapp.connect_timeout', 3))))
             ->withOptions(['verify' => (bool) config('whatsapp.verify_ssl', true)]);
     }
 
@@ -271,7 +273,7 @@ class WahaGateway implements WhatsAppGateway
             throw WhatsAppException::unreachable($action);
         }
 
-        if ($response->failed()) {
+        if (! $response->successful()) {
             throw WhatsAppException::requestFailed($action, $response->status());
         }
 
