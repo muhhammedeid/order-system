@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Concerns\WithCustomChunkSize;
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
@@ -22,7 +23,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  * chunked query reads, formula-injection-safe value binding, and a
  * predictable timestamped download name.
  */
-abstract class BusinessExport implements FromQuery, WithCustomChunkSize, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+abstract class BusinessExport implements FromQuery, WithCustomChunkSize, WithCustomValueBinder, WithHeadings, WithMapping, WithStrictNullComparison, WithTitle
 {
     public const BUSINESS_TIMEZONE = 'Africa/Cairo';
 

@@ -9,13 +9,11 @@ export function useTranslations() {
     const direction = computed(() => page.props.direction ?? (locale.value === 'ar' ? 'rtl' : 'ltr'));
 
     const t = (key, replacements = {}) => {
-        let value = read(page.props.translations ?? {}, key) ?? key;
+        const value = read(page.props.translations ?? {}, key) ?? key;
 
-        Object.entries(replacements).forEach(([name, replacement]) => {
-            value = String(value).replaceAll(`:${name}`, replacement);
-        });
-
-        return value;
+        return String(value).replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, (token, name) =>
+            Object.prototype.hasOwnProperty.call(replacements, name) ? String(replacements[name]) : token,
+        );
     };
 
     return { locale, direction, t };

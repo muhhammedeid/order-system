@@ -64,7 +64,7 @@ class OrderResource extends Resource
     {
         return parent::getEloquentQuery()
             ->where('status', OrderStatus::Delivered->value)
-            ->with('customer:id,name,phone')
+            ->with('customer:id,name,phone,whatsapp,company_name,governorate,city,address')
             ->withSum('items', 'delivered_quantity');
     }
 

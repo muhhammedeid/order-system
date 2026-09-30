@@ -40,7 +40,9 @@ use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Maatwebsite\Excel\Excel as ExcelWriter;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Tests\TestCase;
@@ -358,6 +360,34 @@ class AdminExcelExportTest extends TestCase
         $this->assertSame('Sandal', $sheet->getCell('G3')->getValue());
         $this->assertNull($sheet->getCell('I3')->getValue());
         $this->assertSame(4, (int) $sheet->getCell('N3')->getValue());
+        $this->assertNull($sheet->getCell('P3')->getValue());
+    }
+
+    public function test_order_export_preserves_numeric_zero_and_distinguishes_hidden_price(): void
+    {
+        $variant = $this->makeVariant(Product::factory()->requestPrice()->create(['size_enabled' => true]));
+        $newOrder = $this->makeOrder(OrderStatus::New, [['variant' => $variant, 'quantity' => 5]]);
+        $deliveredOrder = $this->makeOrder(OrderStatus::Delivered, [['variant' => $variant, 'quantity' => 5]]);
+
+        $file = $this->writeTempFile(Excel::raw(
+            OrderItemsExport::forOrderIds([$newOrder->id, $deliveredOrder->id]),
+            ExcelWriter::XLSX,
+        ));
+        $exportBinder = Cell::getValueBinder();
+        Cell::setValueBinder(new DefaultValueBinder);
+        try {
+            $sheet = IOFactory::load($file)->getActiveSheet();
+        } finally {
+            Cell::setValueBinder($exportBinder);
+        }
+
+        $this->assertNotNull($sheet->getCell('M2')->getValue());
+        $this->assertSame(0, (int) $sheet->getCell('M2')->getValue());
+        $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell('M2')->getDataType());
+        $this->assertNotNull($sheet->getCell('N3')->getValue());
+        $this->assertSame(0, (int) $sheet->getCell('N3')->getValue());
+        $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell('N3')->getDataType());
+        $this->assertNull($sheet->getCell('P2')->getValue());
         $this->assertNull($sheet->getCell('P3')->getValue());
     }
 

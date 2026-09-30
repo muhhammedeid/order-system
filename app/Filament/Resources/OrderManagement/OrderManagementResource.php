@@ -72,7 +72,7 @@ class OrderManagementResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with('customer:id,name,phone')
+            ->with('customer:id,name,phone,whatsapp,company_name,governorate,city,address')
             ->withSum('items', 'delivered_quantity');
     }
 
