@@ -3,7 +3,7 @@
 namespace App\Support\WhatsApp\Inbox;
 
 /**
- * WAHA message identifiers are `{fromMe}_{chatId}_{messageId}` for events and
+ * WAHA event identifiers are `{fromMe}_{chatId}_{messageId}[_{participant}]` and
  * a bare `{messageId}` token in `sendText`/`sendMedia` responses. The chat
  * context is part of the provider identity, so callers must always combine
  * the returned message token with the conversation.
@@ -32,7 +32,7 @@ class ProviderMessageId
         }
 
         $chatId = $parts[1];
-        $messageId = end($parts);
+        $messageId = $parts[2];
 
         if ($chatId === '' || ! is_string($messageId) || $messageId === '') {
             return null;

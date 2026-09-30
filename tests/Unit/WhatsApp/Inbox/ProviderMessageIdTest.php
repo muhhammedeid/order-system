@@ -28,6 +28,20 @@ class ProviderMessageIdTest extends TestCase
         $this->assertNull(ProviderMessageId::parse('unknown_chat_id'));
         $this->assertNull(ProviderMessageId::parse(null));
         $this->assertNull(ProviderMessageId::parse(''));
+        $this->assertNull(ProviderMessageId::parse('true_111@c.us__222@c.us'));
+    }
+
+    public function test_optional_participant_does_not_replace_the_message_token(): void
+    {
+        $id = 'true_111@c.us_3EB0ABC_222@c.us';
+
+        $this->assertSame([
+            'fromMe' => true,
+            'chatId' => '111@c.us',
+            'messageId' => '3EB0ABC',
+        ], ProviderMessageId::parse($id));
+        $this->assertSame('3EB0ABC', ProviderMessageId::normalize($id));
+        $this->assertSame('3EB0ABC', ProviderMessageId::safeForLogging($id));
     }
 
     public function test_normalize_reduces_event_ids_and_passes_send_response_ids(): void

@@ -38,4 +38,15 @@ class SentMessageTest extends TestCase
         $this->assertSame('', $message->providerId);
         $this->assertNull($message->timestamp);
     }
+
+    public function test_it_normalizes_a_full_id_with_a_participant(): void
+    {
+        $message = WahaSentMessage::fromArray([
+            'id' => 'true_111@c.us_ABC_222@lid',
+            'timestamp' => 1700000000,
+        ]);
+
+        $this->assertSame('ABC', $message->providerId);
+        $this->assertSame(1700000000, $message->timestamp);
+    }
 }

@@ -11,6 +11,7 @@ use App\Models\WhatsAppMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Fakes\FakeWhatsAppGateway;
 use Tests\TestCase;
@@ -221,7 +222,8 @@ class InboxIngestionTest extends TestCase
         $this->assertSame(0, WhatsAppMessage::count());
     }
 
-    public function test_ack_updates_the_matching_outbound_message(): void
+    #[DataProvider('outboundAckIds')]
+    public function test_ack_updates_the_matching_outbound_message(string $providerId): void
     {
         $conversation = WhatsAppConversation::create(['provider_chat_id' => '20112347663@c.us']);
         $message = $conversation->messages()->create([
@@ -239,7 +241,7 @@ class InboxIngestionTest extends TestCase
             'event' => 'message.ack',
             'session' => 'default',
             'payload' => [
-                'id' => 'true_20112347663@c.us_3EB0ABC',
+                'id' => $providerId,
                 'from' => '20112347663@c.us',
                 'fromMe' => true,
                 'ack' => 2,
@@ -248,6 +250,14 @@ class InboxIngestionTest extends TestCase
         ])->assertStatus(202);
 
         $this->assertSame(WhatsAppMessageStatus::Delivered, $message->refresh()->status);
+    }
+
+    public static function outboundAckIds(): array
+    {
+        return [
+            'without participant' => ['true_20112347663@c.us_3EB0ABC'],
+            'with participant' => ['true_20112347663@c.us_3EB0ABC_201999999999@c.us'],
+        ];
     }
 
     public function test_ack_for_unknown_conversation_is_ignored_safely(): void
