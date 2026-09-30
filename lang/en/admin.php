@@ -83,9 +83,9 @@ return [
         'selected_product' => 'Selected product: :product',
     ],
     'settings' => [
-        'whatsapp_number' => 'WhatsApp Number',
-        'whatsapp_hint' => 'International format, e.g. 201234567890 — digits only',
-        'owner_whatsapp_number' => 'Owner WhatsApp Number',
+        'whatsapp_number' => 'Customer service and follow-up number',
+        'whatsapp_hint' => 'WhatsApp contact for customer service and price requests. International format, e.g. 201234567890 — digits only',
+        'owner_whatsapp_number' => 'Manager number',
         'owner_whatsapp_hint' => 'Receives new-order alerts. International format, e.g. 201234567890 — digits only',
         'saved' => 'Settings saved',
         'save' => 'Save',
