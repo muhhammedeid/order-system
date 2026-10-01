@@ -11,7 +11,7 @@ defineProps({
 <template>
     <a :href="href" class="inline-flex items-center gap-2.5 rounded-control" :aria-label="t('brand.home_label')">
         <img
-            :src="'/Logo.png?v=20261001'"
+            :src="'/Logo.png?v=20261001-original3'"
             alt="Mai shoes"
             width="1536"
             height="1024"

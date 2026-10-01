@@ -24,7 +24,7 @@
             <meta name="twitter:card" content="summary_large_image">
         @endisset
 
-        <link rel="icon" type="image/png" href="/favicon.png?v=20261001">
+        <link rel="icon" type="image/png" href="/favicon.png?v=20261001-brand2">
 
 
         <script>
