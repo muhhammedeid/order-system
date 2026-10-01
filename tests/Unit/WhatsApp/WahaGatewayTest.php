@@ -170,7 +170,20 @@ class WahaGatewayTest extends TestCase
 
         Http::assertSent(fn ($request) => $request->url() === 'http://waha.test/api/sessions'
             && $request['config']['webhooks'][0]['events'] === ['message', 'message.ack', 'session.status']
+            && data_get($request->data(), 'config.noweb.store') === ['enabled' => true, 'fullSync' => false]
             && $request['config']['webhooks'][0]['hmac']['key'] === 'test-hmac-secret');
+    }
+
+    public function test_new_session_enables_identity_store_before_pairing_without_webhooks(): void
+    {
+        Http::fake(['*' => Http::response(['name' => 'default', 'status' => 'STARTING'], 201)]);
+
+        $state = app(WhatsAppGateway::class)->createSession('default');
+
+        $this->assertSame('STARTING', $state->status);
+        Http::assertSent(fn ($request) => $request->url() === 'http://waha.test/api/sessions'
+            && data_get($request->data(), 'config.noweb.store') === ['enabled' => true, 'fullSync' => false]);
+        Http::assertSentCount(1);
     }
 
     public function test_create_session_keeps_an_explicit_hmac_override(): void
@@ -185,7 +198,8 @@ class WahaGatewayTest extends TestCase
             ],
         ]);
 
-        Http::assertSent(fn ($request) => $request['config']['webhooks'][0]['hmac']['key'] === 'override-secret');
+        Http::assertSent(fn ($request) => $request['config']['webhooks'][0]['hmac']['key'] === 'override-secret'
+            && data_get($request->data(), 'config.noweb.store') === ['enabled' => true, 'fullSync' => false]);
     }
 
     public function test_outbound_calls_fail_closed_when_not_configured(): void

@@ -8,6 +8,7 @@ use App\Enums\WhatsAppMessageDirection;
 use App\Enums\WhatsAppMessageStatus;
 use App\Models\Customer;
 use App\Models\WhatsAppConversation;
+use App\Models\WhatsAppMessage;
 use App\Support\WhatsApp\WebhookEvent;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
@@ -215,25 +216,38 @@ class InboxProcessor
         $ack = is_numeric($payload['ack'] ?? null) ? (int) $payload['ack'] : null;
         $ackName = is_string($payload['ackName'] ?? null) ? $payload['ackName'] : null;
 
-        DB::transaction(function () use ($parsed, $ack, $ackName): void {
-            $conversation = WhatsAppConversation::query()
-                ->where('provider_chat_id', $parsed['chatId'])
-                ->first();
+        $message = $this->outboundMessage($parsed['chatId'], $parsed['messageId']);
 
-            if ($conversation === null) {
-                return;
+        // NOWEB may acknowledge a phone-addressed send under its LID alias.
+        // Only the provider's verified mapping may select the phone chat;
+        // a message token alone never identifies a conversation.
+        if ($message === null && str_ends_with($parsed['chatId'], '@lid')) {
+            $phone = $this->gateway->resolvePhoneNumber($parsed['chatId']);
+
+            if (filled($phone)) {
+                $message = $this->outboundMessage($phone.'@c.us', $parsed['messageId']);
             }
+        }
 
-            $message = $conversation->messages()
-                ->where('provider_message_id', $parsed['messageId'])
-                ->first();
+        if ($message === null) {
+            return;
+        }
 
-            if ($message === null || ! $message->isOutbound()) {
-                return;
-            }
-
-            $message->applyProviderAck($ack, $ackName);
+        // Provider lookup stays outside the transaction. Serialize status
+        // updates so a concurrent late SERVER event cannot replace READ.
+        DB::transaction(function () use ($message, $ack, $ackName): void {
+            $locked = WhatsAppMessage::query()->lockForUpdate()->find($message->id);
+            $locked?->applyProviderAck($ack, $ackName);
         });
+    }
+
+    private function outboundMessage(string $chatId, string $messageId): ?WhatsAppMessage
+    {
+        return WhatsAppMessage::query()
+            ->where('provider_message_id', $messageId)
+            ->where('direction', WhatsAppMessageDirection::Outbound)
+            ->whereHas('conversation', fn ($query) => $query->where('provider_chat_id', $chatId))
+            ->first();
     }
 
     private function isUniqueViolation(QueryException $exception): bool

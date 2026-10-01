@@ -45,7 +45,12 @@ class WahaGateway implements WhatsAppGateway
 
     public function createSession(string $name, array $webhooks = []): SessionState
     {
-        $payload = ['name' => $name];
+        // Configure the built-in identity store before the session is paired.
+        // Existing paired sessions are never changed by this method.
+        $payload = [
+            'name' => $name,
+            'config' => ['noweb' => ['store' => ['enabled' => true, 'fullSync' => false]]],
+        ];
 
         if ($webhooks !== []) {
             // The webhook endpoint fails closed without a valid HMAC, so the
@@ -58,7 +63,7 @@ class WahaGateway implements WhatsAppGateway
                 }
             }
 
-            $payload['config'] = ['webhooks' => $webhooks];
+            $payload['config']['webhooks'] = $webhooks;
         }
 
         $data = $this->json('create session', 'post', '/api/sessions', $payload);

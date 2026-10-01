@@ -250,6 +250,7 @@ class InboxIngestionTest extends TestCase
         ])->assertStatus(202);
 
         $this->assertSame(WhatsAppMessageStatus::Delivered, $message->refresh()->status);
+        $this->assertNotContains('resolve_phone', $this->gateway->calls);
     }
 
     public static function outboundAckIds(): array
@@ -277,6 +278,95 @@ class InboxIngestionTest extends TestCase
         ])->assertStatus(202);
 
         $this->assertSame(0, WhatsAppMessage::count());
+    }
+
+    #[DataProvider('lidConversationPresence')]
+    public function test_verified_lid_ack_updates_only_the_phone_chat_outbound_message(bool $existingLid): void
+    {
+        $this->gateway->resolvedPhone = '20112347663';
+        $message = $this->ackMessage('20112347663@c.us');
+        $unrelated = $this->ackMessage('20188888888@c.us');
+        if ($existingLid) {
+            WhatsAppConversation::create(['provider_chat_id' => '214457011683409@lid']);
+        }
+        $conversationCount = WhatsAppConversation::count();
+
+        foreach ([[2, 'DEVICE'], [3, 'READ'], [1, 'SERVER']] as [$ack, $name]) {
+            $this->postEnvelope($this->lidAckEnvelope($ack, $name))->assertStatus(202);
+        }
+
+        $this->assertSame(WhatsAppMessageStatus::Read, $message->refresh()->status);
+        $this->assertSame(WhatsAppMessageStatus::Sent, $unrelated->refresh()->status);
+        $this->assertSame('20112347663@c.us', $message->conversation->provider_chat_id);
+        $this->assertNull($message->conversation->customer_id);
+        $this->assertSame($conversationCount, WhatsAppConversation::count());
+    }
+
+    public static function lidConversationPresence(): array
+    {
+        return ['unknown LID chat' => [false], 'existing LID chat without token' => [true]];
+    }
+
+    #[DataProvider('unmatchableLidAcks')]
+    public function test_lid_ack_without_verified_matching_outbound_record_leaves_status_unchanged(?string $phone, string $direction, string $token): void
+    {
+        $this->gateway->resolvedPhone = $phone;
+        $message = $this->ackMessage('20112347663@c.us', $direction, $token);
+
+        $this->postEnvelope($this->lidAckEnvelope(2, 'DEVICE'))->assertStatus(202);
+
+        $this->assertSame(WhatsAppMessageStatus::Sent, $message->refresh()->status);
+        $this->assertNull($message->provider_ack);
+        $this->assertSame(1, WhatsAppConversation::count());
+    }
+
+    public static function unmatchableLidAcks(): array
+    {
+        return [
+            'unresolved identity' => [null, 'outbound', 'LID-ACK'],
+            'different verified phone' => ['20188888888', 'outbound', 'LID-ACK'],
+            'inbound record only' => ['20112347663', 'inbound', 'LID-ACK'],
+            'different token' => ['20112347663', 'outbound', 'OTHER-TOKEN'],
+        ];
+    }
+
+    public function test_lid_ack_lookup_failure_can_be_reprocessed_without_resending(): void
+    {
+        $message = $this->ackMessage('20112347663@c.us');
+        $envelope = $this->lidAckEnvelope(2, 'DEVICE');
+        $this->gateway->throwOnResolve = new RuntimeException('provider unavailable');
+
+        $this->postEnvelope($envelope)->assertStatus(500);
+        $this->assertSame(WhatsAppMessageStatus::Sent, $message->refresh()->status);
+
+        $this->gateway->throwOnResolve = null;
+        $this->gateway->resolvedPhone = '20112347663';
+        $this->postEnvelope($envelope)->assertStatus(202);
+
+        $this->assertSame(WhatsAppMessageStatus::Delivered, $message->refresh()->status);
+        $this->assertSame(1, WhatsAppMessage::count());
+        $this->assertSame([], $this->gateway->sentTexts);
+    }
+
+    private function ackMessage(string $chatId, string $direction = 'outbound', string $token = 'LID-ACK'): WhatsAppMessage
+    {
+        return WhatsAppConversation::create(['provider_chat_id' => $chatId])->messages()->create([
+            'provider_message_id' => $token,
+            'direction' => $direction,
+            'message_type' => 'text',
+            'body' => 'ACK correlation fixture',
+            'status' => WhatsAppMessageStatus::Sent,
+            'occurred_at' => now(),
+        ]);
+    }
+
+    private function lidAckEnvelope(int $ack, string $name): array
+    {
+        return $this->messageEnvelope('message.ack', '214457011683409@lid', 'LID-ACK', [
+            'fromMe' => true,
+            'ack' => $ack,
+            'ackName' => $name,
+        ]);
     }
 
     public function test_failed_processing_releases_the_dedupe_reservation(): void
