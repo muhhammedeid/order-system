@@ -19,7 +19,7 @@ class CartTest extends TestCase
 
         $this->from('/catalog')
             ->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 3])
-            ->assertRedirect('/catalog')
+            ->assertRedirect('/cart')
             ->assertSessionHas('success');
 
         $this->get('/cart')->assertInertia(fn (Assert $page) => $page

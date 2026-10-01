@@ -17,7 +17,7 @@ class ImportRunner
     public static function products(string $relativePath): ImportResult
     {
         return (new ProductsImporter)->process(
-            self::keyedRows($relativePath, ProductsImporter::HEADERS),
+            self::keyedRows($relativePath, ProductsImporter::REQUIRED_HEADERS),
         );
     }
 

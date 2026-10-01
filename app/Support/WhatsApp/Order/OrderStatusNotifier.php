@@ -64,6 +64,10 @@ class OrderStatusNotifier
 
     private function enqueue(Order $order, string $key, bool $owner = false): OrderNotificationResult
     {
+        if (! ($owner ? Setting::whatsappManagerNotificationsEnabled() : Setting::whatsappCustomerNotificationsEnabled())) {
+            return new OrderNotificationResult(skipped: [$key.':automatic_notifications_disabled']);
+        }
+
         $template = WhatsAppTemplate::query()->where('key', $key)->where('active', true)->first();
 
         if ($template === null) {

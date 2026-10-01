@@ -67,6 +67,8 @@ return [
     'products' => [
         'add' => 'Add product',
         'import' => 'Import products',
+        'import_template' => 'Download product import template',
+        'import_help' => 'Only Product Code is required. New products default to Mai + code, hidden price, active, and color/size selection off. Blank colors/sizes use all active settings options with zero reference quantities. Separate values with commas. Blank optional fields preserve existing product values. Explicit colors/sizes add missing combinations without changing existing variants. Images are preserved. Store codes as text; do not use Excel formulas. Boolean values: 1/0, true/false, or yes/no.',
         'save_changes' => 'Save changes',
         'color_enabled' => 'Enable color selection',
         'color_enabled_help' => 'When disabled, all available colors are shown without allowing the customer to select one, and the requested quantity covers the full assortment.',

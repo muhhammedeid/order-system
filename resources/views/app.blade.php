@@ -24,7 +24,8 @@
             <meta name="twitter:card" content="summary_large_image">
         @endisset
 
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+        <link rel="icon" type="image/png" href="/favicon.png?v=20261001">
+
 
         <script>
             (function () {

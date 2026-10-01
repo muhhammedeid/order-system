@@ -187,8 +187,7 @@ function addToOrder() {
     form.variant_ids = selectedVariantIds.value;
 
     form.post('/cart/add', {
-        preserveScroll: true,
-        preserveState: true,
+        preserveScroll: false,
         onSuccess: () => {
             form.variant_ids = [];
         },

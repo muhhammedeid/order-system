@@ -5,12 +5,17 @@ namespace App\Support\Imports;
 use App\Enums\PriceVisibility;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\VariantColor;
+use App\Models\VariantSize;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ProductsImporter
 {
+    public const REQUIRED_HEADERS = ['Product Code'];
+
     public const HEADERS = [
         'Product Code',
         'Product Name',
@@ -18,6 +23,15 @@ class ProductsImporter
         'Price',
         'Price Visibility',
         'Active',
+    ];
+
+    public const TEMPLATE_HEADERS = [
+        ...self::HEADERS,
+        'Description',
+        'Colors',
+        'Sizes',
+        'Color Enabled',
+        'Size Enabled',
     ];
 
     public function process(array $keyedRows): ImportResult
@@ -42,8 +56,12 @@ class ProductsImporter
 
     private function processRow(array $row, array &$seenCodes): array
     {
+        foreach ($row as $cell) {
+            if (is_string($cell) && str_starts_with(ltrim($cell), '=')) {
+                throw new \RuntimeException('لا تستخدم صيغ Excel في ملف الاستيراد.');
+            }
+        }
         $code = trim((string) ($row['Product Code'] ?? ''));
-        $name = $this->requireTrimmed($row, 'Product Name');
 
         if (blank($code)) {
             throw new \RuntimeException('الحقل Product Code مطلوب');
@@ -55,9 +73,11 @@ class ProductsImporter
 
         $seenCodes[] = $code;
 
-        $visibility = $this->parseVisibility($row);
-        $active = $this->parseActive($row);
-        $category = $this->resolveCategory($row);
+        $existing = Product::query()->where('product_code', $code)->first();
+        $name = $this->provided($row, 'Product Name') ? trim((string) $row['Product Name']) : ($existing?->name ?? 'Mai '.$code);
+        $visibility = $this->provided($row, 'Price Visibility') ? $this->parseVisibility($row) : ($existing?->price_visibility ?? PriceVisibility::RequestPrice);
+        $active = $this->provided($row, 'Active') ? $this->parseActive($row) : ($existing?->active ?? true);
+        $categoryId = $this->provided($row, 'Category') ? $this->resolveCategory($row)->id : $existing?->category_id;
 
         $priceCell = trim((string) ($row['Price'] ?? ''));
         $priceProvided = filled($priceCell);
@@ -67,22 +87,31 @@ class ProductsImporter
             $price = $this->numericPrice($priceCell);
         }
 
-        $existing = Product::query()->where('product_code', $code)->first();
+        $attributes = [
+            'name' => $name,
+            'category_id' => $categoryId,
+            'price_visibility' => $visibility->value,
+            'active' => $active,
+        ];
+        foreach (['Description' => 'description', 'Color Enabled' => 'color_enabled', 'Size Enabled' => 'size_enabled'] as $header => $attribute) {
+            if ($this->provided($row, $header)) {
+                $attributes[$attribute] = $header === 'Description' ? trim((string) $row[$header]) : $this->parseActive(['Active' => $row[$header]]);
+            }
+        }
+        if ($priceProvided) {
+            $attributes['price'] = $price;
+        }
+        if ($visibility === PriceVisibility::PublicPrice && ! $priceProvided && $existing?->price === null) {
+            throw new \RuntimeException('Price مطلوب للمنتج بسعر معلن');
+        }
 
         if ($existing) {
-            $attributes = [
-                'name' => $name,
-                'category_id' => $category?->id,
-                'price_visibility' => $visibility,
-                'active' => $active,
-            ];
-
-            if ($priceProvided) {
-                $attributes['price'] = $price;
-            }
-
             $existing->fill($attributes);
+            Product::validate($existing->getAttributes(), $existing);
             $existing->save();
+            if ($this->provided($row, 'Colors') || $this->provided($row, 'Sizes')) {
+                $this->addVariants($existing, $row);
+            }
 
             return ['status' => 'updated'];
         }
@@ -90,18 +119,19 @@ class ProductsImporter
         $slug = Str::slug($name) ?: $name;
 
         if (Product::query()->where('slug', $slug)->exists()) {
-            return ['status' => 'invalid', 'reason' => "الاسم ينتج رابطًا مستخدمًا بالفعل: {$slug}"];
+            throw new \RuntimeException("الاسم ينتج رابطًا مستخدمًا بالفعل: {$slug}");
         }
 
-        Product::query()->create([
+        $attributes = array_merge($attributes, [
             'product_code' => $code,
-            'name' => $name,
             'slug' => $slug,
-            'category_id' => $category?->id,
-            'price_visibility' => $visibility,
             'price' => $price,
-            'active' => $active,
+            'color_enabled' => $attributes['color_enabled'] ?? false,
+            'size_enabled' => $attributes['size_enabled'] ?? false,
         ]);
+        Product::validate($attributes);
+        $product = Product::query()->create($attributes);
+        $this->addVariants($product, $row);
 
         return ['status' => 'created'];
     }
@@ -174,15 +204,43 @@ class ProductsImporter
         ]);
     }
 
-    private function requireTrimmed(array $row, string $header): string
+    private function provided(array $row, string $header): bool
     {
-        $value = trim((string) ($row[$header] ?? ''));
+        return filled(trim((string) ($row[$header] ?? '')));
+    }
 
-        if (blank($value)) {
-            throw new \RuntimeException("الحقل {$header} مطلوب");
+    private function addVariants(Product $product, array $row): void
+    {
+        $colors = $this->options($row, 'Colors', VariantColor::activeNames());
+        $sizes = $this->options($row, 'Sizes', VariantSize::activeNames());
+        if ($colors === [] || $sizes === []) {
+            if ($this->provided($row, 'Colors') || $this->provided($row, 'Sizes')) {
+                throw new \RuntimeException('أضف الألوان والمقاسات النشطة في الإعدادات أو حددها في الملف.');
+            }
+
+            return;
+        }
+        foreach ($colors as $color) {
+            foreach ($sizes as $size) {
+                $candidate = ProductVariant::validate(['color' => $color, 'size' => $size, 'available_quantity' => 0], $product);
+                if (! ProductVariant::existsFor($product, $color, $size)) {
+                    $product->variants()->create($candidate);
+                }
+            }
+        }
+    }
+
+    private function options(array $row, string $header, array $defaults): array
+    {
+        if (! $this->provided($row, $header)) {
+            return $defaults;
+        }
+        $options = array_map('trim', preg_split('/[,،;|]/u', (string) $row[$header]));
+        if (in_array('', $options, true) || count(array_unique($options)) !== count($options)) {
+            throw new \RuntimeException("{$header}: قيم فارغة أو مكررة");
         }
 
-        return $value;
+        return $options;
     }
 
     private function reason(\Throwable $exception): string

@@ -7,6 +7,7 @@ use App\Enums\WhatsAppMessageDirection;
 use App\Enums\WhatsAppMessageStatus;
 use App\Enums\WhatsAppMessageType;
 use App\Models\Customer;
+use App\Models\Setting;
 use App\Models\WhatsAppCampaignRecipient;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppDispatch;
@@ -195,6 +196,18 @@ class SendWhatsAppDispatch implements ShouldQueue
 
     private function eligible(WhatsAppDispatch $dispatch): bool
     {
+        $automaticNotificationsEnabled = match ($dispatch->kind) {
+            'order_customer' => Setting::whatsappCustomerNotificationsEnabled(),
+            'order_owner' => Setting::whatsappManagerNotificationsEnabled(),
+            default => true,
+        };
+
+        if (! $automaticNotificationsEnabled) {
+            $this->finish($dispatch, 'skipped', 'automatic_notifications_disabled', ['pending']);
+
+            return false;
+        }
+
         if ($dispatch->kind !== 'campaign') {
             return true;
         }
@@ -271,11 +284,11 @@ class SendWhatsAppDispatch implements ShouldQueue
             : $dispatch->customer_id !== null && $conversation->customer_id === $dispatch->customer_id);
     }
 
-    private function finish(WhatsAppDispatch $dispatch, string $status, string $reason): void
+    private function finish(WhatsAppDispatch $dispatch, string $status, string $reason, array $allowedStatuses = ['pending', 'processing']): void
     {
-        DB::transaction(function () use ($dispatch, $status, $reason): void {
+        DB::transaction(function () use ($dispatch, $status, $reason, $allowedStatuses): void {
             $locked = WhatsAppDispatch::query()->lockForUpdate()->findOrFail($dispatch->id);
-            if (! in_array($locked->status, ['pending', 'processing'], true)) {
+            if (! in_array($locked->status, $allowedStatuses, true)) {
                 return;
             }
             $locked->forceFill(['status' => $status, 'failure_reason' => $reason])->save();

@@ -83,6 +83,9 @@ return [
         'selected_product' => 'المنتج المحدد: :product',
     ],
     'settings' => [
+        'whatsapp_customer_notifications_enabled' => 'إشعارات الطلبات التلقائية للعميل',
+        'whatsapp_manager_notifications_enabled' => 'إشعارات الطلبات الجديدة التلقائية للمدير',
+        'automatic_notifications_hint' => 'الإيقاف يمنع أيضًا الإشعارات التلقائية المنتظرة في الطابور. الرسائل اليدوية والحملات لها إعداداتها المستقلة.',
         'whatsapp_number' => 'رقم خدمة ومتابعة العملاء',
         'whatsapp_hint' => 'رقم واتساب للتواصل مع خدمة العملاء وطلب السعر. بالصيغة الدولية، مثال 201234567890 — أرقام فقط',
         'owner_whatsapp_number' => 'رقم المدير',

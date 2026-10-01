@@ -2,14 +2,26 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Models\Category;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
+use App\Models\VariantColor;
+use App\Models\VariantSize;
 use App\Support\Imports\HeaderContractException;
 use App\Support\Imports\ImportResult;
+use App\Support\Imports\ImportRunner;
 use App\Support\Imports\ProductsImporter;
 use App\Support\Imports\RawSheetReader;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 class ProductImportTest extends TestCase
@@ -310,7 +322,7 @@ class ProductImportTest extends TestCase
         $this->assertDatabaseCount('products', 0);
     }
 
-    public function test_import_never_creates_or_modifies_variants(): void
+    public function test_existing_variants_remain_unchanged_and_no_defaults_are_invented_without_settings(): void
     {
         $existing = Product::factory()->create([
             'product_code' => 'SH-100',
@@ -354,16 +366,121 @@ class ProductImportTest extends TestCase
         ]);
     }
 
-    public function test_header_contract_is_enforced(): void
+    public function test_only_product_code_header_is_required(): void
     {
         $reader = new RawSheetReader;
         $reader->rows = [
-            ['Product Code', 'Product Name', 'Category', 'Price', 'Active'],
+            ['Product Code'],
+            ['00123'],
         ];
-
+        $this->assertSame([2 => ['Product Code' => '00123']], $reader->keyedRows(ProductsImporter::REQUIRED_HEADERS));
+        $reader->rows = [['Product Name']];
         $this->expectException(HeaderContractException::class);
-        $this->expectExceptionMessage('Price Visibility');
+        $this->expectExceptionMessage('Product Code');
 
-        $reader->keyedRows(ProductsImporter::HEADERS);
+        $reader->keyedRows(ProductsImporter::REQUIRED_HEADERS);
+    }
+
+    public function test_code_only_defaults_use_all_active_options_without_images(): void
+    {
+        foreach (['Black', 'Coffee'] as $color) {
+            VariantColor::create(['name' => $color, 'active' => true]);
+        }
+        foreach (['37', '38', '39', '40', '41'] as $size) {
+            VariantSize::create(['name' => $size, 'active' => true]);
+        }
+        VariantColor::create(['name' => 'Inactive', 'active' => false]);
+        $this->assertSame(1, $this->import([['Product Code' => '00123']])->created());
+        $product = Product::where('product_code', '00123')->firstOrFail();
+        $this->assertSame('Mai 00123', $product->name);
+        $this->assertSame('request_price', $product->price_visibility->value);
+        $this->assertNull($product->price);
+        $this->assertNull($product->category_id);
+        $this->assertFalse($product->color_enabled);
+        $this->assertFalse($product->size_enabled);
+        $this->assertTrue($product->active);
+        $this->assertSame(0, $product->images()->count());
+        $this->assertSame(10, $product->variants()->count());
+        $this->assertSame(0, $product->variants()->sum('available_quantity'));
+    }
+
+    public function test_code_only_update_preserves_manual_fields_images_and_variants(): void
+    {
+        $product = Product::factory()->create(['product_code' => '00123', 'name' => 'Manual name', 'description' => 'Manual description', 'price' => 123, 'color_enabled' => true, 'size_enabled' => true]);
+        $variant = $product->variants()->create(['color' => 'Custom', 'size' => '42', 'available_quantity' => 17]);
+        $image = $product->images()->create(['image_path' => 'products/manual.jpg', 'sort_order' => 0]);
+        $before = $product->fresh()->getAttributes();
+        $this->assertSame(1, $this->import([['Product Code' => '00123']])->updated());
+        $this->assertSame($before, $product->fresh()->getAttributes());
+        $this->assertSame(17, $variant->fresh()->available_quantity);
+        $this->assertSame('products/manual.jpg', $image->fresh()->image_path);
+        $this->assertSame(1, $product->variants()->count());
+    }
+
+    public function test_explicit_options_add_missing_variants_and_never_reset_existing_quantity(): void
+    {
+        $product = Product::factory()->create(['product_code' => '00123']);
+        $variant = $product->variants()->create(['color' => 'Black', 'size' => '37', 'available_quantity' => 17]);
+        $result = $this->import([['Product Code' => '00123', 'Colors' => 'Black,Coffee', 'Sizes' => '37,38', 'Color Enabled' => 'true', 'Size Enabled' => 'true']]);
+        $this->assertSame(1, $result->updated());
+        $this->assertSame(4, $product->variants()->count());
+        $this->assertSame(17, $variant->fresh()->available_quantity);
+        $this->assertTrue($product->fresh()->size_enabled);
+        $this->assertSame(1, $this->import([['Product Code' => 'BAD', 'Colors' => 'Black,,Coffee', 'Sizes' => '37']])->invalid());
+        $this->assertDatabaseMissing('products', ['product_code' => 'BAD']);
+    }
+
+    public function test_official_template_preserves_text_codes_and_imports_through_the_runner(): void
+    {
+        $sheet = IOFactory::load(resource_path('templates/products-import.xlsx'));
+        $this->assertSame(1, $sheet->getSheetCount());
+        $worksheet = $sheet->getActiveSheet();
+        $this->assertSame(ProductsImporter::TEMPLATE_HEADERS, $worksheet->rangeToArray('A1:K1')[0]);
+        $this->assertSame('@', $worksheet->getStyle('A2')->getNumberFormat()->getFormatCode());
+        $worksheet->setCellValueExplicit('A2', '00123', DataType::TYPE_STRING);
+        Storage::fake('local');
+        $path = 'import-products.xlsx';
+        (new Xlsx($sheet))->save(Storage::disk('local')->path($path));
+        $result = ImportRunner::products($path);
+        $this->assertSame(1, $result->created());
+        $this->assertSame(0, $result->invalid());
+        $this->assertDatabaseHas('products', ['product_code' => '00123', 'name' => 'Mai 00123']);
+    }
+
+    public function test_formula_cells_and_invalid_flag_combinations_are_reported_without_partial_rows(): void
+    {
+        $result = $this->import([
+            ['Product Code' => '=1+1'],
+            ['Product Code' => 'BADFLAGS', 'Color Enabled' => '0', 'Size Enabled' => '1'],
+            ['Product Code' => 'MISSING', 'Color Enabled' => 'maybe'],
+            ['Product Name' => 'Missing code'],
+        ]);
+        $this->assertSame(4, $result->invalid());
+        $this->assertDatabaseCount('products', 0);
+        $this->assertDatabaseCount('product_variants', 0);
+    }
+
+    public function test_admin_can_download_official_import_template(): void
+    {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Livewire::actingAs(User::factory()->create())
+            ->test(ListProducts::class)
+            ->callAction('downloadImportTemplate')
+            ->assertFileDownloaded('products-import.xlsx');
+    }
+
+    public function test_import_update_preserves_order_snapshots(): void
+    {
+        $product = Product::factory()->create(['product_code' => '00123', 'name' => 'Original name', 'price' => 123, 'color_enabled' => true, 'size_enabled' => true]);
+        $variant = $product->variants()->create(['color' => 'Black', 'size' => '37', 'available_quantity' => 0]);
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 3]);
+        $this->post('/checkout', ['name' => 'Test customer', 'phone' => '01001234567', 'city' => 'Cairo'])->assertRedirect();
+        $item = OrderItem::firstOrFail();
+        $before = $item->getAttributes();
+        $result = $this->import([['Product Code' => '00123', 'Product Name' => 'Updated name', 'Price' => 456, 'Colors' => 'Black,Coffee', 'Sizes' => '37']]);
+        $this->assertSame(1, $result->updated());
+        $this->assertSame($before, $item->fresh()->getAttributes());
+        $this->assertSame('Original name', $item->fresh()->product_name);
+        $this->assertSame('123.00', $item->fresh()->unit_price);
     }
 }

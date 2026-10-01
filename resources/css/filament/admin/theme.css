@@ -249,3 +249,44 @@
     margin-top: auto;
     padding-top: 0.15rem;
 }
+
+/* Order status filters retain the existing server-side status queries. */
+.order-status-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+.order-status-card {
+    --status-accent: #2563eb;
+    --status-soft: #dbeafe;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 6rem;
+    padding: 1rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--mai-admin-radius);
+    text-align: start;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.05);
+}
+.order-status-card[data-status="confirmed"] { --status-accent: #7c3aed; --status-soft: #ede9fe; }
+.order-status-card[data-status="partially_delivered"] { --status-accent: #b45309; --status-soft: #fef3c7; }
+.order-status-card[data-status="delivered"] { --status-accent: #15803d; --status-soft: #dcfce7; }
+.order-status-card[data-status="cancelled"] { --status-accent: #b91c1c; --status-soft: #fee2e2; }
+.order-status-card.is-active { border-color: var(--status-accent); box-shadow: 0 0 0 1px var(--status-accent); }
+.order-status-card:focus-visible { outline: 3px solid var(--status-accent); outline-offset: 3px; }
+.order-status-card:disabled { cursor: wait; opacity: 0.65; }
+.order-status-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 50%; color: var(--status-accent); background: var(--status-soft); }
+.order-status-icon svg { width: 1.5rem; height: 1.5rem; }
+.order-status-content { display: flex; flex-direction: column; gap: 0.25rem; }
+.order-status-label { font-size: 0.85rem; font-weight: 600; color: var(--gray-600); }
+.order-status-count { font-size: 1.6rem; font-weight: 700; line-height: 1.2; color: var(--gray-950); font-variant-numeric: tabular-nums; }
+.dark .order-status-card { background: var(--gray-900); border-color: var(--gray-700); }
+.dark .order-status-card.is-active { border-color: var(--status-accent); }
+.dark .order-status-label { color: var(--gray-300); }
+.dark .order-status-count { color: var(--gray-50); }
+@media (max-width: 1100px) { .order-status-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .order-status-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .order-status-card { padding: 0.75rem; } }
+@media (max-width: 360px) { .order-status-cards { grid-template-columns: 1fr; } }

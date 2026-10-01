@@ -83,6 +83,9 @@ return [
         'selected_product' => 'Selected product: :product',
     ],
     'settings' => [
+        'whatsapp_customer_notifications_enabled' => 'Automatic customer order notifications',
+        'whatsapp_manager_notifications_enabled' => 'Automatic manager new-order notifications',
+        'automatic_notifications_hint' => 'Turning this off also skips queued automatic notifications. Manual messages and campaigns keep their own controls.',
         'whatsapp_number' => 'Customer service and follow-up number',
         'whatsapp_hint' => 'WhatsApp contact for customer service and price requests. International format, e.g. 201234567890 — digits only',
         'owner_whatsapp_number' => 'Manager number',

@@ -35,9 +35,9 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName(fn (): string => __('admin.brand'))
-            ->brandLogo('/favicon.svg')
-            ->brandLogoHeight('1.9rem')
-            ->favicon('/favicon.svg')
+            ->brandLogo('/Logo.png?v=20261001')
+            ->brandLogoHeight('3rem')
+            ->favicon('/favicon.png?v=20261001')
             ->font(
                 'IBM Plex Sans Arabic',
                 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap',

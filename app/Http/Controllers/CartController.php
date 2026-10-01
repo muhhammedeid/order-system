@@ -39,7 +39,7 @@ class CartController extends Controller
 
         Cart::add($variantIds, $validated['quantity']);
 
-        return back()->with('success', "تمت إضافة {$variant->product->name} إلى الطلب");
+        return redirect()->route('cart.index')->with('success', "تمت إضافة {$variant->product->name} إلى الطلب");
     }
 
     public function update(Request $request)

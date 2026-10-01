@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppIcon from '@/Components/Ui/AppIcon.vue';
-import BrandMark from '@/Components/Brand/BrandMark.vue';
+import BrandLockup from '@/Components/Brand/BrandLockup.vue';
 import { useTranslations } from '@/composables/useTranslations';
 
 const page = usePage();
@@ -41,19 +41,7 @@ const LINKS = computed(() => [
     <footer class="mt-16 border-t border-line bg-surface-muted text-ink">
         <div class="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.5fr_1fr_1.25fr] lg:px-8">
             <div class="flex flex-col gap-3">
-                <div class="flex items-center gap-2.5">
-                    <BrandMark :size="34" />
-                    <span class="flex flex-col leading-none">
-                        <span
-                            class="font-display text-lg"
-                            dir="ltr"
-                        >MAI<span class="text-primary">*</span></span>
-                        <span
-                            class="mt-0.5 font-display text-[0.5rem] tracking-[0.3em] text-ink-muted"
-                            dir="ltr"
-                        >SHOES</span>
-                    </span>
-                </div>
+                <BrandLockup :show-tagline="false" :mark-size="44" />
 
                 <p class="max-w-xs text-sm text-ink-muted">
                     {{ t('footer.summary') }}

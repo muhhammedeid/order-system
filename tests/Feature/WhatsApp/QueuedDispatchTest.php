@@ -7,6 +7,7 @@ use App\Enums\WhatsAppMessageType;
 use App\Jobs\SendWhatsAppDispatch;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\WhatsAppCampaign;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppDispatch;
@@ -298,6 +299,18 @@ class QueuedDispatchTest extends TestCase
         WhatsAppConversation::create(['provider_chat_id' => 'chat-'.$customer->id, 'customer_id' => $customer->id]);
 
         return [$campaign, $dispatch];
+    }
+
+    public function test_automatic_notification_switches_do_not_disable_campaigns(): void
+    {
+        Setting::set('whatsapp_customer_notifications_enabled', '0');
+        Setting::set('whatsapp_manager_notifications_enabled', '0');
+        [, $dispatch] = $this->campaignDispatch();
+
+        (new SendWhatsAppDispatch($dispatch->id))->handle($this->gateway);
+
+        $this->assertSame('sent', $dispatch->fresh()->status);
+        $this->assertCount(1, $this->gateway->sentTexts);
     }
 
     private function dispatch(array $attributes = []): WhatsAppDispatch

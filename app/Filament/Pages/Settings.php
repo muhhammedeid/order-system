@@ -6,6 +6,7 @@ use App\Models\Setting;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -35,6 +36,8 @@ class Settings extends Page
         $this->form->fill([
             'whatsapp_number' => Setting::get('whatsapp_number'),
             'owner_whatsapp_number' => Setting::get('owner_whatsapp_number'),
+            'whatsapp_customer_notifications_enabled' => Setting::whatsappCustomerNotificationsEnabled(),
+            'whatsapp_manager_notifications_enabled' => Setting::whatsappManagerNotificationsEnabled(),
         ]);
     }
 
@@ -46,6 +49,14 @@ class Settings extends Page
     public function form(Schema $schema): Schema
     {
         return $schema->components([
+            Toggle::make('whatsapp_customer_notifications_enabled')
+                ->label(__('admin.settings.whatsapp_customer_notifications_enabled'))
+                ->helperText(__('admin.settings.automatic_notifications_hint'))
+                ->columnSpanFull(),
+            Toggle::make('whatsapp_manager_notifications_enabled')
+                ->label(__('admin.settings.whatsapp_manager_notifications_enabled'))
+                ->helperText(__('admin.settings.automatic_notifications_hint'))
+                ->columnSpanFull(),
             TextInput::make('whatsapp_number')
                 ->label(__('admin.settings.whatsapp_number'))
                 ->hint(__('admin.settings.whatsapp_hint'))
@@ -70,6 +81,9 @@ class Settings extends Page
 
         $owner = $data['owner_whatsapp_number'] ?? null;
         Setting::set('owner_whatsapp_number', filled($owner) ? trim((string) $owner) : null);
+
+        Setting::set('whatsapp_customer_notifications_enabled', $data['whatsapp_customer_notifications_enabled'] ? '1' : '0');
+        Setting::set('whatsapp_manager_notifications_enabled', $data['whatsapp_manager_notifications_enabled'] ? '1' : '0');
 
         Notification::make()
             ->title(__('admin.settings.saved'))

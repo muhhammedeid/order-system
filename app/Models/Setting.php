@@ -38,6 +38,16 @@ class Setting extends Model
         return preg_replace('/\D/', '', $number);
     }
 
+    public static function whatsappCustomerNotificationsEnabled(): bool
+    {
+        return static::get('whatsapp_customer_notifications_enabled') !== '0';
+    }
+
+    public static function whatsappManagerNotificationsEnabled(): bool
+    {
+        return static::get('whatsapp_manager_notifications_enabled') !== '0';
+    }
+
     /**
      * Owner/operations number that receives new-order alerts. Null when not
      * configured; callers skip the alert instead of guessing a recipient.

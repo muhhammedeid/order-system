@@ -8,7 +8,9 @@ use App\Filament\Resources\OrderManagement\OrderManagementResource;
 use App\Models\Order;
 use App\Support\Exports\OrderItemsExport;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\View;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListOrders extends ListRecords
@@ -46,5 +48,10 @@ class ListOrders extends ListRecords
         }
 
         return $tabs;
+    }
+
+    public function getTabsContentComponent(): Component
+    {
+        return View::make('filament.components.order-status-cards')->key('resourceTabs');
     }
 }
