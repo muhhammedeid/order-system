@@ -1,0 +1,32 @@
+# Production provider example; review target-host configuration before activation.
+name: wholesale-waha
+services:
+  waha:
+    image: devlikeapro/waha:noweb-2026.9.1@sha256:2e4cbc92b16f82da330f8324064e0877e142b81224585938b2314c1d6c90774d
+    restart: unless-stopped
+    stop_grace_period: 30s
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      WAHA_API_KEY: ${WAHA_API_KEY:?supply a sha512 API key hash securely}
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
+      WAHA_DASHBOARD_ENABLED: "false"
+      WHATSAPP_SWAGGER_ENABLED: "false"
+      WAHA_PRINT_QR: "False"
+      WAHA_LOG_LEVEL: warn
+      WAHA_LOG_FORMAT: JSON
+      WAHA_WORKER_RESTART_SESSIONS: "True"
+      WHATSAPP_FILES_FOLDER: /app/.media
+      WHATSAPP_FILES_LIFETIME: "86400"
+    volumes:
+      - waha_sessions:/app/.sessions
+      - waha_media:/app/.media
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  waha_sessions:
+  waha_media:

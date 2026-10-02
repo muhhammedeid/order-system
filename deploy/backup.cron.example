@@ -1,0 +1,2 @@
+# Install as root after separately approved runtime/backup setup and a restore drill.
+15 2 * * * /usr/local/sbin/wholesale-backup >> /var/log/wholesale-backup.log 2>&1

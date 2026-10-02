@@ -1,0 +1,73 @@
+<?php
+
+namespace Tests\Unit\WhatsApp\Inbox;
+
+use App\Support\WhatsApp\Inbox\ProviderMessageId;
+use PHPUnit\Framework\TestCase;
+
+class ProviderMessageIdTest extends TestCase
+{
+    public function test_it_parses_event_ids_into_direction_chat_and_message(): void
+    {
+        $parsed = ProviderMessageId::parse('false_214457011683409@lid_2AFF8BF6FC9E803B6057');
+
+        $this->assertSame(false, $parsed['fromMe']);
+        $this->assertSame('214457011683409@lid', $parsed['chatId']);
+        $this->assertSame('2AFF8BF6FC9E803B6057', $parsed['messageId']);
+
+        $parsed = ProviderMessageId::parse('true_20112347663@c.us_3EB0E36183BA2C52D90B1C');
+
+        $this->assertSame(true, $parsed['fromMe']);
+        $this->assertSame('20112347663@c.us', $parsed['chatId']);
+        $this->assertSame('3EB0E36183BA2C52D90B1C', $parsed['messageId']);
+    }
+
+    public function test_it_rejects_ids_without_chat_context(): void
+    {
+        $this->assertNull(ProviderMessageId::parse('3EB0E36183BA2C52D90B1C'));
+        $this->assertNull(ProviderMessageId::parse('unknown_chat_id'));
+        $this->assertNull(ProviderMessageId::parse(null));
+        $this->assertNull(ProviderMessageId::parse(''));
+        $this->assertNull(ProviderMessageId::parse('true_111@c.us__222@c.us'));
+    }
+
+    public function test_optional_participant_does_not_replace_the_message_token(): void
+    {
+        $id = 'true_111@c.us_3EB0ABC_222@c.us';
+
+        $this->assertSame([
+            'fromMe' => true,
+            'chatId' => '111@c.us',
+            'messageId' => '3EB0ABC',
+        ], ProviderMessageId::parse($id));
+        $this->assertSame('3EB0ABC', ProviderMessageId::normalize($id));
+        $this->assertSame('3EB0ABC', ProviderMessageId::safeForLogging($id));
+    }
+
+    public function test_normalize_reduces_event_ids_and_passes_send_response_ids(): void
+    {
+        $this->assertSame('ABC', ProviderMessageId::normalize('false_111@c.us_ABC'));
+        $this->assertSame('ABC', ProviderMessageId::normalize('true_111@lid_ABC'));
+        $this->assertSame('3EB0ABC', ProviderMessageId::normalize('3EB0ABC'));
+        $this->assertNull(ProviderMessageId::normalize(null));
+    }
+
+    public function test_safe_for_logging_never_keeps_chat_identity(): void
+    {
+        $this->assertSame('3EB0ABC', ProviderMessageId::safeForLogging('false_201234567890@c.us_3EB0ABC'));
+        $this->assertSame('2AFF8BF6FC9E803B6057', ProviderMessageId::safeForLogging('false_214457011683409@lid_2AFF8BF6FC9E803B6057'));
+        $this->assertNull(ProviderMessageId::safeForLogging(null));
+        $this->assertNull(ProviderMessageId::safeForLogging(''));
+
+        $numericToken = ProviderMessageId::safeForLogging('false_201234567890@c.us_201234567890');
+
+        $this->assertStringStartsWith('sha256:', $numericToken);
+        $this->assertStringNotContainsString('201234567890', $numericToken);
+
+        $unparsedId = ProviderMessageId::safeForLogging('201234567890@c.us');
+
+        $this->assertStringStartsWith('sha256:', $unparsedId);
+        $this->assertStringNotContainsString('201234567890', $unparsedId);
+        $this->assertStringNotContainsString('@c.us', $unparsedId);
+    }
+}

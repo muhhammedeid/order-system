@@ -1,0 +1,40 @@
+# Local WAHA instance for isolated integration development.
+#
+# This file starts the provider only; application hosting is configured separately.
+#
+# Usage (from this directory):
+#   set WAHA_API_KEY, WAHA_DASHBOARD_PASSWORD and WHATSAPP_SWAGGER_PASSWORD
+#   docker compose up -d
+#
+# WAHA binds to 127.0.0.1 only. It must never be exposed to the public
+# internet; in production it must live on a private network reachable only
+# by the Laravel host.
+#
+# WAHA_API_KEY accepts either a plain key or the recommended hashed form
+# `sha512:{sha512_hex_hash}`. Laravel always sends the plain key in the
+# X-Api-Key header. Generate a key with:
+#   uuidgen | tr -d '-'   # then sha512-hash it for the WAHA side
+#
+# The named volume keeps the paired session across container restarts.
+
+services:
+  waha:
+    image: devlikeapro/waha:${WAHA_IMAGE_TAG:-noweb-2026.9.1}
+    container_name: waha-local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      WAHA_API_KEY: ${WAHA_API_KEY:?set WAHA_API_KEY before starting}
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
+      WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USERNAME:-admin}
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:?set WAHA_DASHBOARD_PASSWORD}
+      WHATSAPP_SWAGGER_USERNAME: ${WHATSAPP_SWAGGER_USERNAME:-admin}
+      WHATSAPP_SWAGGER_PASSWORD: ${WHATSAPP_SWAGGER_PASSWORD:?set WHATSAPP_SWAGGER_PASSWORD}
+      WAHA_LOG_LEVEL: info
+      WAHA_LOG_FORMAT: PRETTY
+    volumes:
+      - waha_sessions:/app/.sessions
+
+volumes:
+  waha_sessions:

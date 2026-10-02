@@ -1,0 +1,6 @@
+[mysqld]
+bind-address=127.0.0.1
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci
+# Initial, unmeasured budget; adjust after the approved workload measurements.
+innodb-buffer-pool-size=1G

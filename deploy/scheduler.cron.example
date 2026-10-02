@@ -1,0 +1,2 @@
+# Install as www-data; sub-minute tasks keep schedule:run alive through the minute.
+* * * * * cd /var/www/wholesale-order-system/current && /usr/bin/php8.3 artisan schedule:run >> /var/www/wholesale-order-system/shared/storage/logs/scheduler.log 2>&1

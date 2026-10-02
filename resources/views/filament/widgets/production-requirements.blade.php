@@ -1,0 +1,106 @@
+<x-filament-widgets::widget>
+    <x-filament::section
+        :heading="__('admin.production.heading')"
+        :description="__('admin.production.description')"
+        icon="heroicon-o-cog-6-tooth"
+    >
+        @if ($requirements->isEmpty())
+            <x-filament::empty-state
+                :heading="__('admin.production.empty')"
+                icon="heroicon-o-check-circle"
+            />
+        @else
+            <div class="production-grid">
+                @foreach ($requirements as $requirement)
+                    @php
+                        $drilldownUrl = \App\Filament\Pages\ProductionRequirements::getUrl(['product' => $requirement['id']]);
+                    @endphp
+
+                    <article class="production-card">
+                        @if ($requirement['image'])
+                            <img
+                                src="{{ $requirement['image'] }}"
+                                alt="{{ __('admin.production.image_alt', ['product' => $requirement['name']]) }}"
+                                loading="lazy"
+                                class="production-card-image"
+                            >
+                        @else
+                            <div class="production-card-image production-card-image-empty">
+                                <x-filament::icon icon="heroicon-o-photo" />
+                            </div>
+                        @endif
+
+                        <header class="production-card-header">
+                            <div class="min-w-0">
+                                <h3 class="production-card-name">{{ $requirement['name'] }}</h3>
+                                <p class="production-card-code" dir="ltr">{{ $requirement['code'] }}</p>
+                            </div>
+
+                            @unless ($requirement['active'])
+                                <x-filament::badge color="danger">{{ __('admin.production.inactive') }}</x-filament::badge>
+                            @endunless
+                        </header>
+
+                        <section
+                            class="production-quantity-section"
+                            aria-labelledby="production-required-{{ $requirement['id'] }}"
+                        >
+                            <p
+                                class="production-section-label"
+                                id="production-required-{{ $requirement['id'] }}"
+                            >
+                                {{ __('admin.production.outstanding_by_color') }}
+                            </p>
+
+                            @if ($requirement['uniform_remaining'] !== null)
+                                <p class="production-quantity tabular-nums">
+                                    {{ number_format($requirement['uniform_remaining']) }}
+                                    <span class="production-quantity-unit">{{ __('admin.production.per_color') }}</span>
+                                </p>
+                            @else
+                                <p class="production-quantity production-quantity-mixed">
+                                    {{ __('admin.production.mixed_color_quantities') }}
+                                </p>
+                            @endif
+                        </section>
+
+                        <section
+                            class="production-breakdown-section"
+                            aria-label="{{ __('admin.production.remaining_colors') }}"
+                        >
+                            <p class="production-section-label">
+                                {{ __('admin.production.remaining_colors') }}
+                            </p>
+
+                            <div class="production-breakdown">
+                                @foreach ($requirement['pending_colors'] as $color)
+                                    <div class="production-breakdown-item">
+                                        <p class="production-breakdown-color">{{ $color['color'] }}</p>
+                                        <p class="production-breakdown-quantity tabular-nums">
+                                            {{ trans_choice('admin.production.pieces_remaining', $color['remaining'], ['count' => number_format($color['remaining'])]) }}
+                                        </p>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+
+                        <div class="production-card-footer">
+                            <x-filament::badge color="gray">
+                                {{ trans_choice('admin.production.orders_count', $requirement['orders_count'], ['count' => $requirement['orders_count']]) }}
+                            </x-filament::badge>
+
+                            <x-filament::button
+                                tag="a"
+                                :href="$drilldownUrl"
+                                size="sm"
+                                icon="heroicon-m-list-bullet"
+                            >
+                                {{ __('admin.production.view_orders') }}
+                            </x-filament::button>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+    </x-filament::section>
+</x-filament-widgets::widget>
