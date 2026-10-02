@@ -17,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(WhatsAppGateway::class, function ($app): WhatsAppGateway {
+            if (config('demo.enabled')) {
+                return $app->make(UnavailableGateway::class);
+            }
+
             $driver = config('whatsapp.driver') ?? config('whatsapp.provider', 'waha');
 
             return $app->make($driver === 'waha' ? WahaGateway::class : UnavailableGateway::class);

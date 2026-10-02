@@ -1,7 +1,6 @@
-# Local WAHA instance for the P08-W01 spike and development only.
+# Local WAHA instance for isolated integration development.
 #
-# This file does NOT change the application deployment. Staging/production
-# hosting for WAHA is decided separately after the spike passes.
+# This file starts the provider only; application hosting is configured separately.
 #
 # Usage (from this directory):
 #   set WAHA_API_KEY, WAHA_DASHBOARD_PASSWORD and WHATSAPP_SWAGGER_PASSWORD

@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\DemoLogin;
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Widgets\OrderStatsWidget;
 use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Http\Controllers\OrderPrintController;
@@ -33,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(config('demo.enabled') ? DemoLogin::class : Login::class)
             ->brandName(fn (): string => __('admin.brand'))
             ->brandLogo('/Logo.png?v=20261001')
             ->brandLogoHeight('3rem')
@@ -70,11 +72,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::TOPBAR_END,
-                fn (): string => view('filament.components.locale-switcher')->render(),
+                fn (): string => view('filament.components.demo-banner')->render().view('filament.components.locale-switcher')->render(),
             )
             ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
-                fn (): string => '<div class="mt-4 flex justify-center">'.view('filament.components.locale-switcher')->render().'</div>',
+                fn (): string => view('filament.components.demo-banner')->render().'<div class="mt-4 flex justify-center">'.view('filament.components.locale-switcher')->render().'</div>',
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

@@ -1,4 +1,4 @@
-# Production candidate only; do not start before separately authorized activation.
+# Production provider example; review target-host configuration before activation.
 name: wholesale-waha
 services:
   waha:

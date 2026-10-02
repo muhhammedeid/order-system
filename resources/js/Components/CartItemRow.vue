@@ -35,7 +35,7 @@ const unitPriceLabel = computed(() =>
         <div class="flex gap-3">
             <a
                 :href="`/product/${item.product.slug}`"
-                class="h-20 w-20 shrink-0 overflow-hidden rounded-control border border-line bg-surface-muted sm:h-24 sm:w-24"
+                class="aspect-[4/5] w-20 shrink-0 self-start overflow-hidden rounded-control border border-line bg-surface-muted sm:w-24"
                 tabindex="-1"
                 aria-hidden="true"
             >

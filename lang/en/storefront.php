@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'demo' => ['notice' => 'Demo environment — changes apply only to this demonstration.'],
     'meta' => ['description' => 'MAI SHOES wholesale ordering — browse products, choose colors, sizes and quantities, and submit your order in minutes without online payment.'],
     'language' => ['label' => 'Language', 'arabic' => 'العربية', 'english' => 'English'],
     'nav' => ['home' => 'Home', 'catalog' => 'Catalog', 'cart' => 'Order', 'menu' => 'Menu', 'main' => 'Main navigation', 'skip' => 'Skip to content'],
@@ -109,6 +110,7 @@ return [
     'pagination' => ['label' => 'Pagination', 'previous_page' => 'Previous page', 'previous' => 'Previous', 'page' => 'Page :number', 'next_page' => 'Next page', 'next' => 'Next'],
     'accessibility' => ['breadcrumbs' => 'Breadcrumbs', 'notifications' => 'Notifications', 'close_notification' => 'Close notification'],
     'footer' => [
+        'owner' => 'System owned, built and developed by Mohamed Eid.',
         'summary' => 'MAI SHOES wholesale ordering — browse products, see availability and submit your order in minutes.',
         'quick_links' => 'Quick links', 'contact' => 'Contact us', 'whatsapp' => 'WhatsApp',
         'price_note' => 'Prices not shown publicly can be requested through WhatsApp from the product page.',

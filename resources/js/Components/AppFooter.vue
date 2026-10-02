@@ -98,6 +98,7 @@ const LINKS = computed(() => [
         <div class="border-t border-line">
             <div class="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-ink-muted sm:px-6 lg:px-8">
                 <p>{{ t('footer.rights', { year }) }}</p>
+                <p>{{ t('footer.owner') }}</p>
                 <p>{{ t('footer.disclaimer') }}</p>
             </div>
         </div>

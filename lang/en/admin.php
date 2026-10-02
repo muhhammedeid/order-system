@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'login' => ['identifier' => 'Username or email'],
     'brand' => 'MAI SHOES Admin',
     'language' => 'Language',
     'arabic' => 'العربية',
