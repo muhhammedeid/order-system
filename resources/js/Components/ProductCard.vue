@@ -33,7 +33,7 @@ const colorsLabel = computed(() => {
         :href="`/product/${product.slug}`"
         class="group flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-soft-sm transition-[transform,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-soft"
     >
-        <div class="relative aspect-square w-full overflow-hidden bg-surface-muted">
+        <div class="relative aspect-[4/5] w-full overflow-hidden bg-surface-muted">
             <img
                 v-if="product.image"
                 :src="product.image"

@@ -3,12 +3,12 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\DemoLogin;
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Widgets\OrderStatsWidget;
 use App\Filament\Widgets\ProductionRequirementsWidget;
 use App\Http\Controllers\OrderPrintController;
 use App\Http\Controllers\WhatsAppQrController;
 use App\Http\Middleware\SetLocale;
-use Filament\Auth\Pages\Login;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;

@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Contracts\WhatsAppGateway;
 use App\Filament\Auth\DemoLogin;
+use App\Filament\Pages\Auth\Login;
 use App\Models\User;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Services\WhatsApp\UnavailableGateway;
 use App\Services\WhatsApp\WahaGateway;
-use Filament\Auth\Pages\Login;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,7 +57,7 @@ class DemoEnvironmentTest extends TestCase
         }
     }
 
-    public function test_normal_deployments_keep_filament_email_login(): void
+    public function test_normal_deployments_use_the_username_and_email_login(): void
     {
         config(['demo.enabled' => false]);
         $provider = new AdminPanelProvider($this->app);

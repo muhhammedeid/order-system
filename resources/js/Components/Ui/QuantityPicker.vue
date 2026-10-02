@@ -85,16 +85,19 @@ function onCustomInput(event) {
         return;
     }
 
-    const value = Math.min(props.max, Math.max(props.min, Number.parseInt(digits, 10)));
+    const value = Number.parseInt(digits, 10);
     draft.value = value;
     emit('update:modelValue', value);
 }
 
 function normalizeCustom() {
-    if (draft.value === null || ! Number.isFinite(Number(draft.value))) {
-        draft.value = props.min;
-        emit('update:modelValue', props.min);
-    }
+    const value = draft.value === null ? props.min : Number(draft.value);
+    const normalized = Number.isFinite(value)
+        ? Math.min(props.max, Math.max(props.min, value))
+        : props.min;
+
+    draft.value = normalized;
+    emit('update:modelValue', normalized);
 }
 </script>
 

@@ -41,7 +41,7 @@ function step(delta) {
 
 <template>
     <div class="flex flex-col gap-3">
-        <div class="group relative aspect-square w-full overflow-hidden rounded-card border border-line bg-surface-muted">
+        <div class="group relative aspect-[4/5] w-full overflow-hidden rounded-card border border-line bg-surface-muted">
             <img
                 v-if="mainImage"
                 :src="mainImage"
@@ -99,7 +99,7 @@ function step(delta) {
                 v-for="(image, index) in images"
                 :key="image"
                 type="button"
-                class="aspect-square overflow-hidden rounded-control border bg-surface-muted transition-opacity duration-200 ease-out"
+                class="aspect-[4/5] overflow-hidden rounded-control border bg-surface-muted transition-opacity duration-200 ease-out"
                 :class="index === mainIndex
                     ? 'border-primary'
                     : 'border-line opacity-70 hover:opacity-100'"

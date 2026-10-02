@@ -87,6 +87,7 @@ class VariantsRelationManager extends RelationManager
                             ->options(fn (): array => self::colorOptions(null)),
                         TextInput::make('quantity')
                             ->label(__('filament.variants.default_quantity'))
+                            ->default(50)
                             ->numeric()
                             ->integer()
                             ->minValue(0)
@@ -172,6 +173,7 @@ class VariantsRelationManager extends RelationManager
                     ->rule(fn (Get $get, ?ProductVariant $record): \Closure => $this->duplicateCombinationRule($get, $record)),
                 TextInput::make('available_quantity')
                     ->label(__('filament.fields.available_quantity'))
+                    ->default(50)
                     ->required()
                     ->integer()
                     ->minValue(0)
