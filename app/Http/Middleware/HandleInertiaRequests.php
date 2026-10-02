@@ -35,6 +35,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'cartCount' => Cart::count(),
             'appName' => config('app.name'),
+            'demo' => (bool) config('demo.enabled'),
             'locale' => app()->getLocale(),
             'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
             'translations' => trans('storefront'),

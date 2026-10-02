@@ -22,7 +22,8 @@ class WahaGateway implements WhatsAppGateway
 {
     public function enabled(): bool
     {
-        return (config('whatsapp.driver') ?? config('whatsapp.provider')) === 'waha'
+        return ! config('demo.enabled')
+            && (config('whatsapp.driver') ?? config('whatsapp.provider')) === 'waha'
             && (bool) config('whatsapp.enabled')
             && filled(config('whatsapp.base_url'))
             && filled(config('whatsapp.api_key'));

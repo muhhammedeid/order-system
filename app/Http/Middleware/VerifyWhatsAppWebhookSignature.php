@@ -18,6 +18,10 @@ class VerifyWhatsAppWebhookSignature
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (config('demo.enabled')) {
+            abort(503, 'WhatsApp integration is disabled in this demonstration.');
+        }
+
         if ((config('whatsapp.driver') ?? config('whatsapp.provider', 'waha')) !== 'waha') {
             abort(503, 'Webhook provider is not available.');
         }

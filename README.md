@@ -1,5 +1,7 @@
 # Wholesale Order System
 
+Owned, built and developed by **Mohamed Eid**.
+
 An Arabic-first wholesale order platform for a shoe factory, built with Laravel, Vue, Inertia and Filament. Customers browse the catalog and submit color/size quantities without creating an account. Factory staff review orders, record fulfillment, inspect outstanding production requirements and export operational data to Excel.
 
 The application is a single deployable Laravel monolith. It connects the customer storefront to factory operations while keeping the accounting system authoritative for product and customer codes.
@@ -275,7 +277,11 @@ The included [Dockerfile](Dockerfile) is a **staging-oriented** Apache/PHP image
 
 [deploy/](deploy) contains generic Nginx, Supervisor, scheduler, encrypted-backup and WAHA examples. Paths, domains, credentials and operational limits must be reviewed for the target host. These examples are not evidence of a successful restore drill or a capacity guarantee.
 
-A publicly accessible demo needs a separate application environment with synthetic data, database credentials, `APP_KEY`, cookies, storage and provider state. Keep WAHA disabled and remove real customer-service contact settings to prevent even browser price-request links from reaching real recipients. Do not reuse production uploads, backups, customers or orders. Demo reset behavior and a public review URL are not implemented by this repository cleanup.
+The [live demonstration](https://demo.maishoess.com) runs in an isolated application environment on shared server infrastructure. It has its own database account, application key, session cookie, storage directory and PHP-FPM pool. Its catalog and customer records were copied with the system owner's explicit approval; transfer files and runtime data are excluded from this repository. Production orders, administrator credentials and messaging history are not copied.
+
+`DEMO_ENABLED=true` enables visible demo notices and a Filament username login. The `admin` username authenticates against the user email configured by `DEMO_ADMIN_EMAIL`; access details are supplied by Mohamed Eid. Normal deployments retain Filament's email login. Demo mode blocks automated WhatsApp provider calls and inbound webhooks regardless of provider configuration. Browser contact links still use the separately configured customer-service number.
+
+For another demo deployment, provision an independent database and runtime first, use a fresh application key and host-only secure cookies, enable the demo flag, and create a hashed-password user for the configured email. Keep provider credentials empty and install no demo queue worker or scheduler. Use synthetic data unless the data owner explicitly approves another dataset. Shared administrators can modify demo content; changes persist, and no automatic reset schedule is installed.
 
 ## Technical documentation
 

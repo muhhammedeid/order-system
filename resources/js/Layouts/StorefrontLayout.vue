@@ -1,10 +1,12 @@
 <script setup>
 import AppHeader from '@/Components/AppHeader.vue';
+import { usePage } from '@inertiajs/vue3';
 import AppFooter from '@/Components/AppFooter.vue';
 import ToastHost from '@/Components/Ui/ToastHost.vue';
 import { useTranslations } from '@/composables/useTranslations';
 
 const { t } = useTranslations();
+const page = usePage();
 
 defineProps({
     title: {
@@ -28,6 +30,10 @@ defineProps({
         </a>
 
         <AppHeader />
+
+        <p v-if="page.props.demo" class="border-b border-line bg-surface-muted px-4 py-3 text-center text-sm font-semibold">
+            {{ t('demo.notice') }}
+        </p>
 
         <main
             id="main"
