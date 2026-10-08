@@ -72,6 +72,16 @@ class WhatsAppConversationResource extends Resource
         return false;
     }
 
+    public static function canViewAny(): bool
+    {
+        return false;
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return false;
+    }
+
     public static function canEdit(Model $record): bool
     {
         return false;

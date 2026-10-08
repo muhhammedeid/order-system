@@ -24,14 +24,14 @@ class OrderEditingFoundationTest extends TestCase
         return Order::query()->latest('id')->firstOrFail();
     }
 
-    public function test_only_new_orders_are_editable(): void
+    public function test_new_and_confirmed_orders_are_editable(): void
     {
         $new = $this->submittedOrder();
         $this->assertTrue($new->isEditable());
 
         $confirmed = $this->submittedOrder();
         $confirmed->confirm();
-        $this->assertFalse($confirmed->refresh()->isEditable());
+        $this->assertTrue($confirmed->refresh()->isEditable());
 
         $cancelled = $this->submittedOrder();
         $cancelled->cancel();

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WhatsAppMarketingStatus;
+use App\Rules\UsablePhoneNumber;
 use App\Support\WhatsApp\PhoneNumber;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -112,19 +113,20 @@ class Customer extends Model
 
     public static function validate(array $data): array
     {
-        if (array_key_exists('name', $data)) {
-            $data['name'] = trim((string) ($data['name'] ?? ''));
+        if (isset($data['name']) && is_string($data['name'])) {
+            $data['name'] = trim($data['name']);
         }
 
-        if (array_key_exists('phone', $data)) {
-            $data['phone'] = trim((string) ($data['phone'] ?? ''));
+        if (isset($data['phone']) && is_string($data['phone'])) {
+            $data['phone'] = trim($data['phone']);
         }
 
         Validator::make(
             $data,
             [
                 'name' => ['required', 'string', 'max:255'],
-                'phone' => ['required', 'string', 'max:255'],
+                'phone' => ['required', 'string', 'max:255', new UsablePhoneNumber],
+                'whatsapp' => ['nullable', 'string', 'max:255', new UsablePhoneNumber],
                 'customer_code' => ['nullable', 'string', 'max:255'],
             ],
         )->validate();
@@ -134,7 +136,8 @@ class Customer extends Model
 
     /**
      * Deterministic behavior with duplicate phones: the earliest
-     * created customer (lowest id) is matched and refreshed.
+     * created customer (lowest id) is matched. Public checkout must not
+     * overwrite a saved customer profile based only on a supplied phone.
      */
     public static function matchOrCreate(array $data): self
     {
@@ -159,12 +162,6 @@ class Customer extends Model
             ->first();
 
         if ($customer) {
-            $customer->fill(collect($data)
-                ->only(['name', 'company_name', 'governorate', 'city', 'address'])
-                ->filter(fn ($value) => filled($value))
-                ->all());
-            $customer->save();
-
             return $customer;
         }
 

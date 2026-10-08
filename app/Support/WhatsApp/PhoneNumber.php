@@ -50,13 +50,14 @@ class PhoneNumber
      */
     public static function isSyntacticallyUsable(?string $number): bool
     {
-        if (! is_string($number)) {
+        if (! is_string($number)
+            || preg_match('/\A *\+?[0-9٠-٩۰-۹ ().-]+\z/u', $number) !== 1) {
             return false;
         }
 
-        $digits = preg_replace('/\D+/', '', self::normalize($number)) ?? '';
+        $digitCount = preg_match_all('/[0-9٠-٩۰-۹]/u', self::normalize($number) ?? '');
 
-        return strlen($digits) >= 6 && strlen($digits) <= 15;
+        return $digitCount >= 6 && $digitCount <= 15;
     }
 
     /**

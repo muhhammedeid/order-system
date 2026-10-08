@@ -19,6 +19,9 @@ class OrderItemColorQuantity extends Model
 {
     use HasFactory;
 
+    /** Only set on local rows while the parent synchronizes its complete color set. */
+    public bool $deferOrderItemAggregateSync = false;
+
     /**
      * Delivered quantities are never mass assigned: they only change through
      * the guarded mutation methods and the delivery domain.
@@ -59,11 +62,15 @@ class OrderItemColorQuantity extends Model
         // The item's aggregate delivered total is always derived from these
         // authoritative color rows, whichever domain mutates them.
         static::saved(function (self $quantity) {
-            $quantity->orderItem?->syncDeliveredAggregate();
+            if (! $quantity->deferOrderItemAggregateSync) {
+                $quantity->orderItem?->syncDeliveredAggregate();
+            }
         });
 
         static::deleted(function (self $quantity) {
-            $quantity->orderItem?->syncDeliveredAggregate();
+            if (! $quantity->deferOrderItemAggregateSync) {
+                $quantity->orderItem?->syncDeliveredAggregate();
+            }
         });
     }
 

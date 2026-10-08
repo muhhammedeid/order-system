@@ -68,7 +68,7 @@ class OrderWhatsAppPanelTest extends TestCase
 
         Livewire::test(OrderWhatsAppPanel::class, ['order' => $order->id])
             ->assertSee('ORDER_LINKED_MESSAGE')
-            ->assertSee('/admin/whatsapp-conversations/'.$conversation->id)
+            ->assertDontSee('/admin/whatsapp-conversations/'.$conversation->id)
             ->assertDontSee('GENERAL_MESSAGE');
     }
 

@@ -9,6 +9,7 @@ use App\Support\WhatsApp\SessionState;
 use App\Support\WhatsApp\SessionView;
 use App\Support\WhatsApp\WhatsAppException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\Fakes\FakeWhatsAppGateway;
 use Tests\TestCase;
@@ -147,6 +148,22 @@ class WhatsAppAccountPageTest extends TestCase
 
         $this->assertContains('create', $this->gateway->calls);
         $this->assertContains('start', $this->gateway->calls);
+    }
+
+    public function test_admin_cannot_redirect_provider_actions_to_another_session(): void
+    {
+        config(['whatsapp.session' => 'factory-session']);
+        $this->gateway->session = new SessionState('factory-session', 'WORKING');
+        $component = Livewire::test(WhatsAppAccount::class);
+        $this->gateway->calls = [];
+
+        try {
+            $component->set('sessionName', 'another-account')->call('perform', SessionView::ACTION_LOGOUT);
+            $this->fail('Client session substitution was accepted.');
+        } catch (CannotUpdateLockedPropertyException $exception) {
+            $this->assertSame('factory-session', $component->instance()->sessionName);
+            $this->assertSame([], $this->gateway->calls);
+        }
     }
 
     public function test_unhealthy_service_is_shown_separately_from_account_state(): void

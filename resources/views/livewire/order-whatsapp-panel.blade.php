@@ -4,9 +4,6 @@
     $order = $this->orderRecord;
     $conversations = $this->conversations;
     $target = $this->targetConversation;
-    $conversationUrl = $target
-        ? route('filament.admin.resources.whatsapp-conversations.view', ['record' => $target])
-        : null;
 @endphp
 
 <x-filament::card>
@@ -42,20 +39,6 @@
                 {{ $this->enabled ? __('admin.whatsapp.order.service_available') : __('admin.whatsapp.order.service_disabled') }}
             </x-filament::badge>
         </div>
-
-        @if ($conversationUrl)
-            <div>
-                <x-filament::button
-                    tag="a"
-                    :href="$conversationUrl"
-                    size="sm"
-                    color="gray"
-                    icon="heroicon-o-arrow-top-right-on-square"
-                >
-                    {{ __('admin.whatsapp.order.open_conversation') }}
-                </x-filament::button>
-            </div>
-        @endif
 
         @if ($conversations->count() > 1)
             <div class="space-y-1">
@@ -139,11 +122,6 @@
                 @endforelse
             </ul>
 
-            @if ($conversationUrl)
-                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                    {{ __('admin.whatsapp.order.other_history') }}
-                </p>
-            @endif
         </div>
 
         @if ($this->enabled)

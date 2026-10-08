@@ -315,7 +315,7 @@ class OrderItemEditingTest extends TestCase
         $order->updateItems([]);
     }
 
-    public function test_editing_is_rejected_after_confirmation_or_cancellation(): void
+    public function test_editing_is_rejected_after_delivery_begins_or_cancellation(): void
     {
         $order = $this->newOrder();
         $variant = $this->newVariant();
@@ -323,12 +323,13 @@ class OrderItemEditingTest extends TestCase
         $order->recalculateTotalQuantity();
 
         $order->confirm();
+        $order->recordDeliveries([$item->colorQuantities()->firstOrFail()->id => ['quantity' => 1, 'expected_delivered' => 0]]);
 
         try {
             $order->updateItems([
                 ['id' => $item->id, 'product_id' => $variant->product_id, 'product_variant_id' => $variant->id, 'quantity' => 1],
             ]);
-            $this->fail('Expected OrderTransitionException for a confirmed order');
+            $this->fail('Expected OrderTransitionException for a partially delivered order');
         } catch (OrderTransitionException) {
         }
 

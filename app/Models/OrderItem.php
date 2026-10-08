@@ -197,6 +197,7 @@ class OrderItem extends Model
     public function syncColorQuantities(): void
     {
         $requested = max(1, (int) $this->requested_quantity);
+        $changed = false;
 
         $existing = $this->colorQuantities()
             ->get()
@@ -206,10 +207,13 @@ class OrderItem extends Model
             $row = $existing->pull(mb_strtolower(trim($color)));
 
             if (! $row) {
-                $this->colorQuantities()->create([
+                $row = $this->colorQuantities()->make([
                     'color' => $color,
                     'requested_quantity' => $requested,
                 ]);
+                $row->deferOrderItemAggregateSync = true;
+                $row->save();
+                $changed = true;
 
                 continue;
             }
@@ -222,7 +226,9 @@ class OrderItem extends Model
 
             if ((int) $row->requested_quantity !== $requested) {
                 $row->requested_quantity = $requested;
+                $row->deferOrderItemAggregateSync = true;
                 $row->save();
+                $changed = true;
             }
         }
 
@@ -233,7 +239,14 @@ class OrderItem extends Model
                 ]);
             }
 
+            $removed->deferOrderItemAggregateSync = true;
             $removed->delete();
+            $changed = true;
+        }
+
+        // Validate totals after every color has received the new quantity.
+        if ($changed) {
+            $this->syncDeliveredAggregate();
         }
     }
 

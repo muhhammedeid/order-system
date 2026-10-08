@@ -91,12 +91,11 @@ class Order extends Model
     }
 
     /**
-     * Only `new` orders may be edited before confirmation. Once confirmed,
-     * delivered quantities are the controlled mutation path (R02).
+     * Orders remain editable after confirmation until delivery begins.
      */
     public function isEditable(): bool
     {
-        return $this->status === OrderStatus::New;
+        return in_array($this->status, [OrderStatus::New, OrderStatus::Confirmed], true);
     }
 
     /**
@@ -166,7 +165,7 @@ class Order extends Model
     }
 
     /**
-     * Replaces the item set of a `new` order from an untrusted payload.
+     * Replaces the item set of an editable order from an untrusted payload.
      *
      * Row shape: [['id' => ?int, 'product_id' => ?int, 'product_variant_id' => int, 'quantity' => int], ...]
      *
@@ -188,8 +187,8 @@ class Order extends Model
                 ->lockForUpdate()
                 ->first();
 
-            if (! $order || $order->status !== OrderStatus::New) {
-                throw new OrderTransitionException('لا يمكن تعديل بنود الطلب بعد تأكيده أو إلغائه');
+            if (! $order || ! $order->isEditable()) {
+                throw new OrderTransitionException('لا يمكن تعديل بنود الطلب بعد بدء تسليمه أو إلغائه');
             }
 
             if ($rows === []) {

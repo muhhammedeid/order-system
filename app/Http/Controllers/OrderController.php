@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreOrderRequest;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -25,9 +26,9 @@ class OrderController extends Controller
         return Inertia::render('Checkout/Index', Cart::hydrated());
     }
 
-    public function store()
+    public function store(StoreOrderRequest $request)
     {
-        $customerData = $this->validateCustomerData();
+        $customerData = $request->validated();
 
         if (! count(Cart::items())) {
             return back()->withErrors(['cart' => 'السلة فارغة']);
@@ -48,23 +49,6 @@ class OrderController extends Controller
 
         return Inertia::render('Order/Success', [
             'order_number' => $order->order_number,
-        ]);
-    }
-
-    private function validateCustomerData(): array
-    {
-        return request()->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:255'],
-            'company_name' => ['nullable', 'string', 'max:255'],
-            'whatsapp' => ['nullable', 'string', 'max:255'],
-            'governorate' => ['nullable', 'string', 'max:255'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'customer_notes' => ['nullable', 'string', 'max:65535'],
-        ], [
-            'name.required' => 'الاسم مطلوب',
-            'phone.required' => 'رقم الموبايل مطلوب',
         ]);
     }
 

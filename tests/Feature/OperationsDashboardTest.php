@@ -190,7 +190,7 @@ class OperationsDashboardTest extends TestCase
         $this->assertSame(0, $this->statsByLabel()['طلبات مؤكدة']->getValue());
     }
 
-    public function test_outstanding_kpi_counts_colors_still_requiring_production(): void
+    public function test_outstanding_kpi_sums_pieces_still_requiring_production(): void
     {
         $this->orderWithItem(OrderStatus::New, 10);
         $this->orderWithItem(OrderStatus::Cancelled, 10);
@@ -200,7 +200,7 @@ class OperationsDashboardTest extends TestCase
 
         $stats = $this->statsByLabel();
 
-        $this->assertSame(2, $stats['ألوان مطلوبة للتشغيل']->getValue());
+        $this->assertSame('10 قطعة', $stats['إجمالي الطلبات']->getValue());
         $this->assertSame(5, $partialItem->remaining_quantity);
         $this->assertSame(5, $this->colorRow($partialItem, 'Black')->remaining_quantity);
 
@@ -208,15 +208,13 @@ class OperationsDashboardTest extends TestCase
             $this->colorRow($partialItem, 'Black')->id => ['quantity' => 2, 'expected_delivered' => 3],
         ]);
 
-        // Still one pending color on the partially delivered order.
-        $this->assertSame(2, $this->statsByLabel()['ألوان مطلوبة للتشغيل']->getValue());
+        $this->assertSame('8 قطعة', $this->statsByLabel()['إجمالي الطلبات']->getValue());
 
         $partialOrder->recordDeliveries([
             $this->colorRow($partialItem, 'Black')->id => ['quantity' => 3, 'expected_delivered' => 5],
         ]);
 
-        // Its color is complete now, so only the confirmed order remains.
-        $this->assertSame(1, $this->statsByLabel()['ألوان مطلوبة للتشغيل']->getValue());
+        $this->assertSame('5 قطعة', $this->statsByLabel()['إجمالي الطلبات']->getValue());
     }
 
     public function test_outstanding_kpi_excludes_fully_delivered_colors_and_zero_outstanding_products(): void
@@ -230,8 +228,24 @@ class OperationsDashboardTest extends TestCase
         ]);
 
         $this->assertSame(0, OrderItemColorQuantity::outstandingColorCount());
-        $this->assertSame(0, $this->statsByLabel()['ألوان مطلوبة للتشغيل']->getValue());
+        $this->assertSame('0 قطعة', $this->statsByLabel()['إجمالي الطلبات']->getValue());
         $this->assertTrue(OrderItemColorQuantity::productionCards()->isEmpty());
+    }
+
+    public function test_total_orders_card_uses_existing_piece_distribution_across_colors(): void
+    {
+        [$order, $item] = $this->multiColorOrder(['Black', 'White', 'Beige'], 10);
+
+        $this->assertSame('30 قطعة', $this->statsByLabel()['إجمالي الطلبات']->getValue());
+
+        $order->recordDeliveries([
+            $this->colorRow($item, 'White')->id => ['quantity' => 4, 'expected_delivered' => 0],
+        ]);
+
+        $this->assertSame('26 قطعة', $this->statsByLabel()['إجمالي الطلبات']->getValue());
+        $this->assertSame(30, $item->refresh()->quantity);
+        $this->assertSame(10, $item->requested_quantity);
+        $this->assertSame(3, $item->color_count);
     }
 
     public function test_active_products_and_customers_cards(): void
@@ -276,7 +290,7 @@ class OperationsDashboardTest extends TestCase
         $this->assertStringContainsString('/admin/order-management?tab=confirmed', $stats['طلبات مؤكدة']->getUrl());
         $this->assertStringContainsString('/admin/order-management?tab=partially_delivered', $stats['تسليم جزئي']->getUrl());
         $this->assertStringContainsString('/admin/orders', $stats['طلبات مُسلَّمة']->getUrl());
-        $this->assertStringContainsString('/admin/production-requirements', $stats['ألوان مطلوبة للتشغيل']->getUrl());
+        $this->assertStringContainsString('/admin/production-requirements', $stats['إجمالي الطلبات']->getUrl());
         $this->assertStringContainsString('/admin/products?filters', $stats['منتجات نشطة']->getUrl());
         $this->assertStringContainsString('/admin/customers', $stats['العملاء']->getUrl());
     }
@@ -489,7 +503,7 @@ class OperationsDashboardTest extends TestCase
         Livewire::actingAs(User::factory()->create())
             ->test(OrderStatsWidget::class)
             ->assertSee('طلبات جديدة')
-            ->assertSee('ألوان مطلوبة للتشغيل')
+            ->assertSee('إجمالي الطلبات')
             ->assertSee('منتجات نشطة')
             ->assertSee('العملاء');
     }

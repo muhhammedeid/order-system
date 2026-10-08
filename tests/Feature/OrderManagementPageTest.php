@@ -141,7 +141,7 @@ class OrderManagementPageTest extends TestCase
         $page->set('activeTab', 'confirmed')
             ->assertTableActionHidden('confirm', $confirmedOrder)
             ->assertTableActionHidden('cancel', $confirmedOrder)
-            ->assertTableActionHidden('edit', $confirmedOrder)
+            ->assertTableActionVisible('edit', $confirmedOrder)
             ->assertTableActionVisible('recordDelivery', $confirmedOrder)
             ->assertTableActionVisible('deliverAll', $confirmedOrder);
 
@@ -183,7 +183,7 @@ class OrderManagementPageTest extends TestCase
         [$cancelledOrder] = $this->makeOrder(OrderStatus::Cancelled);
 
         $this->actingAs($admin)->get("/admin/order-management/{$newOrder->getKey()}/edit")->assertOk();
-        $this->actingAs($admin)->get("/admin/order-management/{$confirmedOrder->getKey()}/edit")->assertForbidden();
+        $this->actingAs($admin)->get("/admin/order-management/{$confirmedOrder->getKey()}/edit")->assertOk();
         $this->actingAs($admin)->get("/admin/order-management/{$partialOrder->getKey()}/edit")->assertForbidden();
         $this->actingAs($admin)->get("/admin/order-management/{$deliveredOrder->getKey()}/edit")->assertForbidden();
         $this->actingAs($admin)->get("/admin/order-management/{$cancelledOrder->getKey()}/edit")->assertForbidden();

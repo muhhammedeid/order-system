@@ -12,6 +12,7 @@ use App\Models\OrderItemColorQuantity;
 use App\Models\Product;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Operational KPI cards. Every number links to the source view using the
@@ -30,6 +31,8 @@ class OrderStatsWidget extends StatsOverviewWidget
     protected function getStats(): array
     {
         $statusCounts = Order::statusCounts();
+        $requiredPieces = (int) OrderItemColorQuantity::outstandingForProduction()
+            ->sum(DB::raw('order_item_color_quantities.requested_quantity - order_item_color_quantities.delivered_quantity'));
 
         return [
             Stat::make(__('admin.stats.new_orders'), $statusCounts[OrderStatus::New->value] ?? 0)
@@ -57,7 +60,7 @@ class OrderStatsWidget extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-archive-box')
                 ->color('gray')
                 ->url(OrderResource::getUrl('index')),
-            Stat::make(__('admin.stats.production_required'), OrderItemColorQuantity::outstandingColorCount())
+            Stat::make(__('admin.stats.production_required'), number_format($requiredPieces).' '.__('admin.stats.pieces'))
                 ->description(__('admin.stats.production_required_description'))
                 ->descriptionIcon('heroicon-m-cog-6-tooth')
                 ->color('danger')

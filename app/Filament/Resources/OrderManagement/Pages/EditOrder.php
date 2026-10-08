@@ -6,6 +6,7 @@ use App\Filament\Resources\OrderManagement\OrderManagementResource;
 use App\Filament\Resources\OrderManagement\OrderStatusActions;
 use App\Models\Order;
 use App\Models\OrderItem;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,10 @@ class EditOrder extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('saveChanges')
+                ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
+                ->color('success')
+                ->action(fn () => $this->save()),
             OrderStatusActions::confirm(),
             OrderStatusActions::cancel(),
             ViewAction::make(),

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\Cart;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,6 +15,54 @@ use Tests\TestCase;
 class OrderCreationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_malformed_checkout_contact_is_rejected_without_losing_the_cart(): void
+    {
+        $variant = $this->publicVariant();
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2])->assertRedirect();
+        $savedCart = Cart::items();
+
+        foreach ([['phone' => 'abc201001234567xyz'], ['phone' => ['01001234567']], ['phone' => '01001234567', 'whatsapp' => '20100+1234567']] as $contact) {
+            $field = array_key_exists('whatsapp', $contact) ? 'whatsapp' : 'phone';
+            $this->post('/checkout', ['name' => 'Test Store', ...$contact])->assertSessionHasErrors($field);
+            $this->assertDatabaseCount('orders', 0);
+            $this->assertDatabaseCount('customers', 0);
+            $this->assertDatabaseCount('whatsapp_dispatches', 0);
+            $this->assertSame($savedCart, Cart::items());
+        }
+    }
+
+    public function test_public_checkout_reuses_customer_without_overwriting_saved_contact_details(): void
+    {
+        $customer = Customer::factory()->create([
+            'phone' => '01001234567',
+            'customer_code' => '00042',
+            'name' => 'Verified store',
+            'company_name' => 'Verified company',
+            'governorate' => 'Cairo',
+            'city' => 'Verified city',
+            'address' => 'Verified address',
+        ]);
+        $savedContact = $customer->only(['customer_code', 'name', 'company_name', 'phone', 'governorate', 'city', 'address']);
+        $variant = $this->publicVariant();
+        $this->post('/cart/add', ['variant_id' => $variant->id, 'quantity' => 2])->assertRedirect();
+
+        $response = $this->post('/checkout', [
+            'phone' => '+201001234567',
+            'name' => 'Unverified name',
+            'company_name' => 'Unverified company',
+            'governorate' => 'Unverified governorate',
+            'city' => 'Unverified city',
+            'address' => 'Unverified address',
+        ]);
+
+        $order = Order::query()->sole();
+        $response->assertRedirect(route('order.success', $order->order_number));
+        $this->assertSame($customer->id, $order->customer_id);
+        $this->assertSame($savedContact, $customer->fresh()->only(array_keys($savedContact)));
+        $this->assertDatabaseCount('customers', 1);
+        $this->assertSame(2, $order->items()->sole()->quantity);
+    }
 
     private function publicVariant(array $productAttributes = [], array $variantAttributes = []): ProductVariant
     {

@@ -32,7 +32,7 @@ class CustomerMatchingTest extends TestCase
 
     public function test_existing_customer_is_matched_by_exact_phone(): void
     {
-        $existing = Customer::factory()->create(['phone' => '01001234567', 'name' => 'Old Name']);
+        $existing = Customer::factory()->create(['phone' => '01001234567', 'name' => 'Old Name', 'city' => 'Saved City']);
 
         $customer = Customer::matchOrCreate([
             'name' => 'Refreshed Name',
@@ -41,8 +41,8 @@ class CustomerMatchingTest extends TestCase
         ]);
 
         $this->assertTrue($customer->is($existing));
-        $this->assertSame('Refreshed Name', $customer->name);
-        $this->assertSame('Nasr City', $customer->city);
+        $this->assertSame('Old Name', $customer->name);
+        $this->assertSame('Saved City', $customer->city);
         $this->assertDatabaseCount('customers', 1);
     }
 

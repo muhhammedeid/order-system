@@ -3,6 +3,10 @@
 server {
     listen 80;
     server_name __PRODUCTION_DOMAIN__;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Content-Security-Policy "frame-ancestors 'self'" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     return 301 https://$host$request_uri;
 }
 server {
@@ -15,6 +19,11 @@ server {
     index index.php;
     charset utf-8;
     client_max_body_size 8m;
+    # Repeat this policy in any child location that defines its own add_header.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Content-Security-Policy "frame-ancestors 'self'" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     location / { try_files $uri $uri/ /index.php?$query_string; }
     location = /favicon.ico { access_log off; log_not_found off; }
     location = /robots.txt { access_log off; log_not_found off; }
@@ -27,5 +36,9 @@ server {
         fastcgi_param DOCUMENT_ROOT $realpath_root;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
         fastcgi_hide_header X-Powered-By;
+        fastcgi_hide_header X-Content-Type-Options;
+        fastcgi_hide_header X-Frame-Options;
+        fastcgi_hide_header Content-Security-Policy;
+        fastcgi_hide_header Referrer-Policy;
     }
 }

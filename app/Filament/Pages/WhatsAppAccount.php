@@ -12,6 +12,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 
 /**
  * WhatsApp account and session operations for the configured WAHA session.
@@ -35,6 +36,7 @@ class WhatsAppAccount extends Page
 
     public bool $serviceHealthy = false;
 
+    #[Locked]
     public ?string $sessionName = null;
 
     public ?string $rawStatus = null;

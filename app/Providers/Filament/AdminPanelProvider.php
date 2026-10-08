@@ -72,7 +72,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::TOPBAR_END,
-                fn (): string => view('filament.components.demo-banner')->render().view('filament.components.locale-switcher')->render(),
+                fn (): string => view('filament.components.demo-banner', ['showOwner' => false])->render().view('filament.components.locale-switcher')->render(),
             )
             ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
